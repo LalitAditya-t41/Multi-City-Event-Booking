@@ -1,0 +1,78 @@
+# Multi-City Event Booking & Entertainment Platform
+
+**Domain:** EntertainmentTech  
+**Third Party Integration:** Eventbrite  
+**Owner:** Lalit  
+
+---
+
+## 1. City & Event Discovery Flow
+**City Selection → Venue Discovery → Event Listing**  
+Fetch city-filtered events from the Eventbrite API and merge them with the internal event catalog.
+
+---
+
+## 2. Show Scheduling Management
+**Show Scheduling → Time Slot Configuration → Conflict Validation**  
+Admin API to create and validate show slots with Eventbrite synchronization and turnaround gap enforcement between shows.
+
+---
+
+## 3. User Onboarding Flow
+**User Registration → Profile Setup → Preference Onboarding**  
+JWT-based user registration with Eventbrite profile synchronization and user preference storage.
+
+---
+
+## 4. Seat Booking Flow
+**Seat Selection → Pricing Tier Validation → Cart Assembly**  
+Validate seat availability against the Eventbrite API with tier-based pricing and group discount rules.
+
+---
+
+## 5. Payment & Ticketing
+**Payment Gateway Integration → Booking Confirmation → E-Ticket Generation**  
+Process bookings via the Eventbrite Order API and generate QR-coded e-tickets.
+
+---
+
+## 6. Cancellation & Refund Management
+**Cancellation Request → Refund Policy Engine → Wallet Credit**  
+Cancel bookings via the Eventbrite Refund API and apply internal time-based refund policies.
+
+---
+
+## 7. Offers & Coupons Engine
+**Offer & Coupon Engine → Eligibility Check → Discount Application**  
+Merge Eventbrite discount codes with internal promotions and validate against usage limits.
+
+---
+
+## 8. Reviews & Ratings
+**Review & Rating Submission → Moderation Queue → Public Publish**  
+Verify attended bookings, submit reviews to the Eventbrite API, and apply profanity moderation before publishing.
+
+---
+
+## 9. Admin & Inventory Management
+**Admin Dashboard → Event CRUD → Seat Inventory Management**  
+Event CRUD operations with Eventbrite catalog synchronization and real-time seat inventory management.
+
+---
+
+## 10. Seat Lock State Machine with Conflict Resolution
+Distributed seat locking using Spring State Machine and Redis:  
+
+`AVAILABLE → SOFT_LOCKED → HARD_LOCKED → PAYMENT_PENDING → CONFIRMED / RELEASED`
+
+Includes:
+- Eventbrite availability checks  
+- Concurrent conflict handling  
+- Atomic rollback on payment failure  
+
+---
+
+## 11. AI-Powered Event Assistant Chatbot
+Built using Spring AI + OpenAI GPT-4o with Retrieval-Augmented Generation (RAG) over the event catalog and refund policies.  
+
+Includes tool calling integrated with internal APIs and Eventbrite search APIs for live event queries.

@@ -1,0 +1,28 @@
+# IDE/editor
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.sts4-cache/
+.factorypath
+.apt_generated
+.springBeans
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Non-Java lockfiles (ignored per project policy)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+Pipfile.lock
+poetry.lock
+uv.lock
+
+# Logs
+*.log

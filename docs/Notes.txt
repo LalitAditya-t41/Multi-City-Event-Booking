@@ -1,0 +1,3 @@
+Microservices
+Pros: independent deployment and scaling per service, technology heterogeneity (each service can use the best tool for its job), fault isolation (one service crashing doesn't necessarily kill others), teams can work and release independently, easier to scale specific bottlenecks.
+Cons: enormous operational complexity (container orchestration, service discovery, distributed tracing, API gateways), distributed systems problems (partial failures, eventual consistency, network latency), data consistency is hard (no cross-service transactions — you need sagas or eventual consistency patterns), debugging across services is painful, significant DevOps maturity required.

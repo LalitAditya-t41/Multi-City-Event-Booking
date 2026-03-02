@@ -1,0 +1,16 @@
+Project Understanding
+Title: Multi-City Event Booking & Entertainment Platform
+
+Understanding From the project title:
+- Multi City Event Browsing
+- Real Time booking and availability.
+- Ticket&Reservation race  and deadlock conditions. Waitlist features
+- Security, Highly secure, Secure payments
+- Digital Delivery of the tickets, bills (with QR code)
+- Cancellation , Refunds.
+- Organizer-facing tools.
+
+
+Issue to handle:
+- Scalability, cant predict when the server or the application will die due to huge number of requests.
+    the availability issue. 
