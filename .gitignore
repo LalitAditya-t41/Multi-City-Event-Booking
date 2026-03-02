@@ -12,6 +12,9 @@
 .apt_generated
 .springBeans
 
+*.class
+target/
+
 # OS junk
 .DS_Store
 Thumbs.db
@@ -23,7 +26,9 @@ yarn.lock
 Pipfile.lock
 poetry.lock
 uv.lock
+!mock-eventbrite-api/uv.lock
 
 # Logs
 *.log
 docs/eventbriteapiv3public.apib
+docs/IMPLEMENTATION_GUIDE.md

@@ -6,7 +6,7 @@
 
 **Architecture:** Modular Monolith — Spring Boot 3.5.11, Java 21
 
-**External Integrations:** Eventbrite (ticketing/payment backbone) | Razorpay (payment gateway) | OpenAI GPT-4o (AI assistant)
+**External Integrations:** Eventbrite (ticketing + payments + orders) | OpenAI GPT-4o (AI assistant)
 
 ⚠ **Important:** This is the single source of truth for module ownership, boundaries, inter-module communication, and the Eventbrite ACL. Every agent and developer MUST read this before touching any module.
 
@@ -84,29 +84,42 @@ Modules never consume the raw webhook directly.
 ### ACL Facade Services
 
 - **EbEventSyncService** (`shared/eventbrite/service/`)
-  - Create, update, publish, unpublish, cancel, delete events; pull org event catalog; verify sync integrity
+  - Create (org-scoped), update, publish, unpublish, cancel, delete events; pull org event catalog; verify sync integrity
+  
 - **EbVenueService** (`shared/eventbrite/service/`)
-  - Create and update venues on Eventbrite; list venues by org
+  - Read-only: List events at a venue. Venue creation/updates not available via API (Dashboard only).
+  
 - **EbScheduleService** (`shared/eventbrite/service/`)
-  - Create recurring event schedules and occurrences
+  - Create recurring event schedules and occurrences; retrieve series info
+  
 - **EbTicketService** (`shared/eventbrite/service/`)
-  - Create/update ticket classes; manage inventory tiers; check availability
+  - Create/update ticket classes; manage inventory; check availability
+  
 - **EbCapacityService** (`shared/eventbrite/service/`)
-  - Retrieve and update event capacity tiers; manage seat maps
+  - Retrieve and update event capacity tiers; list org seat maps; attach seat map to event
+  
 - **EbOrderService** (`shared/eventbrite/service/`)
-  - Retrieve order details post-checkout; list orders by event/org
+  - Retrieve order details post-checkout; list orders by event/org. **NO order creation via API** — orders created exclusively by Checkout Widget.
+  
 - **EbAttendeeService** (`shared/eventbrite/service/`)
-  - Retrieve attendee records; list attendees by event or org
+  - Retrieve attendee records; list attendees by event. **NO attendee creation via API** — attendees created by Checkout Widget.
+  
 - **EbDiscountSyncService** (`shared/eventbrite/service/`)
-  - Create, update, delete discount codes on Eventbrite; sync with internal promotions
+  - Create/update/delete discount codes at org level; sync usage with internal promotions. (Discounts scoped to org, applied to events at checkout.)
+  
 - **EbRefundService** (`shared/eventbrite/service/`)
-  - Read refund request status on orders; filter orders by refund status
+  - Read refund request status only from order `refund_request` field. **NO refund submission API.**
+  
 - **EbWebhookService** (`shared/eventbrite/service/`)
-  - Register and manage org-scoped webhooks for event/order state changes
+  - **NOT USED in production.** Webhook registration not available via API; only via Dashboard. Mock service simulates webhook delivery for testing.
 
 > **Note:** `EbOrderService` does NOT create orders. Orders are created exclusively by the Eventbrite Checkout Widget (JS SDK). `EbOrderService` only reads orders after the widget fires the `onOrderComplete` callback.
 
-> **Note:** `EbRefundService` does NOT submit refunds programmatically. Refund status is read via order fields. Actual refund initiation is handled by mimicking admin actions via Eventbrite's org token.
+> **Note:** `EbAttendeeService` does NOT create attendees. Attendees are created automatically when the Checkout Widget completes an order. `EbAttendeeService` only reads attendee records.
+
+> **Note:** `EbRefundService` does NOT submit refunds programmatically. Refund status is read from the order's `refund_request` field only. Actual refund initiation is handled by mimicking admin actions via Eventbrite org token (backend only).
+
+> **Note:** `EbVenueService` is read-only. Venue creation and updates are not exposed via Eventbrite's public API — they must be managed via the Eventbrite Dashboard.
 
 ## 5. Eventbrite Integration Principles
 
@@ -140,11 +153,15 @@ Without FR2 sync: If `eventbrite_event_id` is null or orphaned, the entire chain
 |---|---|
 | User creation/sync | No user write API on Eventbrite. Identity is 100% internal. Users are linked via order email post-purchase. |
 | Conflict validation | No conflict API on Eventbrite. Time slot conflicts and turnaround gaps are enforced in your internal DB. |
+| Venue creation/updates | No venue creation API. Venues can only be managed via Eventbrite Dashboard. Your app can read pre-existing venue IDs only. |
 | Seat locking | No seat lock API on Eventbrite. The entire state machine (Redis + Spring State Machine) is internal. |
 | Cart management | No cart API on Eventbrite. Cart assembly and group discount rules are internal. |
-| Order creation | No order creation API. Orders are created exclusively via the Eventbrite Checkout Widget (JS SDK). |
+| Order creation | No order creation API. Orders are created exclusively via the Eventbrite Checkout Widget (JS SDK). Backend only reads orders post-creation. |
+| Attendee creation | No attendee creation API. Attendees are created automatically by Checkout Widget when orders are placed. Backend only reads attendee records. |
+| Payment processing | Eventbrite Checkout Widget handles all payments (credit card, debit, UPI, Eventbrite wallet, PayPal, etc.). Backend reads orders post-creation via EbOrderService. |
 | Single order cancel | No per-order cancel API. Only full event cancel exists. Per-order cancellation is mimicked via org admin token. |
-| Refund submission | No programmatic refund API. Refunds are triggered by mimicking admin actions via Eventbrite org token. |
+| Refund submission | No programmatic refund API. Refund status is embedded in order `refund_request` field only. Read-only access. |
+| Webhook registration | No webhook API. Webhooks are registered via Eventbrite Dashboard only. This app simulates webhooks for testing/development. |
 | Reviews | No reviews API on Eventbrite. Entire review system is internal. Attendance verification uses attendee read API. |
 | Public event search | `GET /events/search/` is deprecated. Event discovery is limited to your org's events. |
 
@@ -194,15 +211,14 @@ This is the most Eventbrite-heavy flow in the system. Every admin-created show s
 
 #### Phase 1 — Pre-Creation Setup (One-Time Onboarding)
 
-**Venue Registration**
+**Venue Setup (Dashboard-Only)**
 - Internal App (Your DB / Spring Boot)
   - Admin registers a venue in the app
   - Internal `venues` table is updated with address, capacity, seating config
 - Eventbrite API Call (via `shared/` ACL)
-  - `POST /organizations/{org_id}/venues/` — create venue on Eventbrite
-  - `GET /venues/{venue_id}/` — verify venue exists on EB side
-  - `PUT /venues/{venue_id}/` — update venue if details change
-  - `GET /organizations/{org_id}/venues/` — list all org venues (used in conflict check)
+  - **NO API CALLS** — Venues must be created/managed via Eventbrite Dashboard
+  - `GET /venues/{venue_id}/events/` — list events at a pre-existing Eventbrite venue (read-only)
+  - Store `eventbrite_venue_id` from Dashboard in your `venues` table for reference
 
 #### Phase 2 — Show Slot Creation (Core Sync)
 
@@ -281,15 +297,16 @@ This is the most Eventbrite-heavy flow in the system. Every admin-created show s
   - `GET /events/{event_id}/capacity_tier/` — verify capacity still matches
 
 **Webhook Setup for FR2**
-- Webhook Registration (One-Time)
+- Webhook Registration (One-Time — Dashboard-Configured)
   - Internal App (Your DB / Spring Boot)
-    - Register webhooks once during app deployment
-    - Listen for unexpected changes made directly on Eventbrite dashboard
+    - Register webhooks once via Eventbrite Dashboard (not via API)
+    - Configure endpoint URL: `https://your-app.com/api/webhooks/eventbrite`
+    - Subscribe to: `event.updated`, `event.published`, `event.unpublished`, `order.placed`, `order.updated`, `attendee.updated`
   - Eventbrite API Call (via `shared/` ACL)
-    - `POST /organizations/{org_id}/webhooks/` — register for `event.updated`, `event.published`, `event.unpublished`
-    - `GET /organizations/{org_id}/webhooks/` — verify webhooks are registered
+    - **NO API for webhook registration** — done via Dashboard only
+    - Once registered, Eventbrite POSTs events to your configured endpoint
 
-**ACL Facades:** `EbEventSyncService`, `EbVenueService`, `EbScheduleService`, `EbTicketService`, `EbCapacityService`, `EbWebhookService`  
+**ACL Facades:** `EbEventSyncService`, `EbVenueService`, `EbScheduleService`, `EbTicketService`, `EbCapacityService`  
 **DB Tables:** `show_slots`, `turnaround_policies`  
 **Publishes:** `ShowSlotCreatedEvent` → booking-inventory | `ShowSlotCancelledEvent` → booking-inventory + payments-ticketing
 
@@ -396,15 +413,15 @@ CONFIRMED (eventbrite_order_id stored in DB)          RELEASED → AVAILABLE
 **Redis Keys:** `seat:lock:{seatId}`  
 **Publishes:** `CartAssembledEvent` → payments-ticketing
 
-### FR5 — Payment Gateway → Booking Confirmation → E-Ticket Generation
+### FR5 — Payment via Eventbrite Checkout Widget → Booking Confirmation → E-Ticket Generation
 **Module:** payments-ticketing
 
-Key Point: There is NO Order creation API on Eventbrite. Orders are created exclusively through the Eventbrite Checkout Widget (JS SDK: `eb_widgets.js`). Your backend reads the order AFTER the widget fires the `onOrderComplete` callback. This is not a webhook — it is a frontend JS callback.
+Key Point: There is NO Order creation API on Eventbrite. Orders are created exclusively through the Eventbrite Checkout Widget (JS SDK: `eb_widgets.js`). Your backend reads the order AFTER the widget fires the `onOrderComplete` callback. Payment processing, attendee creation, and order placement are all handled by Eventbrite internally.
 
 **Step 1: Checkout Widget Embed**
 - Internal App (Your DB / Spring Boot)
   - `CartAssembledEvent` received by payments-ticketing
-  - Backend prepares checkout context: `event_id`, `ticket_class_id`, `promo_code` (if any)
+  - Backend prepares checkout context: `event_id`, `ticket_class_id`, `promo_code` (if any), `attendee_email`
   - Frontend receives `event_id` and renders the Eventbrite Checkout Widget
 - Eventbrite API Call (via `shared/` ACL)
   - (JS SDK — not a REST API call)
@@ -417,57 +434,96 @@ The Checkout Widget is embedded as a popup modal triggered by the Buy Tickets bu
 window.EBWidgets.createWidget({
   widgetType: 'checkout',
   eventId: '{eventbrite_event_id}',
+  ticketClassId: '{ticket_class_id}',
   modal: true,
   modalTriggerElementId: 'eb-checkout-trigger',
   promoCode: '{coupon_code_if_any}',
-  onOrderComplete: function() { notifyBackend(orderId); }
+  attendeeEmail: '{user_email}',
+  onOrderComplete: function(orderId) { 
+    fetch('/api/payments/confirm-order', {
+      method: 'POST',
+      body: JSON.stringify({ orderId: orderId })
+    });
+  }
 });
 ```
 
-**Step 2: User Pays via Eventbrite Widget**
-- Internal App (Your DB / Spring Boot)
-  - User completes payment inside Eventbrite widget (Eventbrite handles payment processing)
-  - Eventbrite creates the Order internally
+**Step 2: User Completes Payment in Eventbrite Widget**
+- Eventbrite Checkout Widget
+  - User enters attendee details (name, email, custom questions)
+  - User selects payment method (credit card, debit, UPI, Eventbrite wallet, PayPal, etc.)
+  - Payment is processed by Eventbrite's payment processor (Stripe, etc.)
+  - Eventbrite creates Order internally
+  - Eventbrite creates Attendee record linked to the order
   - `onOrderComplete` JS callback fires in your frontend with the `order_id`
-  - Frontend sends `order_id` to your backend
 - Eventbrite API Call (via `shared/` ACL)
-  - (Eventbrite handles payment internally — no Razorpay call for this flow)
+  - (Eventbrite handles payment internally — no external payment gateway call)
 
-**Step 3: Booking Confirmation**
+**Step 3: Frontend Notifies Backend**
+- Internal App (Your DB / Spring Boot)
+  - Frontend `onOrderComplete` callback sends `order_id` to backend
+  - Backend receives `order_id` and validates it
+  - No double-submit: check if booking already exists for this `order_id`
+- Eventbrite API Call (via `shared/` ACL)
+  - `GET /orders/{order_id}/` — read order to confirm it exists and status is `placed`
+
+**Step 4: Booking Confirmation**
 - Internal App (Your DB / Spring Boot)
   - Backend receives `order_id` from frontend callback
   - Internal booking record created in `bookings` table with status `CONFIRMED`
   - `booking_items` created from cart snapshot
+  - Seat locks transitioned from HARD_LOCKED → CONFIRMED
   - `BookingConfirmedEvent` published
 - Eventbrite API Call (via `shared/` ACL)
-  - `GET /orders/{order_id}/` — read full order details (costs, buyer info, status)
-  - `GET /events/{event_id}/attendees/` — verify user appears as attendee
-  - `GET /organizations/{org_id}/orders/` — cross-reference order belongs to your org
+  - `GET /orders/{order_id}/` — read full order details (costs, buyer email, status, attendee info)
+  - `GET /events/{event_id}/attendees/` — verify attendee created by Eventbrite
+  - `GET /events/{event_id}/attendees/{attendee_id}/` — get attendee barcode/QR if Eventbrite native ticketing used
 
-**Step 4: E-Ticket Generation**
+**Step 5: E-Ticket Generation**
 - Internal App (Your DB / Spring Boot)
   - `ETicket` record created in `e_tickets` table
-  - QR code generated from booking reference + seat info
+  - QR code generated from booking reference + attendee barcode (from Eventbrite)
   - PDF e-ticket generated internally (not from Eventbrite)
   - E-ticket stored in object storage, download link returned to user
   - Booking confirmation email sent with e-ticket attached
 - Eventbrite API Call (via `shared/` ACL)
-  - `GET /orders/{order_id}/?expand=attendees` — get attendee barcodes if using Eventbrite native tickets
-  - `GET /events/{event_id}/attendees/{attendee_id}/` — get seat assignment details for QR
+  - `GET /orders/{order_id}/?expand=attendees` — get attendee barcodes from Eventbrite ticket
+  - `GET /events/{event_id}/attendees/{attendee_id}/` — get attendee check-in barcode for QR
 
-**Also: Webhook for Order Events**
+**Also: Webhook for Order Events (Safety Net — Dashboard-Configured)**
 - Webhook (Parallel Path)
   - Internal App (Your DB / Spring Boot)
     - `EbWebhookDispatcher` receives `order.placed` event from Eventbrite
     - Dispatched as Spring Event → payments-ticketing listens
     - Used as a secondary confirmation if frontend callback was missed
+    - Idempotent: check if booking already created before creating duplicate
   - Eventbrite API Call (via `shared/` ACL)
-    - `POST /organizations/{org_id}/webhooks/` — register for `order.placed`, `attendee.updated`
+    - **NO API for webhook registration** — Webhooks configured via Eventbrite Dashboard only
+    - Once configured, Eventbrite POSTs `order.placed`, `order.updated`, `attendee.updated` to your endpoint
     - (Webhook is a safety net — not the primary confirmation path)
 
-**ACL Facades:** `EbOrderService`, `EbAttendeeService`, `EbWebhookService`  
-**DB Tables:** `bookings`, `booking_items`, `payments`, `e_tickets`  
-**Publishes:** `BookingConfirmedEvent` → engagement + identity | `PaymentFailedEvent` → booking-inventory
+**Payment Success Path:**
+```
+User clicks Buy → Widget rendered → User enters payment details → Eventbrite processes payment
+  → Order created on Eventbrite → Attendee created on Eventbrite → onOrderComplete fires
+  → Frontend POST to backend → Backend reads order via EbOrderService
+  → Internal booking created → E-ticket generated → User receives email
+```
+
+**Payment Failure Path:**
+```
+User clicks Buy → Widget rendered → User enters payment (fails) → Widget closes
+  → onOrderComplete never fires → Eventbrite order NOT created
+  → Frontend detects widget closed → triggers PaymentFailedEvent
+  → PaymentFailedListener → RollbackAction (Redis locks released)
+  → Cart cleared → User can retry or abandon
+```
+
+**ACL Facades:** `EbOrderService`, `EbAttendeeService`  
+**DB Tables:** `bookings`, `booking_items`, `e_tickets`  
+**External System:** Eventbrite (payment + order + attendee creation)  
+**Publishes:** `BookingConfirmedEvent` → engagement + identity | `PaymentFailedEvent` → booking-inventory  
+**Listens to:** `CartAssembledEvent` (from booking-inventory)
 
 ### FR6 — Cancellation Request → Refund Policy Engine → Wallet Credit
 **Module:** payments-ticketing
@@ -816,7 +872,6 @@ Tool Calling
 | Package | External System | Services |
 |---|---|---|
 | `shared/eventbrite/` | Eventbrite API | `EbEventSyncService`, `EbVenueService`, `EbScheduleService`, `EbTicketService`, `EbCapacityService`, `EbOrderService`, `EbAttendeeService`, `EbDiscountSyncService`, `EbRefundService`, `EbWebhookService` |
-| `shared/razorpay/` | Razorpay | `RazorpayPaymentService`, `RazorpayWebhookDispatcher` |
 | `shared/openai/` | OpenAI GPT-4o | `OpenAiChatService`, `OpenAiEmbeddingService` |
 
 ### Shared Common Classes
@@ -851,6 +906,7 @@ Tool Calling
 10. `eventbrite_event_id` is never null in production — if null, block FR4, FR5, FR6, FR7, FR8, FR10.
 11. The Checkout Widget (JS SDK) is the ONLY way orders are created on Eventbrite — no backend order creation.
 12. Per-order cancellation and refunds use org admin token mimic — document this clearly in `EbRefundService`.
+13. Eventbrite Checkout Widget is the ONLY way payments are accepted and orders are created. No backend order creation API exists on Eventbrite. Payment processing is 100% Eventbrite-handled. Backend reads orders AFTER widget fires onOrderComplete callback via `EbOrderService`.
 
 ## 10. Where to Put New Code
 
