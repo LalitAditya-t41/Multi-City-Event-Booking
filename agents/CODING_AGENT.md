@@ -109,6 +109,151 @@ log.info("Booking confirmed: " + bookingId); // string concatenation, not parame
 
 ---
 
+## Inter-Module Communication Patterns
+
+Modules communicate via REST (sync queries) or Spring Events (async commands). Never import another module's @Service directly.
+
+**Pattern 1: REST Query** — Module B needs data from upstream Module A
+```java
+// ✅ Call REST API
+private final RestClient restClient;
+public Payment getPaymentDetails(UUID paymentId) {
+    return restClient.get("/api/payments/{id}", paymentId, Payment.class);
+}
+
+// ❌ Never import @Service
+private final PaymentService paymentService; // WRONG
+```
+
+**Pattern 2: Spring Events** — Module A publishes, others listen
+```java
+// Module A publishes
+eventPublisher.publishEvent(new PaymentConfirmedEvent(bookingId, amount));
+
+// Module B listens (delegates immediately to service)
+@Component
+public class PaymentConfirmedListener {
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onPaymentConfirmed(PaymentConfirmedEvent event) {
+        bookingService.confirmBooking(event.bookingId());
+    }
+}
+
+// ❌ Never call service directly from event trigger
+// ❌ Never block the listener — delegate immediately
+```
+
+**Pattern 3: Shared Contracts** — Enums, DTOs, base classes in `shared/common/` only
+```java
+// ✅ Define once in shared/common/enums/
+public enum BookingStatus { PENDING, CONFIRMED, CANCELLED, REFUNDED }
+
+// ❌ Never duplicate in multiple modules
+```
+
+---
+
+## Eventbrite ACL Facades — The Only Door to External Systems
+
+**HARD RULE: No module calls Eventbrite HTTP directly. All calls go through shared/eventbrite/service/ facades only.**
+
+### The 10 Eventbrite Facades (All in `shared/eventbrite/service/`)
+
+| Facade | Used By | Purpose |
+|---|---|---|
+| EbEventSyncService | discovery-catalog, scheduling, engagement | Create, update, publish, cancel events; pull catalog |
+| EbVenueService | scheduling | Create/update venues; list org venues |
+| EbScheduleService | scheduling | Create recurring event schedules |
+| EbTicketService | discovery-catalog, booking-inventory | Create/update ticket classes; check availability |
+| EbCapacityService | admin/ | Update event capacity tiers |
+| EbOrderService | payments-ticketing | Read orders post-checkout |
+| EbAttendeeService | payments-ticketing, engagement | Get attendees; verify attendance for reviews |
+| EbDiscountSyncService | promotions | Create/update/delete discount codes |
+| EbRefundService | payments-ticketing | Read refund status (no submission API) |
+| EbWebhookService | shared/eventbrite/webhook/ | Register webhooks |
+
+### Correct Pattern
+
+```java
+// ✅ Inject facade, call it
+@Service
+public class EventService {
+    private final EbEventSyncService ebEventService; // from shared/
+    
+    public Event createEvent(EventRequest request) {
+        Event event = new Event(request.name(), request.venue());
+        eventRepository.save(event); // save internally first
+        
+        EbEventResponse ebResp = ebEventService.createEvent(
+            mapper.toEbCreateRequest(event));
+        event.setEventbriteEventId(ebResp.id()); // store EB ID
+        eventRepository.save(event);
+        return event;
+    }
+}
+
+// ❌ Never import and call HTTP client directly
+private final EventbriteWebClient ebClient;
+public void createEvent(...) {
+    ebClient.post("/events", ...); // VIOLATES HARD RULE #2
+}
+```
+
+### Critical Constraints (These Don't Exist on Eventbrite)
+
+- **No user creation API** — Users 100% internal; link post-purchase via order email
+- **No order creation API** — JS SDK widget only; backend reads AFTER onOrderComplete callback
+- **No single-order cancel** — Only bulk event cancel; per-order requires workaround
+- **No seat lock API** — Entire state machine (AVAILABLE → SOFT_LOCKED → HARD_LOCKED → CONFIRMED) is internal Redis + Spring State Machine
+- **No refund submission API** — Refund status read-only via EbRefundService only
+- **No conflict validation API** — Turnaround gaps enforced entirely in internal DB
+- **No reviews API** — Reviews 100% internal; Eventbrite attendance verification only
+
+**See docs/EVENTBRITE_INTEGRATION.md for full constraints and workarounds.**
+
+---
+
+## admin/ Module Special Rules
+
+Admin owns no domain, no @Entity classes, no database tables. It reads and orchestrates.
+
+### Reading from Modules — Direct Import OK
+
+```java
+// ✅ Reads only — can import @Service directly (same JVM)
+@Service
+public class AdminDashboardService {
+    private final BookingService bookingService;  // from booking-inventory
+    private final PaymentService paymentService;  // from payments-ticketing
+    
+    public Dashboard getMetrics() {
+        return new Dashboard(
+            bookingService.getTotalBookings(),
+            paymentService.getTotalRevenue()
+        );
+    }
+}
+```
+
+### Writing to Modules — REST API Only
+
+```java
+// ❌ WRONG — bypasses module's validation and events
+private final BookingRepository bookingRepository;
+public void bulkCancel(...) {
+    bookingRepository.deleteAll(bookings); // skips business rules
+}
+
+// ✅ CORRECT — calls module's REST API
+public void bulkCancel(List<UUID> bookingIds) {
+    for (UUID id : bookingIds) {
+        restClient.delete("/api/bookings/{id}", id);
+    }
+}
+```
+
+---
+
 ## Layer-by-Layer Coding Standards
 
 ---
@@ -200,7 +345,7 @@ and calls ACL facades for external systems. It owns no business logic itself —
 - Never map fields manually
 - Wrap multi-step operations in `@Transactional`
 - Never call another module's `@Service` directly — use REST or Events
-- All external system calls go through ACL facade services from `shared/`
+- **CRITICAL: All external system calls go ONLY through ACL facade services from `shared/`. Never call Eventbrite, Razorpay, or OpenAI HTTP directly. See "Eventbrite ACL Facades" section above in "Coding Standards".**
 
 ```java
 // ✅ Correct service
@@ -730,7 +875,9 @@ String url = "https://api.razorpay.com/v1/orders"; // wrong
 - [ ] Every new class is in the correct layer and package per `docs/MODULE_STRUCTURE_TEMPLATE.md`
 - [ ] No `@Service`, `@Component`, or `@Autowired` in `domain/` classes
 - [ ] No field mapping in services or controllers — all in `mapper/`
-- [ ] No external API calls inside module code — all through `shared/` ACL facades
+- [ ] **No external API calls inside module code — ALL through `shared/` ACL facades (Eventbrite, Razorpay, OpenAI)**
+- [ ] **Eventbrite: No module calls Eventbrite HTTP directly. All calls via EbEventSyncService, EbVenueService, EbTicketService, EbOrderService, EbAttendeeService, etc.**
+- [ ] **Eventbrite: Never attempt order creation, user creation, single-order cancel, seat locking, or cart persistence (not supported)**
 - [ ] No cross-module `@Service` or `@Repository` imports
 - [ ] `@Transactional` applied to all multi-step service methods
 - [ ] `@Valid` applied to all `@RequestBody` parameters
@@ -743,3 +890,5 @@ String url = "https://api.razorpay.com/v1/orders"; // wrong
 - [ ] New Flyway migration file added for every schema change, with correct global version number
 - [ ] Tests written for all four layers: `domain/`, `service/`, `api/`, `arch/`
 - [ ] `arch/` test includes a rule for every new architectural decision introduced by this feature
+- [ ] **admin/ Module: Reads can import module @Service directly. Writes MUST call owning module's REST API.**
+- [ ] **If feature touches multiple modules: Spring Events used for async reactions, never direct service calls**

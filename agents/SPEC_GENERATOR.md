@@ -40,6 +40,50 @@ If any of the above are unclear, the agent should ask before proceeding. Do not 
 
 ---
 
+## Module Registry & Dependency Context
+
+Before speccing any feature, understand the module structure and dependency order from `PRODUCT.md`. Read PRODUCT.md Sections 1 & 2 before proceeding to Stage 3.
+
+### The 7 Modules (Quick Reference)
+
+| Module | Owns | Eventbrite Facades |
+|---|---|---|
+| discovery-catalog | Events, Venues, Cities, catalog sync | EbEventSyncService, EbTicketService |
+| scheduling | Show slots, conflict validation | EbEventSyncService |
+| identity | Users, JWT, profiles, preferences | None (100% internal) |
+| booking-inventory | Seats, SeatMap, Cart, Seat Lock State Machine | EbTicketService |
+| payments-ticketing | Bookings, Payments, E-Tickets, Cancellations, Refunds | EbOrderService, EbAttendeeService, EbRefundService |
+| promotions | Coupons, Promotions, Eligibility rules | EbDiscountSyncService |
+| engagement | Reviews, Moderation, AI Chatbot, RAG pipeline | EbEventSyncService |
+
+### Module Dependency Direction (Strictly Downward)
+
+The order is: `shared/ → discovery-catalog → scheduling/identity → booking-inventory → payments-ticketing → promotions → engagement → admin/ → app/`
+
+A module NEVER imports from a module at its level or below. If Module B needs data from Module A, it calls Module A's REST API.
+
+**Key Constraint:** Before Stage 3, confirm the owning module is in the correct dependency position for this feature.
+
+---
+
+## Eventbrite Integration Constraints (Critical for Feature Specs)
+
+When speccing a feature touching Eventbrite, these unsupported operations are non-negotiable:
+
+- **No user creation API** — Users 100% internal; link to Eventbrite post-purchase
+- **No order creation API** — JS SDK checkout widget only; backend reads after onOrderComplete callback
+- **No single-order cancel API** — Uncheck bulk event cancel only; per-order requires workaround
+- **No seat lock API** — Entire state machine (AVAILABLE → SOFT_LOCKED → HARD_LOCKED → CONFIRMED) is internal Redis
+- **No refund submission API** — Refund status read-only; submission requires org-token workaround
+- **No conflict validation API** — Turnaround gaps enforced entirely in internal DB
+- **No reviews API** — Reviews 100% internal; Eventbrite attendance verification only
+
+**See docs/EVENTBRITE_INTEGRATION.md for full constraints and workarounds.**
+
+If your feature hits one of these, document it in Open Questions.
+
+---
+
 ## Generation Process (Ordered Flow)
 
 The agent must generate every section in this order. Each stage builds on the previous.

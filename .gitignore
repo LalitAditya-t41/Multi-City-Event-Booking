@@ -26,3 +26,4 @@ uv.lock
 
 # Logs
 *.log
+docs/eventbriteapiv3public.apib

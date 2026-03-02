@@ -693,17 +693,139 @@ class [Module]ArchTest {
             .resideInAPackage("..[module].service..")
             .because("Mappers are pure translation — they must not call services or trigger business logic");
 
-    // Rule 6: No direct external system calls from within the module
+    // Rule 6: No direct external system calls — must use shared/ ACL facades
     @ArchTest
-    static final ArchRule no_direct_external_api_calls_in_module =
+    static final ArchRule no_direct_eventbrite_calls =
         noClasses()
             .that().resideInAPackage("..[module]..")
             .should().dependOnClassesThat()
-            .resideInAPackage("..[module]..")
-            .andShould().dependOnClassesThat()
-            .haveSimpleNameEndingWith("WebClient")
-            .because("External system calls must go through shared/[system-acl]/ facades only");
+            .resideInAPackage("com.eventbrite.client..")
+            .because("Eventbrite calls must use EbEventSyncService, EbTicketService, etc. from shared/eventbrite/service/");
+
+    @ArchTest
+    static final ArchRule no_direct_razorpay_calls =
+        noClasses()
+            .that().resideInAPackage("..[module]..")
+            .should().dependOnClassesThat()
+            .resideInAPackage("com.razorpay..")
+            .because("Razorpay calls must use RazorpayAclService from shared/payment/service/");
+
+    @ArchTest
+    static final ArchRule no_direct_openai_calls =
+        noClasses()
+            .that().resideInAPackage("..[module]..")
+            .should().dependOnClassesThat()
+            .resideInAPackage("com.openai..")
+            .because("OpenAI calls must use ChatbotAclService from shared/ai/service/");
+
+    // Rule 7: No module imports another module's service, entity, or repository
+    @ArchTest
+    static final ArchRule no_cross_module_service_imports =
+        noClasses()
+            .that().resideInAPackage("..[module]..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage(
+                "..[other-module-a].service..",
+                "..[other-module-b].service..",
+                "..[other-module-a].domain..",
+                "..[other-module-b].domain..",
+                "..[other-module-a].repository..",
+                "..[other-module-b].repository.."
+            )
+            .because("Modules communicate only via REST API or Spring Events — never import another module's internal classes");
+
+    // Rule 8: shared/ can NEVER depend on any module
+    @ArchTest
+    static final ArchRule shared_must_not_depend_on_modules =
+        noClasses()
+            .that().resideInAPackage("..shared..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage(
+                "..discovery-catalog..",
+                "..scheduling..",
+                "..identity..",
+                "..booking-inventory..",
+                "..payments-ticketing..",
+                "..promotions..",
+                "..engagement.."
+            )
+            .because("shared/ is foundational — it cannot depend on any module");
+
+    // Rule 9: Only one GlobalExceptionHandler exists in shared/common/exception/
+    @ArchTest
+    static final ArchRule only_one_global_exception_handler =
+        noClasses()
+            .that()
+            .resideInAPackage("..[module].api.exception..")
+            .should().beAnnotatedWith(ControllerAdvice.class)
+            .because("All exception handling routes through shared/common/exception/GlobalExceptionHandler — never add @ControllerAdvice in a module");
+
+    // Rule 10: Dependency direction is strictly downward; no circular imports
+    @ArchTest
+    static final ArchRule module_dependency_direction_is_downward =
+        layeredArchitecture()
+            .layer("shared").definedBy("..shared..")
+            .layer("discovery-catalog").definedBy("..discovery-catalog..")
+            .layer("scheduling").definedBy("..scheduling..")
+            .layer("identity").definedBy("..identity..")
+            .layer("booking-inventory").definedBy("..booking-inventory..")
+            .layer("payments-ticketing").definedBy("..payments-ticketing..")
+            .layer("promotions").definedBy("..promotions..")
+            .layer("engagement").definedBy("..engagement..")
+            .layer("admin").definedBy("..admin..")
+            .layer("app").definedBy("..app..")
+            
+            .whereLayer("app").mayNotAccessAnyLayer()
+            .whereLayer("admin").mayNotAccessAnyLayer()
+            .whereLayer("engagement").mayNotAccessLayers("admin", "app")
+            .whereLayer("promotions").mayNotAccessLayers("engagement", "admin", "app")
+            .whereLayer("payments-ticketing").mayNotAccessLayers("promotions", "engagement", "admin", "app")
+            .whereLayer("booking-inventory").mayNotAccessLayers("payments-ticketing", "promotions", "engagement", "admin", "app")
+            .whereLayer("scheduling").mayNotAccessLayers("booking-inventory", "payments-ticketing", "promotions", "engagement", "admin", "app")
+            .whereLayer("identity").mayNotAccessLayers("booking-inventory", "payments-ticketing", "promotions", "engagement", "admin", "app")
+            .whereLayer("discovery-catalog").mayNotAccessLayers("scheduling", "identity", "booking-inventory", "payments-ticketing", "promotions", "engagement", "admin", "app")
+            .whereLayer("shared").mayNotAccessAnyLayer()
+            
+            .because("Dependency order is: shared ← discovery-catalog ← scheduling/identity ← booking-inventory ← payments-ticketing ← promotions ← engagement ← admin ← app. No circular dependencies allowed.");
 }
+```
+
+### Testing Eventbrite Integration Rules
+
+Add these additional rules to any module that integrates with Eventbrite to enforce ACL facade usage:
+
+```java
+    // Rule: Only EbEventSyncService may read Eventbrite events
+    @ArchTest
+    static final ArchRule only_acl_service_calls_eventbrite_api =
+        noClasses()
+            .that().resideInAPackage("..[module]..")
+            .and().doNotHaveSimpleName("EbEventSyncService")
+            .and().doNotHaveSimpleName("EbVenueService")
+            .and().doNotHaveSimpleName("EbScheduleService")
+            .and().doNotHaveSimpleName("EbTicketService")
+            .and().doNotHaveSimpleName("EbCapacityService")
+            .and().doNotHaveSimpleName("EbOrderService")
+            .and().doNotHaveSimpleName("EbAttendeeService")
+            .and().doNotHaveSimpleName("EbDiscountSyncService")
+            .and().doNotHaveSimpleName("EbRefundService")
+            .and().doNotHaveSimpleName("EbWebhookService")
+            .should().dependOnClassesThat()
+            .resideInAPackage("..eventbrite..")
+            .because("Only the 10 ACL facades in shared/eventbrite/service/ may call Eventbrite API");
+
+    // Rule: User and Order creation must never happen via Eventbrite API
+    @ArchTest
+    static final ArchRule no_eventbrite_user_or_order_creation =
+        noClasses()
+            .that().resideInAPackage("..[module].service..")
+            .should().callMethodWhere(
+                target -> target.getFullName().contains("EbAttendeeService.createUser") ||
+                          target.getFullName().contains("EbOrderService.createOrder") ||
+                          target.getFullName().contains("EbOrderService.create")
+            )
+            .because("User registration and order creation are internal-only — Eventbrite has no API for these; " +
+                     "use identity module for users and booking module for orders; JavaScript SDK handles Eventbrite order creation");
 ```
 
 ### When to Add a New Arch Rule
@@ -713,6 +835,8 @@ Add a new rule to `[Module]ArchTest.java` whenever:
 - A new layer or package is introduced
 - A new external system integration is added
 - A code review reveals a violation that should be prevented automatically in future
+
+Clear example: If you implement a seat-locking state machine, add a rule preventing any @Service from bypassing the state machine and directly updating seat status.
 
 Never add a rule to suppress a valid violation. Fix the code.
 
