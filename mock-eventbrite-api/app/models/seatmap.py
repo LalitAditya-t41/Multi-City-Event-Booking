@@ -14,4 +14,4 @@ class SeatMap(Base):
     organization_id: Mapped[str] = mapped_column(String, ForeignKey("organizations.id"), nullable=False)
     venue_id: Mapped[str | None] = mapped_column(String, nullable=True)
     name: Mapped[str | None] = mapped_column(String, nullable=True)
-    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    metadata_json: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)

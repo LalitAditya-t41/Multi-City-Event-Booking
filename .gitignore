@@ -30,5 +30,21 @@ uv.lock
 
 # Logs
 *.log
-docs/eventbriteapiv3public.apib
-docs/IMPLEMENTATION_GUIDE.md
+
+docs/Files
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+.venv/
+venv/
+env/
+.env
+.env.*
+pip-wheel-metadata/

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.config import settings
@@ -10,8 +12,22 @@ from app.utils.rate_limit_middleware import RateLimitMiddleware
 from app.api.routes import events, venues, schedules, ticket_classes, capacity, seatmaps, orders, attendees, discounts, mock_admin
 
 
+@asynccontextmanager
+async def _lifespan(_: FastAPI):
+    init_db()
+    from app.database import SessionLocal
+    from app.services.seed import seed_data
+
+    session = SessionLocal()
+    try:
+        seed_data(session)
+    finally:
+        session.close()
+    yield
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title=settings.app_name)
+    app = FastAPI(title=settings.app_name, lifespan=_lifespan)
     app.add_exception_handler(ApiError, api_error_handler)
     app.add_middleware(RateLimitMiddleware)
 
@@ -25,18 +41,6 @@ def create_app() -> FastAPI:
     app.include_router(attendees.router)
     app.include_router(discounts.router)
     app.include_router(mock_admin.router)
-
-    @app.on_event("startup")
-    def _startup():
-        init_db()
-        from app.database import SessionLocal
-        from app.services.seed import seed_data
-
-        session = SessionLocal()
-        try:
-            seed_data(session)
-        finally:
-            session.close()
 
     return app
 

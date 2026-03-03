@@ -222,7 +222,7 @@ def seed_data(session: Session) -> None:
         organization_id=org.id,
         venue_id=venue.id,
         name="Main Hall",
-        metadata={"tiers": 3},
+        metadata_json={"tiers": 3},
     )
     session.add(seatmap)
 

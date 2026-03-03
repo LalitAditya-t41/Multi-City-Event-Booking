@@ -12,7 +12,7 @@ router = APIRouter(prefix="/v3", tags=["seatmaps"])
 
 
 def _to_response(sm: SeatMap) -> SeatMapResponse:
-    return SeatMapResponse(id=sm.id, name=sm.name, venue_id=sm.venue_id, metadata=sm.metadata)
+    return SeatMapResponse(id=sm.id, name=sm.name, venue_id=sm.venue_id, metadata=sm.metadata_json)
 
 
 @router.get("/organizations/{organization_id}/seatmaps/", dependencies=[Depends(require_auth)])
