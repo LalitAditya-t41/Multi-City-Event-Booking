@@ -121,6 +121,52 @@ Modules never consume the raw webhook directly.
 
 > **Note:** `EbVenueService` is read-only. Venue creation and updates are not exposed via Eventbrite's public API — they must be managed via the Eventbrite Dashboard.
 
+### Mock Eventbrite Service — Development & Testing
+
+**Location:** `mock-eventbrite-api/` (Python FastAPI, in-memory)
+
+**Purpose:** Enable local development and integration testing without making real API calls to production Eventbrite. All 10 ACL façades route through this mock service when `spring.profiles.active=mock`.
+
+**Architecture:** Python FastAPI server (async, non-blocking) provides full mock implementations of Eventbrite API v3 endpoints. Data is stored in-memory (no database persistence by default). For integration tests, add SQLite or PostgreSQL backend to the mock service.
+
+**Endpoints Mocked:**
+- `POST/GET /organizations/{org_id}/events/` 
+- `POST/GET /venues/{venue_id}/events/`
+- `GET /events/{event_id}/`
+- `POST/GET /ticket_classes/`
+- `POST/GET /inventory_tiers/`
+- `POST/GET /capacity_tiers/`
+- `POST/GET /orders/`
+- `POST/GET /attendees/`
+- `POST/GET /discounts/`
+- `POST/GET /webhooks/` (webhook registration)
+- ... and 100+ supporting endpoints
+
+**Configuration:**
+- **Spring Profile:** `mock` (Spring Boot automatically routes all ACL façade calls to mock service)
+- **Environment Variable:** `EVENTBRITE_API_URL=http://localhost:9000/v3/` (when using mock profile)
+- **Startup Command:** 
+  ```bash
+  cd mock-eventbrite-api
+  python -m uvicorn app.main:app --host 0.0.0.0 --port 9000 --reload
+  ```
+
+**Trade-Offs:**
+| Aspect | Behavior |
+|---|---|
+| **Data Persistence** | In-memory; lost on shutdown. Acceptable for rapid iteration. |
+| **Latency** | Minimal (<5ms); no real network calls. |
+| **API Fidelity** | Matches Eventbrite API v3 schema exactly; test against real contract. |
+| **Concurrency** | Handles parallel requests; respects single-flight locks for testing. |
+| **Webhooks** | Simulates webhook delivery for testing event-driven flows. |
+
+**Usage Pattern:**
+- **Local Dev:** Run mock service; set `spring.profiles.active=mock` in `application-mock.properties`
+- **Integration Tests:** Use Spring `@ActiveProfiles("mock")` to inject mock implementations
+- **Production:** Set `spring.profiles.active=production`; real Eventbrite API calls occur
+
+**See** `mock-eventbrite-api/README.md` **for detailed mock service documentation, sample payloads, and configuration options.**
+
 ## 5. Eventbrite Integration Principles
 
 **Core Architecture:** Your internal DB is the primary source of truth. Eventbrite is the ticketing/payment backbone. Every entity is created internally first — then pushed to Eventbrite. The `eventbrite_event_id` returned from each push is stored in your DB and is the bridge between both systems.

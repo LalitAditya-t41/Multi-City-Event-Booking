@@ -50,7 +50,7 @@ Before speccing any feature, understand the module structure and dependency orde
 |---|---|---|
 | discovery-catalog | Events, Venues, Cities, catalog sync | EbEventSyncService, EbTicketService |
 | scheduling | Show slots, conflict validation | EbEventSyncService |
-| identity | Users, JWT, profiles, preferences | None (100% internal) |
+| identity | Users, JWT, profiles, preferences | EbAttendeeService |
 | booking-inventory | Seats, SeatMap, Cart, Seat Lock State Machine | EbTicketService |
 | payments-ticketing | Bookings, Payments, E-Tickets, Cancellations, Refunds | EbOrderService, EbAttendeeService, EbRefundService |
 | promotions | Coupons, Promotions, Eligibility rules | EbDiscountSyncService |
@@ -227,7 +227,7 @@ the three rules below. Using the wrong mechanism is an architectural violation.
 
 | Interaction Type | When to Use | Correct Mechanism |
 |---|---|---|
-| Query (sync read) | This module needs data owned by another module | Call the other module's **REST API endpoint** — never import its `@Service` or `@Repository` |
+| Query (sync read) | This module needs data owned by another module | Call the other module's **REST API endpoint** — never import its `@Service` or `@Repository` (Exception: `admin/` may import module `@Service` for READ-only operations) |
 | Command (async) | This module completed something others should react to | Publish a **Spring `ApplicationEvent`** — never call the other module directly |
 | Shared contract | An enum, base class, or DTO used by 2+ modules | Lives in **`shared/common/`** only — never duplicated across modules |
 
@@ -409,7 +409,7 @@ Errors:
   404  ResourceNotFoundException      → "Human-readable: [resource] with id {id} not found"
   422  BusinessRuleException          → "Human-readable: [rule that was violated]"
   400  MethodArgumentNotValidException → "Validation failed: [field] [constraint message]"
-  502  [System]IntegrationException   → "An external service error occurred. Please try again."
+  502  SystemIntegrationException   → "An external service error occurred. Please try again."
 ```
 
 **Error handling rules:**
@@ -420,7 +420,7 @@ Errors:
 - Module-specific exceptions (e.g. `BookingNotFoundException`) extend `ResourceNotFoundException`
   from `shared/common/exception/` — they are never defined from scratch.
 - Payment, external service, or integration errors must never expose vendor internals to the client.
-  Always use `[System]IntegrationException` → maps to 502 via `GlobalExceptionHandler`.
+  Always use `SystemIntegrationException` → maps to 502 via `GlobalExceptionHandler`.
 
 **External integration rule:**
 If any endpoint triggers a call to an external system (payment gateway, email, SMS, etc.),
@@ -581,6 +581,10 @@ from `shared/common/exception/` — never extend `RuntimeException` directly.
 
 Every requirement tagged `[MUST]` must have at least one test. Every business logic rule,
 state transition, and error path must have a test. Tests are not optional.
+
+**Execution ownership:** After Stage 8 test list/specification is finalized, hand off implementation
+and execution to `agents/TEST_AGENT.md`. The Test Agent writes tests, runs them, fixes failures,
+and logs outcomes in `test_result_folder/` with timestamped filenames.
 
 Tests are organised into four layers matching the source package structure. The agent must
 assign every test case to the correct layer — never put business logic tests in `api/`
