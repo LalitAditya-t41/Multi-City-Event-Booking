@@ -1,9 +1,9 @@
 package com.eventplatform.shared.eventbrite.service;
 
-import com.eventplatform.shared.eventbrite.dto.EbInventoryTierRequest;
-import com.eventplatform.shared.eventbrite.dto.EbInventoryTierResponse;
-import com.eventplatform.shared.eventbrite.dto.EbTicketClassRequest;
-import com.eventplatform.shared.eventbrite.dto.EbTicketClassResponse;
+import com.eventplatform.shared.eventbrite.dto.request.EbInventoryTierRequest;
+import com.eventplatform.shared.eventbrite.dto.response.EbInventoryTierResponse;
+import com.eventplatform.shared.eventbrite.dto.request.EbTicketClassRequest;
+import com.eventplatform.shared.eventbrite.dto.response.EbTicketClassResponse;
 import com.eventplatform.shared.eventbrite.exception.EbIntegrationException;
 import java.util.List;
 import org.slf4j.Logger;

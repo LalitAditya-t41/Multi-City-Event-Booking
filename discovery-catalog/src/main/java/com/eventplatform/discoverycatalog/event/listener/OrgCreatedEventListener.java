@@ -3,7 +3,7 @@ package com.eventplatform.discoverycatalog.event.listener;
 import com.eventplatform.discoverycatalog.domain.WebhookConfig;
 import com.eventplatform.discoverycatalog.repository.WebhookConfigRepository;
 import com.eventplatform.shared.common.event.published.OrgCreatedEvent;
-import com.eventplatform.shared.eventbrite.dto.EbWebhookRegistrationResult;
+import com.eventplatform.shared.eventbrite.dto.response.EbWebhookRegistrationResult;
 import com.eventplatform.shared.eventbrite.service.EbWebhookService;
 import java.time.Instant;
 import java.util.List;

@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.eventplatform.shared.eventbrite.domain.OrganizationAuth;
 import com.eventplatform.shared.eventbrite.domain.OrgAuthStatus;
-import com.eventplatform.shared.eventbrite.dto.EbOAuthTokenResponse;
+import com.eventplatform.shared.eventbrite.dto.response.EbOAuthTokenResponse;
 import com.eventplatform.shared.eventbrite.exception.EbAuthException;
 import com.eventplatform.shared.eventbrite.repository.OrganizationAuthRepository;
 import java.time.Instant;

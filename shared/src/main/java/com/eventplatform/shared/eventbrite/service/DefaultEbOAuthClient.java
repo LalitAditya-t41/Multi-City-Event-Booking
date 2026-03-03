@@ -1,6 +1,6 @@
 package com.eventplatform.shared.eventbrite.service;
 
-import com.eventplatform.shared.eventbrite.dto.EbOAuthTokenResponse;
+import com.eventplatform.shared.eventbrite.dto.response.EbOAuthTokenResponse;
 import com.eventplatform.shared.eventbrite.exception.EbIntegrationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

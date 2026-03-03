@@ -17,7 +17,7 @@ import com.eventplatform.discoverycatalog.repository.CityRepository;
 import com.eventplatform.discoverycatalog.repository.VenueRepository;
 import com.eventplatform.discoverycatalog.service.cache.EventCatalogSnapshotCache;
 import com.eventplatform.shared.common.enums.SeatingMode;
-import com.eventplatform.shared.eventbrite.dto.EbVenueResponse;
+import com.eventplatform.shared.eventbrite.dto.response.EbVenueResponse;
 import com.eventplatform.shared.eventbrite.exception.EbIntegrationException;
 import com.eventplatform.shared.eventbrite.service.EbVenueService;
 import java.util.List;

@@ -32,7 +32,7 @@ import com.eventplatform.shared.common.event.published.SlotDraftCreatedEvent;
 import com.eventplatform.shared.common.event.published.SlotSyncFailedEvent;
 import com.eventplatform.shared.common.exception.BusinessRuleException;
 import com.eventplatform.shared.common.exception.ValidationException;
-import com.eventplatform.shared.eventbrite.dto.EbEventDto;
+import com.eventplatform.shared.eventbrite.dto.response.EbEventDto;
 import com.eventplatform.shared.eventbrite.exception.EbIntegrationException;
 import com.eventplatform.shared.eventbrite.service.EbCapacityService;
 import com.eventplatform.shared.eventbrite.service.EbEventSyncService;

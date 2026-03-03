@@ -1,4 +1,4 @@
-package com.eventplatform.shared.eventbrite.dto;
+package com.eventplatform.shared.eventbrite.dto.response;
 
 public record EbCapacityResponse(
     String eventId,

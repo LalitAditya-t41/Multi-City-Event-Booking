@@ -1,7 +1,7 @@
 package com.eventplatform.shared.eventbrite.service;
 
-import com.eventplatform.shared.eventbrite.dto.EbVenueCreateRequest;
-import com.eventplatform.shared.eventbrite.dto.EbVenueResponse;
+import com.eventplatform.shared.eventbrite.dto.request.EbVenueCreateRequest;
+import com.eventplatform.shared.eventbrite.dto.response.EbVenueResponse;
 import com.eventplatform.shared.eventbrite.exception.EbIntegrationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

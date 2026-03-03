@@ -3,7 +3,7 @@ package com.eventplatform.scheduling.service;
 import com.eventplatform.scheduling.domain.ShowSlot;
 import com.eventplatform.scheduling.domain.enums.ShowSlotStatus;
 import com.eventplatform.scheduling.repository.ShowSlotRepository;
-import com.eventplatform.shared.eventbrite.dto.EbEventDto;
+import com.eventplatform.shared.eventbrite.dto.response.EbEventDto;
 import com.eventplatform.shared.eventbrite.exception.EbIntegrationException;
 import com.eventplatform.shared.eventbrite.service.EbEventSyncService;
 import java.util.List;

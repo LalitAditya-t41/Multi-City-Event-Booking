@@ -1,4 +1,4 @@
-package com.eventplatform.shared.eventbrite.dto;
+package com.eventplatform.shared.eventbrite.dto.request;
 
 import java.time.ZonedDateTime;
 

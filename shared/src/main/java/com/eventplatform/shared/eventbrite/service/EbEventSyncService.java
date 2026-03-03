@@ -1,8 +1,8 @@
 package com.eventplatform.shared.eventbrite.service;
 
-import com.eventplatform.shared.eventbrite.dto.EbEventCreateRequest;
-import com.eventplatform.shared.eventbrite.dto.EbEventDto;
-import com.eventplatform.shared.eventbrite.dto.EbEventUpdateRequest;
+import com.eventplatform.shared.eventbrite.dto.request.EbEventCreateRequest;
+import com.eventplatform.shared.eventbrite.dto.response.EbEventDto;
+import com.eventplatform.shared.eventbrite.dto.request.EbEventUpdateRequest;
 import java.util.List;
 
 public interface EbEventSyncService {

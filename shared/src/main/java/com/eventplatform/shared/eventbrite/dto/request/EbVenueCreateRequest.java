@@ -1,4 +1,4 @@
-package com.eventplatform.shared.eventbrite.dto;
+package com.eventplatform.shared.eventbrite.dto.request;
 
 public record EbVenueCreateRequest(
     String name,
