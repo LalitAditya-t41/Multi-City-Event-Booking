@@ -48,3 +48,4 @@ env/
 .env
 .env.*
 pip-wheel-metadata/
+/export_session_md.py

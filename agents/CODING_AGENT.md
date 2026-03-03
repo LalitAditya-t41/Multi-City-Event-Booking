@@ -12,7 +12,14 @@
 - [ ] Read `PRODUCT.md` — confirm which module owns this feature, check the inter-module event map and ACL facade names
 - [ ] Read the confirmed `SPEC.md` for this feature — domain model, API, business logic, error handling
 - [ ] Read `docs/MODULE_STRUCTURE_TEMPLATE.md` — confirm which package and layer each class belongs to
-- [ ] Read `docs/TESTING_GUIDE.md` — know what tests to write before writing production code
+- [ ] Read `agents/TEST_AGENT.md` — testing implementation/execution/logging ownership is delegated to the Test Agent
+
+### Scope Boundary for CODING_AGENT
+
+- CODING_AGENT owns **production code quality and architecture compliance**.
+- CODING_AGENT does **not** own end-to-end test authoring/execution workflow by default.
+- Test creation, execution, and failure/fix logging are owned by `agents/TEST_AGENT.md`.
+- If explicitly asked to write tests in the same task, follow `docs/TESTING_GUIDE.md` and coordinate with TEST_AGENT standards.
 
 ---
 
@@ -111,7 +118,7 @@ log.info("Booking confirmed: " + bookingId); // string concatenation, not parame
 
 ## Inter-Module Communication Patterns
 
-Modules communicate via REST (sync queries) or Spring Events (async commands). Never import another module's @Service directly.
+Modules communicate via REST (sync queries) or Spring Events (async commands). Never import another module's @Service directly (exception: `admin/` may import module `@Service` for READ-only operations).
 
 **Pattern 1: REST Query** — Module B needs data from upstream Module A
 ```java
@@ -170,7 +177,7 @@ public enum BookingStatus { PENDING, CONFIRMED, CANCELLED, REFUNDED }
 | EbAttendeeService | payments-ticketing, engagement | Get attendees; verify attendance for reviews |
 | EbDiscountSyncService | promotions | Create/update/delete discount codes |
 | EbRefundService | payments-ticketing | Read refund status (no submission API) |
-| EbWebhookService | shared/eventbrite/webhook/ | Register webhooks |
+| EbWebhookService | mock-eventbrite-api only | Mock/testing webhook registration and delivery simulation (NOT production) |
 
 ### Correct Pattern
 
@@ -344,8 +351,8 @@ and calls ACL facades for external systems. It owns no business logic itself —
 - Never call a mapper — that is the controller's job
 - Never map fields manually
 - Wrap multi-step operations in `@Transactional`
-- Never call another module's `@Service` directly — use REST or Events
-- **CRITICAL: All external system calls go ONLY through ACL facade services from `shared/`. Never call Eventbrite, Razorpay, or OpenAI HTTP directly. See "Eventbrite ACL Facades" section above in "Coding Standards".**
+- Never call another module's `@Service` directly — use REST or Events (exception: `admin/` read-only aggregation)
+- **CRITICAL: All external system calls go ONLY through ACL facade services from `shared/`. Never call Eventbrite or OpenAI HTTP directly. See "Eventbrite ACL Facades" section above in "Coding Standards".**
 
 ```java
 // ✅ Correct service
@@ -356,7 +363,7 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final RazorpayPaymentService razorpayPaymentService; // ACL facade from shared/
+    private final EbOrderService ebOrderService; // ACL facade from shared/eventbrite/service/
 
     @Transactional
     public Booking confirmBooking(UUID bookingId) {
@@ -380,28 +387,11 @@ public class BookingService {
 
     @Transactional
     public Booking initiateBooking(CreateBookingCommand command) {
-        PaymentResult paymentResult;
+        // 5. Checkout happens via Eventbrite JS widget; backend only reads order after callback
+        EbOrder order = ebOrderService.getOrderById(command.eventbriteOrderId());
 
-        // 5. Call ACL facade — never call Razorpay directly
-        try {
-            paymentResult = razorpayPaymentService.charge(
-                new ChargeRequest(command.amount(), command.paymentMethodId()));
-        } catch (RazorpayIntegrationException e) {
-            log.error("Payment charge failed. userId={}", command.userId(), e);
-            throw e; // propagate — GlobalExceptionHandler maps to 502
-        }
-
-        Booking booking = new Booking(command.userId(), command.cartId(), paymentResult.paymentIntentId());
-
-        try {
-            bookingRepository.save(booking);
-        } catch (Exception e) {
-            // Compensate — charge succeeded but DB failed
-            log.error("DB write failed after successful charge. paymentIntentId={} Initiating refund.",
-                paymentResult.paymentIntentId(), e);
-            razorpayPaymentService.refund(paymentResult.paymentIntentId());
-            throw new RuntimeException("Booking creation failed. Refund has been initiated.", e);
-        }
+        Booking booking = new Booking(command.userId(), command.cartId(), order.id());
+        bookingRepository.save(booking);
 
         eventPublisher.publishEvent(new BookingInitiatedEvent(booking.getId(), booking.getUserId()));
         return booking;
@@ -623,7 +613,7 @@ throw new BookingNotFoundException(bookingId);
 throw new BusinessRuleException("Cannot confirm a booking in status: " + status);
 
 // 502 — external system failure
-throw new RazorpayIntegrationException("Payment gateway returned 503: " + detail);
+throw new SystemIntegrationException("Eventbrite API returned 503: " + detail);
 ```
 
 ---
@@ -730,33 +720,23 @@ public class EventAssistantService {
 Every external system integration follows this structure. Never deviate.
 
 ```java
-// shared/razorpay/service/RazorpayPaymentService.java
-// ✅ Correct ACL facade — the ONLY thing modules call for Razorpay
+// shared/eventbrite/service/EbOrderService.java
+// ✅ Correct ACL facade — modules read order data from Eventbrite post-checkout
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class RazorpayPaymentService {
+public class EbOrderService {
 
-    private final RazorpayWebClient razorpayWebClient; // raw HTTP — in client/ package
-    private final RazorpayOrderMapper mapper;           // translates external → internal
+    private final EventbriteOrderWebClient eventbriteOrderWebClient; // raw HTTP in shared ACL only
+    private final EbOrderMapper mapper;
 
-    public PaymentResult charge(ChargeRequest request) {
+    public EbOrder getOrderById(String orderId) {
         try {
-            RazorpayOrderResponse response = razorpayWebClient.createOrder(
-                mapper.toRazorpayRequest(request));
-            return mapper.toPaymentResult(response);
+            EbOrderResponse response = eventbriteOrderWebClient.getOrder(orderId);
+            return mapper.toDomain(response);
         } catch (WebClientResponseException e) {
-            log.error("Razorpay charge failed. status={} body={}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new RazorpayIntegrationException("Payment gateway error: " + e.getMessage());
-        }
-    }
-
-    public void refund(String paymentIntentId) {
-        try {
-            razorpayWebClient.refundOrder(paymentIntentId);
-        } catch (WebClientResponseException e) {
-            log.error("Razorpay refund failed. paymentIntentId={}", paymentIntentId, e);
-            throw new RazorpayIntegrationException("Refund failed: " + e.getMessage());
+            log.error("Eventbrite order read failed. orderId={} status={}", orderId, e.getStatusCode());
+            throw new SystemIntegrationException("Eventbrite order lookup failed: " + e.getMessage());
         }
     }
 }
@@ -862,7 +842,7 @@ try {
 // ❌ Never commit TODO comments — raise as Open Questions in the spec instead
 
 // ❌ Never hardcode URLs, secrets, or config values
-String url = "https://api.razorpay.com/v1/orders"; // wrong
+String url = "https://api.eventbrite.com/v3/orders"; // wrong
 // Use @Value or @ConfigurationProperties from shared/config/
 
 // ❌ Never use Thread.sleep() in production code — use scheduled tasks or events
@@ -875,7 +855,7 @@ String url = "https://api.razorpay.com/v1/orders"; // wrong
 - [ ] Every new class is in the correct layer and package per `docs/MODULE_STRUCTURE_TEMPLATE.md`
 - [ ] No `@Service`, `@Component`, or `@Autowired` in `domain/` classes
 - [ ] No field mapping in services or controllers — all in `mapper/`
-- [ ] **No external API calls inside module code — ALL through `shared/` ACL facades (Eventbrite, Razorpay, OpenAI)**
+- [ ] **No external API calls inside module code — ALL through `shared/` ACL facades (Eventbrite, OpenAI)**
 - [ ] **Eventbrite: No module calls Eventbrite HTTP directly. All calls via EbEventSyncService, EbVenueService, EbTicketService, EbOrderService, EbAttendeeService, etc.**
 - [ ] **Eventbrite: Never attempt order creation, user creation, single-order cancel, seat locking, or cart persistence (not supported)**
 - [ ] No cross-module `@Service` or `@Repository` imports
@@ -888,7 +868,5 @@ String url = "https://api.razorpay.com/v1/orders"; // wrong
 - [ ] `@TransactionalEventListener(phase = AFTER_COMMIT)` used for post-commit listeners
 - [ ] Constructor injection used everywhere — no `@Autowired` on fields
 - [ ] New Flyway migration file added for every schema change, with correct global version number
-- [ ] Tests written for all four layers: `domain/`, `service/`, `api/`, `arch/`
-- [ ] `arch/` test includes a rule for every new architectural decision introduced by this feature
 - [ ] **admin/ Module: Reads can import module @Service directly. Writes MUST call owning module's REST API.**
 - [ ] **If feature touches multiple modules: Spring Events used for async reactions, never direct service calls**

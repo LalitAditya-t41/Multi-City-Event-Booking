@@ -14,7 +14,9 @@
 | `docs/MODULE_STRUCTURE_TEMPLATE.md` | Canonical folder and package layout for every module. The exact location of every layer: `api/controller/`, `api/dto/`, `domain/`, `service/`, `repository/`, `mapper/`, `event/published/`, `event/listener/`, `statemachine/`, `exception/`. Anti-patterns list. Read this before writing any class. |
 | `agents/SPEC_GENERATOR.md` | How to produce a `SPEC.md` for any feature. Eight confirmation-gated stages with module context and Eventbrite constraints built-in. Requirements → Domain Model → Architecture & File Structure → DB Schema → API → Business Logic → Error Handling → Tests. Read this before speccing any feature. |
 | `agents/CODING_AGENT.md` | Spring Boot 3.5.11 / Java 21 coding standards. Domain behaviour, service orchestration, mapper rules, controller rules, event rules, 10 Eventbrite ACL facades, inter-module communication (REST + Spring Events), admin/ special rules, state machine, Spring AI. Read this before writing any production code. |
+| `agents/TEST_AGENT.md` | Test agent responsibilities and best practices. Builds tests from `SPEC_*.md` Stage 8, executes tests, fixes test/code issues caused by behavior mismatches, and writes timestamped logs under `test_result_folder/`. Read this before writing or running tests. |
 | `docs/TESTING_GUIDE.md` | Four-layer test structure: `domain/` (unit), `service/` (Mockito), `api/` (@WebMvcTest), `arch/` (ArchUnit enforcing 10 hard rules + Eventbrite constraints). All rule examples, happy path, negative path, exception patterns. Read before writing any test. |
+| `mock-eventbrite-api/README.md` | **Mock Eventbrite Service:** Python FastAPI in-memory mock of Eventbrite API v3. Used for local development and testing. Exposes all 10 ACL facade endpoints without hitting production Eventbrite. See setup instructions below. |
 
 ---
 
@@ -38,9 +40,10 @@ Full detail for each module is in `PRODUCT.md`. This table is a lookup only.
 
 ## Hard Rules — Never Violate
 
-These are repeated from `PRODUCT.md`. They apply to every task without exception.
+Canonical numbering and wording are owned by `PRODUCT.md` Section 9. These shorthand rules apply to every task without exception.
 
 1. No module imports another module's `@Service`, `@Entity`, or `@Repository`.
+  - Exception: `admin/` MAY import module `@Service` beans for READ operations only; all writes MUST go through the owning module REST API.
 2. No module calls Eventbrite, Razorpay, or OpenAI HTTP directly — only through `shared/` ACL facades.
 3. ACL facade names are exactly as listed below — never invent new ones.
 4. Spring Events carry only primitives, IDs, enums, and value objects — never `@Entity` objects.
@@ -54,6 +57,7 @@ These are repeated from `PRODUCT.md`. They apply to every task without exception
 ---
 
 ## Eventbrite ACL Facade Names (HARD RULE #3)
+Read the docs/eventbriteapiv3public.apib for detail API Endpoint with schema, Response, Request and errors
 
 All 10 facades are in `shared/eventbrite/service/`. These are the ONLY things modules call for Eventbrite:
 
@@ -66,7 +70,7 @@ All 10 facades are in `shared/eventbrite/service/`. These are the ONLY things mo
 7. **EbAttendeeService** — List attendees; verify attendance for reviews
 8. **EbDiscountSyncService** — Create, update, delete discount codes
 9. **EbRefundService** — Read refund status only (NO submission API — workaround required)
-10. **EbWebhookService** — Register and manage webhooks
+10. **EbWebhookService** — Mock/testing only; not used in production registration flow
 
 **See `docs/EVENTBRITE_INTEGRATION.md` for which module uses which facade and what gaps exist.**
 
