@@ -1,9 +1,11 @@
 package com.eventplatform.discoverycatalog.api.controller;
 
 import com.eventplatform.discoverycatalog.api.dto.response.VenueListResponse;
+import com.eventplatform.discoverycatalog.api.dto.response.VenueResponse;
 import com.eventplatform.discoverycatalog.service.VenueCatalogService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,9 +25,16 @@ public class VenueCatalogController {
     @GetMapping("/venues")
     public VenueListResponse listVenues(
         @RequestParam(name = "cityId") Long cityId,
+        @RequestParam(name = "orgId", required = false) Long organizationId,
         @RequestParam(name = "page", defaultValue = "0") int page,
         @RequestParam(name = "size", defaultValue = "20") int size
     ) {
-        return venueCatalogService.listVenues(defaultOrgId, cityId, page, size);
+        Long resolvedOrgId = organizationId != null ? organizationId : defaultOrgId;
+        return venueCatalogService.listVenues(resolvedOrgId, cityId, page, size);
+    }
+
+    @GetMapping("/venues/{id}")
+    public VenueResponse getVenue(@PathVariable("id") Long venueId) {
+        return venueCatalogService.getVenue(venueId);
     }
 }

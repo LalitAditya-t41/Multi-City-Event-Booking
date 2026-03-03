@@ -45,4 +45,10 @@ public class VenueCatalogService {
         PaginationInfo pagination = new PaginationInfo(page, size, venues.getTotalElements(), venues.getTotalPages());
         return new VenueListResponse(venues.getContent(), pagination);
     }
+
+    public VenueResponse getVenue(Long venueId) {
+        return venueRepository.findById(venueId)
+            .map(venueMapper::toResponse)
+            .orElseThrow(() -> new CatalogNotFoundException("Venue not found: " + venueId));
+    }
 }

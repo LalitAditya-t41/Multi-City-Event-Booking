@@ -107,6 +107,11 @@ public class EventCatalogItem extends BaseEntity {
         this.deletedAt = deletedAt;
     }
 
+    public void markCancelled(Instant changedAt) {
+        this.state = EventState.CANCELLED;
+        this.eventbriteChangedAt = changedAt;
+    }
+
     public Long getOrganizationId() {
         return organizationId;
     }
