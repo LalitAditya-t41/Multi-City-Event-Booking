@@ -87,7 +87,7 @@ Modules never consume the raw webhook directly.
   - Create (org-scoped), update, publish, unpublish, cancel, delete events; pull org event catalog; verify sync integrity
   
 - **EbVenueService** (`shared/eventbrite/service/`)
-  - Read-only: List events at a venue. Venue creation/updates not available via API (Dashboard only).
+  - Create venues under an org (`POST /organizations/{org_id}/venues/`); update venues (`POST /venues/{venue_id}/`); list org venues (`GET /organizations/{org_id}/venues/`); list events at a venue (`GET /venues/{venue_id}/events/`).
   
 - **EbScheduleService** (`shared/eventbrite/service/`)
   - Create recurring event schedules and occurrences; retrieve series info
@@ -119,7 +119,7 @@ Modules never consume the raw webhook directly.
 
 > **Note:** `EbRefundService` does NOT submit refunds programmatically. Refund status is read from the order's `refund_request` field only. Actual refund initiation is handled by mimicking admin actions via Eventbrite org token (backend only).
 
-> **Note:** `EbVenueService` is read-only. Venue creation and updates are not exposed via Eventbrite's public API — they must be managed via the Eventbrite Dashboard.
+> **Note:** `EbVenueService` supports venue creation (`POST /organizations/{org_id}/venues/`) and updates (`POST /venues/{venue_id}/`). The Eventbrite API v3 exposes both endpoints. Venue creation in your app always pushes to Eventbrite and stores the returned `eb_venue_id`.
 
 ### Mock Eventbrite Service — Development & Testing
 
