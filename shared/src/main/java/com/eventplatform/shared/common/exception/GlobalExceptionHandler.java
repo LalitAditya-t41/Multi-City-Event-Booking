@@ -1,0 +1,44 @@
+package com.eventplatform.shared.common.exception;
+
+import java.time.Instant;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(BaseException.class)
+    public ResponseEntity<ErrorResponse> handleBaseException(BaseException ex) {
+        ErrorResponse response = new ErrorResponse(
+            ex.getErrorCode(),
+            ex.getMessage(),
+            ex.getHttpStatus().value(),
+            Instant.now()
+        );
+        return ResponseEntity.status(ex.getHttpStatus()).body(response);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
+        ErrorResponse response = new ErrorResponse(
+            "VALIDATION_ERROR",
+            ex.getMessage(),
+            400,
+            Instant.now()
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
+        ErrorResponse response = new ErrorResponse(
+            "INTERNAL_ERROR",
+            ex.getMessage(),
+            500,
+            Instant.now()
+        );
+        return ResponseEntity.status(500).body(response);
+    }
+}
