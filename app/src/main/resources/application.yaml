@@ -23,11 +23,23 @@ spring:
 
 app:
   default-org-id: 1
+  internal-base-url: http://localhost:8080
 
 eventbrite:
+  oauth:
+    client-id: local-client-id
+    redirect-uri: http://localhost:8080/api/v1/admin/orgs/1/eventbrite/callback
+    encryption-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+  retry:
+    max-attempts: 3
+    initial-backoff-ms: 250
+    max-backoff-ms: 5000
   webhook:
     secret: local-dev-secret
     endpoint-url: http://localhost:8080/admin/v1/webhooks/eventbrite
+
+scheduling:
+  turnaround-gap-minutes: 60
 
 management:
   endpoints:
