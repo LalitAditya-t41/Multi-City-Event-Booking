@@ -1,0 +1,21 @@
+[project]
+name = "mock-eventbrite-api"
+version = "0.1.0"
+description = "Mock Eventbrite API service"
+requires-python = ">=3.10"
+
+dependencies = [
+  "fastapi==0.104.1",
+  "uvicorn==0.24.0",
+  "sqlalchemy==2.0.23",
+  "pydantic==2.5.0",
+  "pydantic-settings==2.1.0",
+  "httpx==0.25.1",
+  "apscheduler==3.10.4",
+  "python-multipart==0.0.6",
+  "pytest==7.4.4",
+  "requests==2.31.0",
+]
+
+[tool.uv]
+# uv will use this project metadata; no additional config required.
