@@ -67,11 +67,11 @@ public class VenueService {
         } catch (EbIntegrationException ex) {
             venue.markSyncFailed(ex.getMessage());
             venueRepository.save(venue);
-            throw ex;
+            return venue;
         } catch (Exception ex) {
             venue.markSyncFailed(ex.getMessage());
             venueRepository.save(venue);
-            throw new CatalogSyncException("Failed to sync venue with Eventbrite", ex);
+            return venue;
         }
     }
 
@@ -102,9 +102,8 @@ public class VenueService {
             }
             venue = venueRepository.save(venue);
         } catch (EbIntegrationException ex) {
-            venue.markSyncFailed(ex.getMessage());
+            venue.markDrift(ex.getMessage());
             venueRepository.save(venue);
-            throw ex;
         } finally {
             snapshotCache.invalidate(organizationId, venue.getCityId());
         }
@@ -131,7 +130,7 @@ public class VenueService {
         } catch (EbIntegrationException ex) {
             venue.markSyncFailed(ex.getMessage());
             venueRepository.save(venue);
-            throw ex;
+            return venue;
         } finally {
             snapshotCache.invalidate(organizationId, venue.getCityId());
         }

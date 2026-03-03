@@ -13,4 +13,11 @@ class DiscoveryCatalogArchTest {
     @ArchTest
     static final ArchRule should_not_have_controller_advice =
         noClasses().should().beAnnotatedWith(ControllerAdvice.class);
+
+    @ArchTest
+    static final ArchRule listeners_should_not_import_scheduling_domain =
+        noClasses()
+            .that().resideInAPackage("..discoverycatalog.event.listener..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage("..com.eventplatform.scheduling.domain..", "..com.eventplatform.scheduling.repository..");
 }

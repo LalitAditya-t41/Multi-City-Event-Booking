@@ -3,6 +3,7 @@ package com.eventplatform.scheduling.domain;
 import com.eventplatform.scheduling.domain.enums.ShowSlotStatus;
 import com.eventplatform.shared.common.domain.BaseEntity;
 import com.eventplatform.shared.common.enums.SeatingMode;
+import com.eventplatform.shared.common.exception.BusinessRuleException;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -207,6 +208,33 @@ public class ShowSlot extends BaseEntity {
     public void addOccurrence(ShowSlotOccurrence occurrence) {
         occurrences.add(occurrence);
         occurrence.attachTo(this);
+    }
+
+    public void submit() {
+        if (status != ShowSlotStatus.DRAFT) {
+            throw new BusinessRuleException("Invalid slot transition: " + status + " -> PENDING_SYNC", "INVALID_SLOT_TRANSITION");
+        }
+        if (pricingTiers == null || pricingTiers.isEmpty()) {
+            throw new BusinessRuleException("Slot must have at least one pricing tier before submission", "MISSING_PRICING_TIERS");
+        }
+        markPendingSync();
+    }
+
+    public void activate() {
+        if (status != ShowSlotStatus.PENDING_SYNC) {
+            throw new BusinessRuleException("Invalid slot transition: " + status + " -> ACTIVE", "INVALID_SLOT_TRANSITION");
+        }
+        markActive();
+    }
+
+    public void cancel() {
+        if (status == ShowSlotStatus.CANCELLED) {
+            throw new BusinessRuleException("Slot already cancelled", "SLOT_ALREADY_CANCELLED");
+        }
+        if (status == ShowSlotStatus.DRAFT) {
+            throw new BusinessRuleException("DRAFT slots must be deleted, not cancelled", "SLOT_DRAFT_CANCEL");
+        }
+        markCancelled();
     }
 
     public void markPendingSync() {

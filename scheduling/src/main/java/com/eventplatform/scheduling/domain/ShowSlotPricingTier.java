@@ -3,6 +3,7 @@ package com.eventplatform.scheduling.domain;
 import com.eventplatform.scheduling.domain.enums.TierType;
 import com.eventplatform.shared.common.domain.BaseEntity;
 import com.eventplatform.shared.common.domain.Money;
+import com.eventplatform.shared.common.exception.BusinessRuleException;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.Column;
@@ -50,6 +51,12 @@ public class ShowSlotPricingTier extends BaseEntity {
     }
 
     public ShowSlotPricingTier(String name, Money price, Integer quota, TierType tierType) {
+        if (quota == null || quota <= 0) {
+            throw new BusinessRuleException("Pricing tier quota must be greater than 0", "INVALID_TIER_QUOTA");
+        }
+        if (tierType == TierType.FREE && price != null && price.amount().signum() > 0) {
+            throw new BusinessRuleException("FREE tier must have priceAmount = 0", "INVALID_TIER_PRICE");
+        }
         this.name = name;
         this.price = price;
         this.quota = quota;

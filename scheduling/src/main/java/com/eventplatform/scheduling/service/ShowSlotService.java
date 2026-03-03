@@ -22,6 +22,7 @@ import com.eventplatform.shared.common.event.published.TicketSyncCompletedEvent;
 import com.eventplatform.shared.common.event.published.TicketSyncFailedEvent;
 import com.eventplatform.shared.common.exception.BusinessRuleException;
 import com.eventplatform.shared.common.exception.IntegrationException;
+import com.eventplatform.shared.common.exception.ValidationException;
 import com.eventplatform.shared.eventbrite.dto.EbEventCreateRequest;
 import com.eventplatform.shared.eventbrite.dto.EbEventDto;
 import com.eventplatform.shared.eventbrite.dto.EbEventUpdateRequest;
@@ -30,6 +31,7 @@ import com.eventplatform.shared.eventbrite.exception.EbIntegrationException;
 import com.eventplatform.shared.eventbrite.service.EbCapacityService;
 import com.eventplatform.shared.eventbrite.service.EbEventSyncService;
 import com.eventplatform.shared.eventbrite.service.EbScheduleService;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -81,6 +83,7 @@ public class ShowSlotService {
     @Transactional
     public ShowSlot createSlot(Long organizationId, CreateShowSlotRequest request) {
         CatalogVenueResponse venue = venueCatalogClient.getVenue(request.venueId());
+        validateCreateRequest(venue, request);
         conflictDetectionService.validateOrThrow(organizationId, venue, request.startTime(), request.endTime());
 
         ShowSlot slot = showSlotMapper.toEntity(organizationId, request.venueId(), venue.cityId(), request);
@@ -167,22 +170,32 @@ public class ShowSlotService {
     }
 
     @Transactional
-    public ShowSlot updateSlot(Long organizationId, Long slotId, UpdateShowSlotRequest request) {
+    public ShowSlotUpdateResult updateSlot(Long organizationId, Long slotId, UpdateShowSlotRequest request) {
         ShowSlot slot = getSlotOrThrow(slotId);
         if (slot.getStatus() == ShowSlotStatus.CANCELLED) {
             throw new BusinessRuleException("Cannot update a cancelled slot", "SLOT_CANCELLED");
+        }
+        if (slot.getStatus() == ShowSlotStatus.PENDING_SYNC) {
+            throw new BusinessRuleException("Slot cannot be edited while sync is in progress (PENDING_SYNC)", "SLOT_PENDING_SYNC");
+        }
+
+        if (request.startTime() != null || request.endTime() != null) {
+            CatalogVenueResponse venue = venueCatalogClient.getVenue(slot.getVenueId());
+            conflictDetectionService.validateOrThrow(organizationId, venue, request.startTime(), request.endTime(), slot.getId());
         }
 
         Integer previousCapacity = slot.getCapacity();
         slot.updateDetails(request.title(), request.description(), request.startTime(), request.endTime(), request.capacity());
 
         if (request.pricingTiers() != null) {
+            validatePricingTiers(request.pricingTiers());
             slot.clearPricingTiers();
             showSlotMapper.toPricingTiers(request.pricingTiers()).forEach(slot::addPricingTier);
         }
 
         slot = showSlotRepository.save(slot);
 
+        boolean ebSyncFailed = false;
         if (slot.getStatus() == ShowSlotStatus.ACTIVE) {
             try {
                 ebEventSyncService.updateEvent(organizationId, slot.getEbEventId(), toEbUpdateRequest(slot));
@@ -192,11 +205,11 @@ public class ShowSlotService {
             } catch (EbIntegrationException ex) {
                 slot.recordSyncFailure(ex.getMessage());
                 showSlotRepository.save(slot);
-                throw ex;
+                ebSyncFailed = true;
             }
         }
 
-        return slot;
+        return new ShowSlotUpdateResult(slot, ebSyncFailed);
     }
 
     @Transactional
@@ -309,5 +322,34 @@ public class ShowSlotService {
             slot.getStartTime(),
             slot.getEndTime()
         );
+    }
+
+    private void validateCreateRequest(CatalogVenueResponse venue, CreateShowSlotRequest request) {
+        if (venue.eventbriteVenueId() == null || venue.eventbriteVenueId().isBlank()) {
+            throw new BusinessRuleException("Cannot create slot for venue not yet synced to Eventbrite", "VENUE_NOT_SYNCED");
+        }
+        if (request.seatingMode() != null && request.seatingMode().name().equals("RESERVED")
+            && (request.sourceSeatMapId() == null || request.sourceSeatMapId().isBlank())) {
+            throw new ValidationException("sourceSeatMapId is required for RESERVED seating", "SLOT_VALIDATION_ERROR");
+        }
+        validatePricingTiers(request.pricingTiers());
+    }
+
+    private void validatePricingTiers(List<com.eventplatform.scheduling.api.dto.request.PricingTierRequest> tiers) {
+        if (tiers == null || tiers.isEmpty()) {
+            throw new BusinessRuleException("Slot must have at least one pricing tier before submission", "MISSING_PRICING_TIERS");
+        }
+        for (var tier : tiers) {
+            if (tier.quota() == null || tier.quota() <= 0) {
+                throw new ValidationException("quota must be greater than 0", "SLOT_VALIDATION_ERROR");
+            }
+            if (tier.priceAmount() == null || tier.priceAmount().compareTo(BigDecimal.ZERO) < 0) {
+                throw new ValidationException("priceAmount must be non-negative", "SLOT_VALIDATION_ERROR");
+            }
+            if (tier.tierType() != null && tier.tierType().name().equals("FREE")
+                && tier.priceAmount().compareTo(BigDecimal.ZERO) > 0) {
+                throw new ValidationException("FREE tier must have priceAmount = 0", "SLOT_VALIDATION_ERROR");
+            }
+        }
     }
 }

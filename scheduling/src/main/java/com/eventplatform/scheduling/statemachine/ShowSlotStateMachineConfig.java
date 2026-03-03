@@ -13,7 +13,8 @@ public class ShowSlotStateMachineConfig {
         transitions.put(ShowSlotState.DRAFT, Map.of(ShowSlotEvent.SUBMIT, ShowSlotState.PENDING_SYNC));
         transitions.put(ShowSlotState.PENDING_SYNC, Map.of(
             ShowSlotEvent.EB_PUBLISHED, ShowSlotState.ACTIVE,
-            ShowSlotEvent.EB_FAILED, ShowSlotState.PENDING_SYNC
+            ShowSlotEvent.EB_FAILED, ShowSlotState.PENDING_SYNC,
+            ShowSlotEvent.CANCEL, ShowSlotState.CANCELLED
         ));
         transitions.put(ShowSlotState.ACTIVE, Map.of(ShowSlotEvent.CANCEL, ShowSlotState.CANCELLED));
         transitions.put(ShowSlotState.CANCELLED, Map.of());

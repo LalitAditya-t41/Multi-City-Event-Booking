@@ -21,6 +21,28 @@ public interface ShowSlotRepository extends JpaRepository<ShowSlot, Long>, JpaSp
         @Param("endTime") ZonedDateTime endTime
     );
 
+    @Query("select s from ShowSlot s where s.venueId = :venueId and s.status <> 'CANCELLED' and s.startTime < :endTime and s.endTime > :startTime and (:excludeId is null or s.id <> :excludeId)")
+    List<ShowSlot> findConflictsExcludingId(
+        @Param("venueId") Long venueId,
+        @Param("startTime") ZonedDateTime startTime,
+        @Param("endTime") ZonedDateTime endTime,
+        @Param("excludeId") Long excludeId
+    );
+
+    @Query("select s from ShowSlot s where s.venueId = :venueId and s.status <> 'CANCELLED' and s.endTime <= :startTime and (:excludeId is null or s.id <> :excludeId) order by s.endTime desc")
+    Optional<ShowSlot> findPrevSlotForGap(
+        @Param("venueId") Long venueId,
+        @Param("startTime") ZonedDateTime startTime,
+        @Param("excludeId") Long excludeId
+    );
+
+    @Query("select s from ShowSlot s where s.venueId = :venueId and s.status <> 'CANCELLED' and s.startTime >= :endTime and (:excludeId is null or s.id <> :excludeId) order by s.startTime asc")
+    Optional<ShowSlot> findNextSlotForGap(
+        @Param("venueId") Long venueId,
+        @Param("endTime") ZonedDateTime endTime,
+        @Param("excludeId") Long excludeId
+    );
+
     Optional<ShowSlot> findFirstByVenueIdAndEndTimeLessThanEqualOrderByEndTimeDesc(Long venueId, ZonedDateTime startTime);
 
     Optional<ShowSlot> findFirstByVenueIdAndStartTimeGreaterThanEqualOrderByStartTimeAsc(Long venueId, ZonedDateTime endTime);

@@ -13,6 +13,7 @@ import com.eventplatform.scheduling.domain.ShowSlotOccurrence;
 import com.eventplatform.scheduling.domain.enums.ShowSlotStatus;
 import com.eventplatform.scheduling.mapper.ShowSlotMapper;
 import com.eventplatform.scheduling.service.ShowSlotService;
+import com.eventplatform.scheduling.service.ShowSlotUpdateResult;
 import com.eventplatform.shared.common.dto.PageResponse;
 import com.eventplatform.shared.security.Roles;
 import jakarta.validation.Valid;
@@ -21,6 +22,7 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -89,13 +91,17 @@ public class ShowSlotController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public ShowSlotResponse updateSlot(
+    public ResponseEntity<ShowSlotResponse> updateSlot(
         @RequestParam("orgId") Long organizationId,
         @PathVariable("id") Long slotId,
         @Valid @RequestBody UpdateShowSlotRequest request
     ) {
-        ShowSlot slot = showSlotService.updateSlot(organizationId, slotId, request);
-        return showSlotMapper.toResponse(slot);
+        ShowSlotUpdateResult result = showSlotService.updateSlot(organizationId, slotId, request);
+        ShowSlotResponse response = showSlotMapper.toResponse(result.slot());
+        if (result.ebSyncFailed()) {
+            return ResponseEntity.status(207).body(response);
+        }
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{id}/cancel")

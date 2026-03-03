@@ -2,6 +2,7 @@ package com.eventplatform.admin.service;
 
 import com.eventplatform.shared.eventbrite.domain.OrganizationAuth;
 import com.eventplatform.shared.eventbrite.service.EbTokenStore;
+import com.eventplatform.shared.common.exception.ValidationException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -53,10 +54,10 @@ public class OrgOAuthService {
     private void validateState(Long orgId, String state) {
         StateEntry entry = stateStore.remove(state);
         if (entry == null || !entry.orgId().equals(orgId)) {
-            throw new IllegalArgumentException("Invalid OAuth state");
+            throw new ValidationException("OAuth state mismatch or expired. Restart the connection flow.", "OAUTH_STATE_INVALID");
         }
         if (entry.createdAt().isBefore(Instant.now().minus(STATE_TTL))) {
-            throw new IllegalArgumentException("OAuth state expired");
+            throw new ValidationException("OAuth state mismatch or expired. Restart the connection flow.", "OAUTH_STATE_EXPIRED");
         }
     }
 

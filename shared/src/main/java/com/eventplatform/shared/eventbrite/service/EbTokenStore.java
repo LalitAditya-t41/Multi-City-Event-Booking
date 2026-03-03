@@ -54,10 +54,10 @@ public class EbTokenStore {
 
     @Transactional
     public void disconnect(Long orgId) {
-        OrganizationAuth auth = repository.findByOrganizationId(orgId)
-            .orElseThrow(() -> new EbAuthException("No Eventbrite auth configured for org: " + orgId));
-        auth.markRevoked();
-        repository.save(auth);
+        repository.findByOrganizationId(orgId).ifPresent(auth -> {
+            auth.markRevoked();
+            repository.save(auth);
+        });
     }
 
     @Transactional

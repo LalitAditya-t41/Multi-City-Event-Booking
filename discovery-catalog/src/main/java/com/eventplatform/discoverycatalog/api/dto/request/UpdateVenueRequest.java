@@ -1,6 +1,7 @@
 package com.eventplatform.discoverycatalog.api.dto.request;
 
 import com.eventplatform.shared.common.enums.SeatingMode;
+import jakarta.validation.constraints.Positive;
 
 public record UpdateVenueRequest(
     String name,
@@ -11,7 +12,7 @@ public record UpdateVenueRequest(
     String zipCode,
     String latitude,
     String longitude,
-    Integer capacity,
+    @Positive Integer capacity,
     SeatingMode seatingMode
 ) {
 }

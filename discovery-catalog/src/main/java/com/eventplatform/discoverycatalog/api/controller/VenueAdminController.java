@@ -12,6 +12,7 @@ import com.eventplatform.shared.security.Roles;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,11 +37,14 @@ public class VenueAdminController {
     }
 
     @PostMapping("/venues")
-    @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public VenueResponse createVenue(@RequestParam("orgId") Long organizationId, @Valid @RequestBody CreateVenueRequest request) {
+    public ResponseEntity<VenueResponse> createVenue(@RequestParam("orgId") Long organizationId, @Valid @RequestBody CreateVenueRequest request) {
         Venue venue = venueService.createVenue(organizationId, request);
-        return venueMapper.toResponse(venue);
+        VenueResponse response = venueMapper.toResponse(venue);
+        HttpStatus status = venue.getSyncStatus() == com.eventplatform.discoverycatalog.domain.enums.VenueSyncStatus.PENDING_SYNC
+            ? HttpStatus.ACCEPTED
+            : HttpStatus.CREATED;
+        return ResponseEntity.status(status).body(response);
     }
 
     @PutMapping("/venues/{id}")
