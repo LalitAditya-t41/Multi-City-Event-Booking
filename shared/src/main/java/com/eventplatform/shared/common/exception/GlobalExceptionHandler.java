@@ -15,7 +15,8 @@ public class GlobalExceptionHandler {
             ex.getErrorCode(),
             ex.getMessage(),
             ex.getHttpStatus().value(),
-            Instant.now()
+            Instant.now(),
+            ex.getDetails()
         );
         return ResponseEntity.status(ex.getHttpStatus()).body(response);
     }
@@ -26,7 +27,8 @@ public class GlobalExceptionHandler {
             "VALIDATION_ERROR",
             ex.getMessage(),
             400,
-            Instant.now()
+            Instant.now(),
+            null
         );
         return ResponseEntity.badRequest().body(response);
     }
@@ -37,7 +39,8 @@ public class GlobalExceptionHandler {
             "INTERNAL_ERROR",
             ex.getMessage(),
             500,
-            Instant.now()
+            Instant.now(),
+            null
         );
         return ResponseEntity.status(500).body(response);
     }
