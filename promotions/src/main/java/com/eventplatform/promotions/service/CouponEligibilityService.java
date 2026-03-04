@@ -67,7 +67,7 @@ public class CouponEligibilityService {
             throw new BusinessRuleException("Cart expired", "CART_EXPIRED");
         }
 
-        Coupon coupon = couponRepository.findByCodeIgnoreCaseAndOrgId(request.couponCode(), cartSummary.orgId())
+        Coupon coupon = couponRepository.findTopByCodeIgnoreCase(request.couponCode())
             .orElseThrow(() -> new CouponNotFoundException(request.couponCode()));
 
         if (!coupon.getOrgId().equals(cartSummary.orgId())) {
@@ -105,27 +105,31 @@ public class CouponEligibilityService {
             throw new CouponPerUserCapReachedException();
         }
 
-        reservationRepository.findActiveByCouponIdAndCartId(coupon.getId(), request.cartId(), now)
-            .ifPresentOrElse(
-                existing -> {},
-                () -> reservationRepository.save(new CouponUsageReservation(coupon, request.cartId(), userId, cartSummary.expiresAt()))
-            );
+        boolean reservationCreated = reservationRepository
+            .findActiveByCouponIdAndCartId(coupon.getId(), request.cartId(), now)
+            .map(existing -> false)
+            .orElseGet(() -> {
+                reservationRepository.save(new CouponUsageReservation(coupon, request.cartId(), userId, cartSummary.expiresAt()));
+                return true;
+            });
 
         DiscountCalculationResult result = calculateDiscount(coupon, cartSummary.currency(), request.cartId());
-        eventPublisher.publishEvent(new CouponValidatedEvent(
-            request.cartId(),
-            coupon.getCode(),
-            result.discountAmountInSmallestUnit(),
-            result.currency(),
-            userId
-        ));
-        eventPublisher.publishEvent(new CouponAppliedEvent(
-            request.cartId(),
-            coupon.getCode(),
-            result.discountAmountInSmallestUnit(),
-            result.currency(),
-            userId
-        ));
+        if (reservationCreated) {
+            eventPublisher.publishEvent(new CouponValidatedEvent(
+                request.cartId(),
+                coupon.getCode(),
+                result.discountAmountInSmallestUnit(),
+                result.currency(),
+                userId
+            ));
+            eventPublisher.publishEvent(new CouponAppliedEvent(
+                request.cartId(),
+                coupon.getCode(),
+                result.discountAmountInSmallestUnit(),
+                result.currency(),
+                userId
+            ));
+        }
 
         return new DiscountBreakdownResponse(
             result.couponCode(),

@@ -80,6 +80,7 @@ public class DiscountReconciliationService {
                 if (ebQuantity > coupon.getRedemptionCount()) {
                     coupon.updateRedemptionCountFromEb(ebQuantity);
                     couponRepository.save(coupon);
+                    drifts++;
                 }
 
                 boolean drift = (eb.code() != null && !eb.code().equalsIgnoreCase(coupon.getCode()));

@@ -50,6 +50,11 @@ public class CouponRedemptionService {
 
     @Transactional
     public void onBookingConfirmed(Long bookingId, Long cartId, Long userId) {
+        CartSummaryDto summary = cartSnapshotReader.getCartSummary(cartId);
+        if (summary.couponCode() == null || summary.couponCode().isBlank()) {
+            return;
+        }
+
         CouponUsageReservation reservation = reservationRepository.findOpenByCartId(cartId).orElse(null);
         if (reservation == null) {
             return;
@@ -68,7 +73,6 @@ public class CouponRedemptionService {
             return;
         }
 
-        CartSummaryDto summary = cartSnapshotReader.getCartSummary(cartId);
         DiscountCalculationResult calc = eligibilityService.calculateDiscount(coupon, summary.currency(), cartId);
         BigDecimal discountMajor = BigDecimal.valueOf(calc.discountAmountInSmallestUnit())
             .divide(BigDecimal.valueOf(100));

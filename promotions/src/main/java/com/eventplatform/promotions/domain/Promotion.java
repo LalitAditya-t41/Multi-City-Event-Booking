@@ -79,10 +79,19 @@ public class Promotion extends BaseEntity {
 
     public void deactivate() {
         this.status = PromotionStatus.INACTIVE;
+        this.coupons.forEach(Coupon::deactivate);
     }
 
     public boolean isActiveAt(Instant now) {
         return status == PromotionStatus.ACTIVE && !now.isBefore(validFrom) && !now.isAfter(validUntil);
+    }
+
+    public boolean isValid(Instant now) {
+        return isActiveAt(now);
+    }
+
+    public void addCoupon(Coupon coupon) {
+        this.coupons.add(coupon);
     }
 
     public Long getOrgId() { return orgId; }

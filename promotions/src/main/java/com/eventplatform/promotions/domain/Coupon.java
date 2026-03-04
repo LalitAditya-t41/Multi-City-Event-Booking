@@ -90,6 +90,7 @@ public class Coupon extends BaseEntity {
     public void markNotSynced() {
         this.ebDiscountId = null;
         this.ebSyncStatus = EbSyncStatus.NOT_SYNCED;
+        this.ebQuantitySoldAtLastSync = 0;
         this.lastEbSyncAt = Instant.now();
     }
 
@@ -136,4 +137,8 @@ public class Coupon extends BaseEntity {
     public EbSyncStatus getEbSyncStatus() { return ebSyncStatus; }
     public Integer getEbQuantitySoldAtLastSync() { return ebQuantitySoldAtLastSync; }
     public Instant getLastEbSyncAt() { return lastEbSyncAt; }
+
+    public boolean canEbDelete() {
+        return ebDiscountId != null && (ebQuantitySoldAtLastSync == null || ebQuantitySoldAtLastSync == 0);
+    }
 }

@@ -55,7 +55,9 @@ public class CouponAdminService {
             throw new CouponCodeConflictException(request.code());
         }
 
-        Coupon coupon = couponRepository.save(new Coupon(promotion, orgId, request.code().trim()));
+        Coupon coupon = new Coupon(promotion, orgId, request.code().trim());
+        coupon.markSyncPending();
+        coupon = couponRepository.save(coupon);
         discountSyncOrchestrator.createSync(coupon.getId());
         return couponMapper.toResponse(coupon);
     }
