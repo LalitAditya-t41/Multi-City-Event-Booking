@@ -49,7 +49,7 @@ public class VenueReconciliationJob {
                     continue;
                 }
                 String expectedAddress = venue.getAddress();
-                String actualAddress = ebVenue.address();
+                String actualAddress = ebVenue.address() != null ? ebVenue.address().addressLine1() : null;
                 if (expectedAddress != null && actualAddress != null && !expectedAddress.equalsIgnoreCase(actualAddress)) {
                     String drift = "EB address changed from '%s' to '%s'".formatted(expectedAddress, actualAddress);
                     venue.markDrift(drift);

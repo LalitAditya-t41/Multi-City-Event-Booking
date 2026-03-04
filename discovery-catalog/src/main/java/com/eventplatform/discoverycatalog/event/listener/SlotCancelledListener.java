@@ -5,8 +5,9 @@ import com.eventplatform.discoverycatalog.repository.EventCatalogRepository;
 import com.eventplatform.discoverycatalog.service.cache.EventCatalogSnapshotCache;
 import com.eventplatform.shared.common.event.published.ShowSlotCancelledEvent;
 import java.time.Instant;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 public class SlotCancelledListener {
@@ -22,7 +23,7 @@ public class SlotCancelledListener {
         this.snapshotCache = snapshotCache;
     }
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onSlotCancelled(ShowSlotCancelledEvent event) {
         eventCatalogRepository.findByEventbriteEventId(event.ebEventId()).ifPresent(item -> {
             item.markCancelled(Instant.now());

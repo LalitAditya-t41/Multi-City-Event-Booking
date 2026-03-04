@@ -57,7 +57,9 @@ class VenueServiceTest {
         when(venueMapper.toEntity(1L, request)).thenReturn(venue);
         when(venueRepository.save(venue)).thenReturn(venue);
         when(ebVenueService.createVenue(eq(1L), any()))
-            .thenReturn(new EbVenueResponse("eb-1", "Venue", "Addr", "City", "IN", "123", null, null));
+            .thenReturn(new EbVenueResponse("eb-1", "Venue",
+                new EbVenueResponse.AddressField("Addr", null, "City", "IN", "123", null, null),
+                null, null));
 
         Venue result = venueService.createVenue(1L, request);
 
@@ -91,7 +93,9 @@ class VenueServiceTest {
         when(venueRepository.findById(10L)).thenReturn(Optional.of(venue));
         when(venueRepository.save(venue)).thenReturn(venue);
         when(ebVenueService.updateVenue(eq(1L), eq("eb-1"), any()))
-            .thenReturn(new EbVenueResponse("eb-1", "Venue", "Addr", "City", "IN", "123", null, null));
+            .thenReturn(new EbVenueResponse("eb-1", "Venue",
+                new EbVenueResponse.AddressField("Addr", null, "City", "IN", "123", null, null),
+                null, null));
 
         Venue result = venueService.updateVenue(1L, 10L, request);
 

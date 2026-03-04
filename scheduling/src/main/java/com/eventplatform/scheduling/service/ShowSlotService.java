@@ -98,8 +98,14 @@ public class ShowSlotService {
         ShowSlot slot = getSlotOrThrow(slotId);
         stateMachineService.sendEvent(slot, ShowSlotEvent.SUBMIT);
 
+        CatalogVenueResponse venue = venueCatalogClient.getVenue(slot.getVenueId());
+        if (venue.eventbriteVenueId() == null || venue.eventbriteVenueId().isBlank()) {
+            throw new com.eventplatform.shared.common.exception.BusinessRuleException(
+                "Cannot submit slot: venue not yet synced to Eventbrite", "VENUE_NOT_SYNCED");
+        }
+
         try {
-            EbEventDto created = ebEventSyncService.createDraft(organizationId, toEbCreateRequest(slot));
+            EbEventDto created = ebEventSyncService.createDraft(organizationId, toEbCreateRequest(slot, venue));
             slot.setEbEventId(created.id());
             slot.markAttempted();
             showSlotRepository.save(slot);
@@ -302,21 +308,24 @@ public class ShowSlotService {
             .orElseThrow(() -> new SchedulingNotFoundException("Slot not found: " + slotId, "SLOT_NOT_FOUND"));
     }
 
-    private EbEventCreateRequest toEbCreateRequest(ShowSlot slot) {
-        return new EbEventCreateRequest(
+    private EbEventCreateRequest toEbCreateRequest(ShowSlot slot, CatalogVenueResponse venue) {
+        String currency = slot.getPricingTiers().isEmpty()
+            ? "INR"
+            : slot.getPricingTiers().get(0).getPrice().currency();
+        return EbEventCreateRequest.of(
             slot.getTitle(),
             slot.getDescription(),
-            slot.getVenueId().toString(),
+            venue.eventbriteVenueId(),
             slot.getStartTime(),
             slot.getEndTime(),
             slot.getCapacity(),
             slot.isRecurring(),
-            null
+            currency
         );
     }
 
     private EbEventUpdateRequest toEbUpdateRequest(ShowSlot slot) {
-        return new EbEventUpdateRequest(
+        return EbEventUpdateRequest.of(
             slot.getTitle(),
             slot.getDescription(),
             slot.getStartTime(),

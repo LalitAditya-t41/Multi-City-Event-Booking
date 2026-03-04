@@ -367,40 +367,22 @@ Key Point: Eventbrite has NO user creation or update API. Identity is 100% inter
   - Backend validates uniqueness in `users` table
   - Password is hashed (BCrypt) and stored
   - JWT token is issued — user is now authenticated
-  - `UserRegisteredEvent` is published
-- Eventbrite API Call (via `shared/` ACL)
-  - (none — no user creation API on Eventbrite)
+  - No publish Required we will be using the atendee publish that is built later on.
 
 **Step 2: Profile Setup**
 - Internal App (Your DB / Spring Boot)
   - User fills in profile details: display name, phone, city, avatar
   - Internal `users` table is updated
   - No sync to Eventbrite at this stage
-- Eventbrite API Call (via `shared/` ACL)
-  - `GET /users/me/` — only called if user explicitly linked their Eventbrite account via OAuth (optional)
 
 **Step 3: Preference Onboarding**
 - Internal App (Your DB / Spring Boot)
-  - User selects preferred genres, cities, price ranges, notification settings
-  - Stored in `user_preferences` table
+  - User selects preferred genres, cities, notification settings
+  - Store the preferences
   - Used for personalized event recommendations from internal catalog
-- Eventbrite API Call (via `shared/` ACL)
-  - (none — preferences are internal only)
 
-**Post-Purchase: User ↔ Eventbrite Link Established**
-- Internal App (Your DB / Spring Boot)
-  - User completes a purchase via Eventbrite Checkout Widget
-  - Eventbrite creates order with buyer email
-  - Your backend reads the order via `GET /orders/{order_id}/`
-  - Match order email to `users` table → store `eventbrite_order_id` against `user_id` in `bookings` table
-  - User is now linked to Eventbrite via their order history
-- Eventbrite API Call (via `shared/` ACL)
-  - `GET /orders/{order_id}/` — read order details post-checkout
-  - `GET /events/{event_id}/attendees/` — verify user appears as attendee
-
-**ACL Facades:** (none during registration) | `EbOrderService` + `EbAttendeeService` (post-purchase)  
-**DB Tables:** `users`, `user_preferences`, `user_wallets`  
-**Publishes:** `UserRegisteredEvent`
+- This is the basic flow of the user registration and onboarding
+- The JWT and authentication and API key like 
 
 ### FR4 — Seat Selection → Pricing Tier Validation → Cart Assembly
 **Module:** booking-inventory
