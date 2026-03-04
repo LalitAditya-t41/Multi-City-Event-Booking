@@ -49,3 +49,7 @@ env/
 .env.*
 pip-wheel-metadata/
 /export_session_md.py
+
+# JWT private keys
+app/src/main/resources/certs/private.pem
+app/src/test/resources/certs/private.pem

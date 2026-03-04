@@ -40,6 +40,10 @@ eventbrite:
     secret: local-dev-secret
     endpoint-url: http://localhost:8080/admin/v1/webhooks/eventbrite
 
+jwt:
+  private-key-path: classpath:certs/private.pem
+  public-key-path: classpath:certs/public.pem
+
 scheduling:
   turnaround-gap-minutes: 60
 
