@@ -199,7 +199,7 @@ Without FR2 sync: If `eventbrite_event_id` is null or orphaned, the entire chain
 |---|---|
 | User creation/sync | No user write API on Eventbrite. Identity is 100% internal. Users are linked via order email post-purchase. |
 | Conflict validation | No conflict API on Eventbrite. Time slot conflicts and turnaround gaps are enforced in your internal DB. |
-| Venue creation/updates | No venue creation API. Venues can only be managed via Eventbrite Dashboard. Your app can read pre-existing venue IDs only. |
+| "Venue creation — POST /organizations/{org_id}/venues/ is available via EbVenueService.createVenue(). Admin creates venues in your app; they are pushed to Eventbrite and eb_venue_id is stored. Venue updates via POST /venues/{venue_id}/. The Eventbrite Dashboard can also manage venues independently — VenueReconciliationJob detects and flags drift."|
 | Seat locking | No seat lock API on Eventbrite. The entire state machine (Redis + Spring State Machine) is internal. |
 | Cart management | No cart API on Eventbrite. Cart assembly and group discount rules are internal. |
 | Order creation | No order creation API. Orders are created exclusively via the Eventbrite Checkout Widget (JS SDK). Backend only reads orders post-creation. |
