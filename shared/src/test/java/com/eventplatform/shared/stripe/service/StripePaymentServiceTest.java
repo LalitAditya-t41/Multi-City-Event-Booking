@@ -48,7 +48,7 @@ class StripePaymentServiceTest {
             )).thenReturn(mockIntent);
 
             StripePaymentIntentRequest request = new StripePaymentIntentRequest(
-                50000L, "inr", "user@test.com", "Test booking", "idem-key-1"
+                50000L, "inr", "user@test.com", "Test booking", "idem-key-1", java.util.Map.of()
             );
 
             StripePaymentIntentResponse response = service.createPaymentIntent(request);
@@ -70,7 +70,7 @@ class StripePaymentServiceTest {
             )).thenThrow(new ApiException("Stripe error", "req_1", null, 400, null));
 
             StripePaymentIntentRequest request = new StripePaymentIntentRequest(
-                1000L, "inr", "user@test.com", "Test", "idem-key-2"
+                1000L, "inr", "user@test.com", "Test", "idem-key-2", java.util.Map.of()
             );
 
             assertThatThrownBy(() -> service.createPaymentIntent(request))
