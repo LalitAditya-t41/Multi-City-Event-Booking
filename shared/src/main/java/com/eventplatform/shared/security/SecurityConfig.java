@@ -45,7 +45,8 @@ public class SecurityConfig {
                     "/api/v1/auth/login",
                     "/api/v1/auth/token/refresh",
                     "/api/v1/auth/password/reset",
-                    "/api/v1/auth/password/reset/confirm"
+                    "/api/v1/auth/password/reset/confirm",
+                    "/internal/**"                            // server-to-server internal module calls
                 ).permitAll()
                 .anyRequest().authenticated()
             )

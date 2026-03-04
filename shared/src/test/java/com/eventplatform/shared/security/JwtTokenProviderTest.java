@@ -65,4 +65,21 @@ class JwtTokenProviderTest {
     void should_return_false_for_invalid_token() {
         assertThat(jwtTokenProvider.validateToken("not.a.valid.token")).isFalse();
     }
+
+    @Test
+    void should_include_email_claim_when_generateToken_with_email_called() {
+        String token = jwtTokenProvider.generateToken(5L, "USER", null, "alice@example.com");
+
+        assertThat(jwtTokenProvider.validateToken(token)).isTrue();
+        assertThat(jwtTokenProvider.extractUserId(token)).isEqualTo(5L);
+        assertThat(jwtTokenProvider.extractEmail(token)).isEqualTo("alice@example.com");
+        assertThat(jwtTokenProvider.extractOrgId(token)).isNull();
+    }
+
+    @Test
+    void should_return_null_email_when_token_has_no_email_claim() {
+        String token = jwtTokenProvider.generateToken(3L, "USER");
+
+        assertThat(jwtTokenProvider.extractEmail(token)).isNull();
+    }
 }

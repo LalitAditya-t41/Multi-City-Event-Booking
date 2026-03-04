@@ -97,7 +97,7 @@ class AuthServiceTest {
         setId(user, 11L);
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("plain-pass", "encoded-pass")).thenReturn(true);
-        when(jwtTokenProvider.generateToken(11L, user.getRole())).thenReturn("access-token");
+        when(jwtTokenProvider.generateToken(11L, user.getRole(), null, user.getEmail())).thenReturn("access-token");
 
         AuthTokensResponse response = authService.login(new LoginRequest("user@example.com", "plain-pass"));
 
@@ -124,7 +124,7 @@ class AuthServiceTest {
         setId(user, 20L);
         RefreshToken token = new RefreshToken(user, sha("refresh-token"), Instant.now().plusSeconds(100));
         when(refreshTokenRepository.findByTokenHash(sha("refresh-token"))).thenReturn(Optional.of(token));
-        when(jwtTokenProvider.generateToken(20L, user.getRole())).thenReturn("new-access");
+        when(jwtTokenProvider.generateToken(20L, user.getRole(), null, user.getEmail())).thenReturn("new-access");
 
         AccessTokenResponse response = authService.refreshToken("refresh-token");
 

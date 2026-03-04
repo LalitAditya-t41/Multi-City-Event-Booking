@@ -13,20 +13,39 @@ import com.eventplatform.admin.service.OrgOAuthService;
 import com.eventplatform.shared.common.exception.GlobalExceptionHandler;
 import com.eventplatform.shared.common.exception.ValidationException;
 import com.eventplatform.shared.eventbrite.exception.EbAuthException;
+import com.eventplatform.shared.security.JwtAuthenticationFilter;
+import com.eventplatform.shared.security.JwtTokenProvider;
 import com.eventplatform.shared.security.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.ContextConfiguration;
 
+import static org.mockito.Mockito.mock;
+
 @WebMvcTest(OrgEventbriteController.class)
 @ContextConfiguration(classes = com.eventplatform.admin.AdminTestApplication.class)
-@Import({GlobalExceptionHandler.class, SecurityConfig.class})
+@Import({GlobalExceptionHandler.class, SecurityConfig.class, OrgEventbriteControllerTest.MockBeans.class})
 class OrgEventbriteControllerTest {
+
+    @TestConfiguration
+    static class MockBeans {
+        @Bean
+        JwtTokenProvider jwtTokenProvider() {
+            return mock(JwtTokenProvider.class);
+        }
+
+        @Bean
+        JwtAuthenticationFilter jwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+            return new JwtAuthenticationFilter(jwtTokenProvider);
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;

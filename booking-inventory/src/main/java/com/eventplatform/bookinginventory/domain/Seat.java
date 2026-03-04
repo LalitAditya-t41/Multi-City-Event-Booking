@@ -45,8 +45,8 @@ public class Seat extends BaseEntity {
     @Column(name = "locked_until")
     private Instant lockedUntil;
 
-    @Column(name = "eb_order_id")
-    private String ebOrderId;
+    @Column(name = "booking_ref")
+    private String bookingRef;
 
     protected Seat() {
     }
@@ -85,12 +85,12 @@ public class Seat extends BaseEntity {
         this.lockState = SeatLockState.PAYMENT_PENDING;
     }
 
-    public void confirm(String orderId) {
+    public void confirm(String bookingRef) {
         if (this.lockState != SeatLockState.PAYMENT_PENDING && this.lockState != SeatLockState.HARD_LOCKED) {
             throw new BusinessRuleException("Seat cannot be confirmed from current state", "INVALID_SEAT_TRANSITION");
         }
         this.lockState = SeatLockState.CONFIRMED;
-        this.ebOrderId = orderId;
+        this.bookingRef = bookingRef;
         this.lockedByUserId = null;
         this.lockedUntil = null;
     }
@@ -149,7 +149,7 @@ public class Seat extends BaseEntity {
         return lockedUntil;
     }
 
-    public String getEbOrderId() {
-        return ebOrderId;
+    public String getBookingRef() {
+        return bookingRef;
     }
 }

@@ -48,10 +48,14 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(Long userId, String role) {
-        return generateToken(userId, role, null);
+        return generateToken(userId, role, null, null);
     }
 
     public String generateToken(Long userId, String role, Long orgId) {
+        return generateToken(userId, role, orgId, null);
+    }
+
+    public String generateToken(Long userId, String role, Long orgId, String email) {
         Instant now = Instant.now();
         var builder = Jwts.builder()
             .subject(String.valueOf(userId))
@@ -62,6 +66,9 @@ public class JwtTokenProvider {
             .expiration(Date.from(now.plusSeconds(SecurityConstants.ACCESS_TOKEN_TTL_S)));
         if (orgId != null) {
             builder.claim("orgId", orgId);
+        }
+        if (email != null) {
+            builder.claim("email", email);
         }
         return builder.signWith(privateKey, Jwts.SIG.RS256).compact();
     }
@@ -95,6 +102,11 @@ public class JwtTokenProvider {
             return n.longValue();
         }
         return null;
+    }
+
+    public String extractEmail(String token) {
+        Claims claims = parseClaims(token);
+        return claims.get("email", String.class);
     }
 
     private Claims parseClaims(String token) {

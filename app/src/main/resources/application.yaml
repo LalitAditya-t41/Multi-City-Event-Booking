@@ -25,6 +25,14 @@ app:
   default-org-id: 1
   internal-base-url: http://localhost:8080
 
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY:sk_test_placeholder}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_placeholder}
+  publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_placeholder}
+  currency: inr
+  payment-intent:
+    capture-method: automatic
+
 eventbrite:
   base-url: http://localhost:8888
   api-key: ${EVENTBRITE_API_KEY:mock-token}

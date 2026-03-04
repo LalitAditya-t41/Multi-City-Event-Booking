@@ -191,7 +191,7 @@ public class CartService {
     }
 
     @Transactional
-    public CartResponse confirm(Long userId, Long orgId, ConfirmCartRequest request) {
+    public CartResponse confirm(Long userId, Long orgId, String userEmail, ConfirmCartRequest request) {
         Cart cart = cartRepository.findById(request.cartId()).orElseThrow(() -> new CartNotFoundException(request.cartId()));
         if (!Objects.equals(cart.getUserId(), userId)) {
             throw new CartNotFoundException(request.cartId());
@@ -265,13 +265,22 @@ public class CartService {
         cart.extendTtl(HARD_LOCK_TTL);
         cartRepository.save(cart);
 
+        List<CartItem> confirmedItems = new ArrayList<>(cart.getItems());
+        CartPricingResult pricing = cartPricingService.recompute(cart, confirmedItems);
+        long totalAmountInSmallestUnit = pricing.total().amount()
+            .multiply(java.math.BigDecimal.valueOf(100)).longValue();
+        String pricingCurrency = pricing.total().currency().toLowerCase();
+
         eventPublisher.publishEvent(new CartAssembledEvent(
             cart.getId(),
             cart.getShowSlotId(),
             cart.getUserId(),
             cart.getOrgId(),
             slot.ebEventId(),
-            cart.getCouponCode()
+            cart.getCouponCode(),
+            totalAmountInSmallestUnit,
+            pricingCurrency,
+            userEmail
         ));
 
         return buildCartResponse(cart, tierById);
@@ -314,7 +323,7 @@ public class CartService {
     }
 
     @Transactional
-    public void onBookingConfirmed(Long cartId, List<Long> seatIds, String orderId, Long userId) {
+    public void onBookingConfirmed(Long cartId, List<Long> seatIds, String bookingRef, Long userId) {
         Cart cart = cartRepository.findById(cartId).orElseThrow(() -> new CartNotFoundException(cartId));
         for (Long seatId : seatIds) {
             Seat seat = seatRepository.findByIdWithLock(seatId).orElse(null);
@@ -328,10 +337,10 @@ public class CartService {
             if (previous == SeatLockState.HARD_LOCKED) {
                 seat.markPaymentPending();
             }
-            seat.confirm(orderId);
+            seat.confirm(bookingRef);
             seatRepository.save(seat);
             seatLockRedisService.release(seatId, userId);
-            writeAudit(seat, userId, previous, SeatLockState.CONFIRMED, SeatLockEvent.CONFIRM_PAYMENT, "ORDER_PLACED", orderId);
+            writeAudit(seat, userId, previous, SeatLockState.CONFIRMED, SeatLockEvent.CONFIRM_PAYMENT, "STRIPE_PAYMENT_CONFIRMED", bookingRef);
         }
         cart.confirm();
         cartRepository.save(cart);
@@ -490,7 +499,7 @@ public class CartService {
         SeatLockState to,
         SeatLockEvent event,
         String reason,
-        String orderId
+        String bookingRef
     ) {
         seatLockAuditLogRepository.save(new SeatLockAuditLog(
             seat.getId(),
@@ -501,7 +510,7 @@ public class CartService {
             to,
             event,
             reason,
-            orderId
+            bookingRef
         ));
     }
 

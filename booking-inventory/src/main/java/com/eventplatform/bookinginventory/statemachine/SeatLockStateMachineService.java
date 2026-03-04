@@ -48,12 +48,12 @@ public class SeatLockStateMachineService {
         switch (event) {
             case SELECT -> softLockAction.apply(seat, context);
             case CONFIRM -> hardLockAction.apply(seat, context);
-            case CHECKOUT_INITIATE -> paymentPendingAction.apply(seat, context);
+            case PAYMENT_INITIATE -> paymentPendingAction.apply(seat, context);
             case CONFIRM_PAYMENT -> confirmAction.apply(seat, context);
             case RELEASE -> releaseAction.apply(seat, context);
         }
     }
 
-    public record SeatActionContext(Long userId, String orderId, String reason) {
+    public record SeatActionContext(Long userId, String bookingRef, String reason) {
     }
 }

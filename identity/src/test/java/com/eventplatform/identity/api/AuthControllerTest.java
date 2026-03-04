@@ -204,7 +204,7 @@ class AuthControllerTest {
 
     private UsernamePasswordAuthenticationToken userAuthentication() {
         return new UsernamePasswordAuthenticationToken(
-            new AuthenticatedUser(1L, "USER", null),
+            new AuthenticatedUser(1L, "USER", null, null),
             null,
             List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );

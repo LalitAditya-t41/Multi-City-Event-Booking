@@ -192,7 +192,7 @@ class BookingInventoryControllerTest {
 
     @Test
     void should_return_410_when_soft_lock_expired_at_confirm() throws Exception {
-        when(cartService.confirm(eq(1L), eq(44L), any(ConfirmCartRequest.class)))
+        when(cartService.confirm(eq(1L), eq(44L), any(String.class), any(ConfirmCartRequest.class)))
             .thenThrow(new SoftLockExpiredException(Set.of(201L)));
 
         mockMvc.perform(post("/api/v1/booking/cart/confirm")
@@ -205,7 +205,7 @@ class BookingInventoryControllerTest {
 
     @Test
     void should_return_409_when_tier_sold_out_on_eventbrite_at_confirm() throws Exception {
-        when(cartService.confirm(eq(1L), eq(44L), any(ConfirmCartRequest.class)))
+        when(cartService.confirm(eq(1L), eq(44L), any(String.class), any(ConfirmCartRequest.class)))
             .thenThrow(new TierSoldOutException(1L, Map.of("otherTiers", List.of())));
 
         mockMvc.perform(post("/api/v1/booking/cart/confirm")
@@ -218,7 +218,7 @@ class BookingInventoryControllerTest {
 
     @Test
     void should_return_503_when_eventbrite_unreachable_at_confirm() throws Exception {
-        when(cartService.confirm(eq(1L), eq(44L), any(ConfirmCartRequest.class)))
+        when(cartService.confirm(eq(1L), eq(44L), any(String.class), any(ConfirmCartRequest.class)))
             .thenThrow(new BaseException("Eventbrite unavailable", "EB_UNAVAILABLE", HttpStatus.SERVICE_UNAVAILABLE) {
             });
 
@@ -232,7 +232,7 @@ class BookingInventoryControllerTest {
 
     @Test
     void should_return_410_when_cart_expired_at_confirm() throws Exception {
-        when(cartService.confirm(eq(1L), eq(44L), any(ConfirmCartRequest.class)))
+        when(cartService.confirm(eq(1L), eq(44L), any(String.class), any(ConfirmCartRequest.class)))
             .thenThrow(new BaseException("Cart expired", "CART_EXPIRED", HttpStatus.GONE) {
             });
 
@@ -269,7 +269,7 @@ class BookingInventoryControllerTest {
 
     @Test
     void should_return_422_when_invalid_state_transition_attempted() throws Exception {
-        when(cartService.confirm(eq(1L), eq(44L), any(ConfirmCartRequest.class)))
+        when(cartService.confirm(eq(1L), eq(44L), any(String.class), any(ConfirmCartRequest.class)))
             .thenThrow(new BusinessRuleException("Invalid seat transition", "INVALID_SEAT_TRANSITION"));
 
         mockMvc.perform(post("/api/v1/booking/cart/confirm")
@@ -281,7 +281,7 @@ class BookingInventoryControllerTest {
     }
 
     private UsernamePasswordAuthenticationToken userAuth() {
-        AuthenticatedUser user = new AuthenticatedUser(1L, "USER", 44L);
+        AuthenticatedUser user = new AuthenticatedUser(1L, "USER", 44L, "test@example.com");
         return new UsernamePasswordAuthenticationToken(
             user,
             null,

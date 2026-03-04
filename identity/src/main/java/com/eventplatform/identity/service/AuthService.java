@@ -91,7 +91,7 @@ public class AuthService {
             throw new IdentityException("Invalid credentials", "INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED);
         }
 
-        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getRole());
+        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getRole(), null, user.getEmail());
         String refreshTokenRaw = generateOpaqueToken();
         String refreshTokenHash = hashToken(refreshTokenRaw);
 
@@ -114,7 +114,7 @@ public class AuthService {
             throw new IdentityException("Refresh token invalid", "REFRESH_TOKEN_INVALID", HttpStatus.UNAUTHORIZED);
         }
 
-        String accessToken = jwtTokenProvider.generateToken(refreshToken.getUser().getId(), refreshToken.getUser().getRole());
+        String accessToken = jwtTokenProvider.generateToken(refreshToken.getUser().getId(), refreshToken.getUser().getRole(), null, refreshToken.getUser().getEmail());
         return new AccessTokenResponse(accessToken);
     }
 

@@ -35,8 +35,8 @@ public class GaInventoryClaim extends BaseEntity {
     @Column(name = "locked_until", nullable = false)
     private Instant lockedUntil;
 
-    @Column(name = "eb_order_id")
-    private String ebOrderId;
+    @Column(name = "booking_ref")
+    private String bookingRef;
 
     protected GaInventoryClaim() {
     }
@@ -56,9 +56,9 @@ public class GaInventoryClaim extends BaseEntity {
         this.lockedUntil = lockUntil;
     }
 
-    public void confirm(String orderId) {
+    public void confirm(String bookingRef) {
         this.lockState = SeatLockState.CONFIRMED;
-        this.ebOrderId = orderId;
+        this.bookingRef = bookingRef;
         this.lockedUntil = null;
     }
 

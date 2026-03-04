@@ -17,6 +17,6 @@ public class BookingConfirmedListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onBookingConfirmed(BookingConfirmedEvent event) {
-        cartService.onBookingConfirmed(event.cartId(), event.seatIds(), event.ebOrderId(), event.userId());
+        cartService.onBookingConfirmed(event.cartId(), event.seatIds(), event.stripePaymentIntentId(), event.userId());
     }
 }
