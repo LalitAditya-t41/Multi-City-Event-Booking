@@ -16,4 +16,7 @@ public interface UserSettingsRepository extends JpaRepository<UserSettings, Long
         where us.user.id = :userId
         """)
     Optional<UserSettings> findWithPreferencesByUserId(@Param("userId") Long userId);
+
+    @Query("select us.fullName from UserSettings us where us.user.id = :userId")
+    Optional<String> findFullNameByUserId(@Param("userId") Long userId);
 }

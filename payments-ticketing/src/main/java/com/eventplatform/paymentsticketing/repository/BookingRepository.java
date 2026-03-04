@@ -19,4 +19,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     Page<Booking> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     List<Booking> findBySlotIdAndStatus(Long slotId, BookingStatus status);
+
+    Optional<Booking> findTopByUserIdAndEventIdOrderByCreatedAtDesc(Long userId, Long eventId);
 }
