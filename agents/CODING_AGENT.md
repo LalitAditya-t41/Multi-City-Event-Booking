@@ -158,6 +158,39 @@ public enum BookingStatus { PENDING, CONFIRMED, CANCELLED, REFUNDED }
 // ❌ Never duplicate in multiple modules
 ```
 
+**Pattern 4: Shared Reader Interfaces (hot-path in-process reads)** — For high-frequency reads where HTTP overhead is unacceptable, define a read-only interface in `shared/common/service/` and implement it in the owning module. The consuming module injects the `shared/` interface — never the owning module's concrete `@Service`.
+
+```java
+// In shared/common/service/ — interface only, no implementation
+public interface CartSnapshotReader {
+    List<CartItemSnapshotDto> getCartItems(Long cartId);
+}
+
+// In booking-inventory/service/ — owns the data, implements the contract
+@Service
+@Transactional(readOnly = true)
+public class CartSnapshotReaderImpl implements CartSnapshotReader {
+    private final CartItemRepository cartItemRepository;
+    public List<CartItemSnapshotDto> getCartItems(Long cartId) {
+        return cartItemRepository.findByCartId(cartId).stream()
+            .map(mapper::toDto).toList();
+    }
+}
+
+// In payments-ticketing/service/ — injects shared interface only, never the impl directly
+@Service
+public class PaymentService {
+    private final CartSnapshotReader cartSnapshotReader; // ✅ shared interface
+    // ❌ private final CartSnapshotReaderImpl ... // WRONG — direct module import
+}
+```
+
+Current shared reader interfaces:
+- `SlotSummaryReader` → implemented in `scheduling`, consumed by `booking-inventory`
+- `SlotPricingReader` → implemented in `scheduling`, consumed by `booking-inventory`
+- `CartSnapshotReader` → implemented in `booking-inventory`, consumed by `payments-ticketing` (payment confirmation hot path)
+- `PaymentConfirmationReader` → implemented in `payments-ticketing`, consumed by `booking-inventory` `PaymentTimeoutWatchdog`
+
 ---
 
 ## Eventbrite ACL Facades — The Only Door to External Systems
@@ -173,10 +206,10 @@ public enum BookingStatus { PENDING, CONFIRMED, CANCELLED, REFUNDED }
 | EbScheduleService | scheduling | Create recurring event schedules |
 | EbTicketService | discovery-catalog, booking-inventory | Create/update ticket classes; check availability |
 | EbCapacityService | admin/ | Update event capacity tiers |
-| EbOrderService | payments-ticketing | Read orders post-checkout |
-| EbAttendeeService | payments-ticketing, engagement | Get attendees; verify attendance for reviews |
+| EbOrderService | admin/ (reporting only) | Read EB orders for organizer-side admin reporting only — **NOT used in FR5/FR6 payment flows**; Stripe owns all payments |
+| EbAttendeeService | engagement | Get attendees; verify attendance for reviews (FR8 only) |
 | EbDiscountSyncService | promotions | Create/update/delete discount codes |
-| EbRefundService | payments-ticketing | Read refund status (no submission API) |
+| EbRefundService | — (inactive) | Retained for legacy compatibility only — **do NOT call for any refund**; all refunds via `StripeRefundService` |
 | EbWebhookService | mock-eventbrite-api only | Mock/testing webhook registration and delivery simulation (NOT production) |
 
 ### Correct Pattern
@@ -209,18 +242,60 @@ public void createEvent(...) {
 ### Critical Constraints (These Don't Exist on Eventbrite)
 
 - **No user creation API** — Users 100% internal; link post-purchase via order email
-- **No order creation API** — JS SDK widget only; backend reads AFTER onOrderComplete callback
-- **No single-order cancel** — Only bulk event cancel; per-order requires workaround
+- **No order creation API** — Orders are created internally in your `bookings` table when Stripe payment is confirmed. The EB Checkout Widget is **removed** — do NOT use or reference it.
+- **No single-order cancel** — Only bulk event cancel; per-order buyer cancellation uses `StripeRefundService` — no EB call involved
 - **No seat lock API** — Entire state machine (AVAILABLE → SOFT_LOCKED → HARD_LOCKED → CONFIRMED) is internal Redis + Spring State Machine
-- **No refund submission API** — Refund status read-only via EbRefundService only
+- **No refund submission API** — All refunds submitted via `StripeRefundService` (`POST /v1/refunds`). `EbRefundService` is **inactive** — do NOT call it for any refund flow.
 - **No conflict validation API** — Turnaround gaps enforced entirely in internal DB
-- **No reviews API** — Reviews 100% internal; Eventbrite attendance verification only
+- **No reviews API** — Reviews 100% internal; Eventbrite attendance verification only (EbAttendeeService, engagement module, FR8 only)
 
 **See docs/EVENTBRITE_INTEGRATION.md for full constraints and workarounds.**
 
 ---
 
-## admin/ Module Special Rules
+## Stripe ACL Facades — Payments and Refunds
+
+**HARD RULE: No module calls Stripe HTTP directly. All Stripe calls go through `shared/stripe/service/` facades only.**
+
+### The 3 Stripe Facades (All in `shared/stripe/service/`)
+
+| Facade | Used By | Purpose |
+|---|---|---|
+| `StripePaymentService` | payments-ticketing | `POST /v1/payment_intents` — create PaymentIntent; `GET /v1/payment_intents/{id}` — retrieve and verify status |
+| `StripeRefundService` | payments-ticketing | `POST /v1/refunds` — full or partial refund; `GET /v1/refunds/{id}` — retrieve async refund status |
+| `StripeWebhookHandler` | payments-ticketing (StripeWebhookController) | Verify `Stripe-Signature` header via `Webhook.constructEvent()`; routes events to service methods |
+
+### Key Rules
+
+- `client_secret` **must never be stored or logged** — pass to frontend response DTO directly and discard
+- `stripe_payment_intent_id` (`pi_...`) and `stripe_charge_id` (`ch_...`) are stored in `payments` and `bookings` tables
+- All amounts in **smallest currency unit** (paise for INR) on the wire and in DB; convert for display only
+- Stripe webhook endpoint (`POST /api/webhooks/stripe`) **must verify** `Stripe-Signature` before any processing; return `400` on failure
+- All webhook handlers are **idempotent** — check current state before acting; skip if already in target state
+
+```java
+// ✅ Correct — use facade only
+@Service
+public class PaymentService {
+    private final StripePaymentService stripePaymentService; // from shared/stripe/service/
+
+    public CheckoutInitResponse createCheckout(CartAssembledEvent event) {
+        StripePaymentIntentResponse resp = stripePaymentService.createPaymentIntent(
+            new StripePaymentIntentRequest(
+                event.totalAmountInSmallestUnit(), event.currency(),
+                event.userEmail(), "Booking " + bookingRef, idempotencyKey,
+                Map.of("booking_ref", bookingRef)
+            )
+        );
+        // clientSecret → return to caller only, never persist
+        return new CheckoutInitResponse(cartId, bookingRef, resp.paymentIntentId(), resp.clientSecret(), ...);
+    }
+}
+
+// ❌ Never call Stripe SDK directly from a module
+private final Stripe stripe; // WRONG — violates Hard Rule #4
+PaymentIntent.create(params);  // WRONG — must go through StripePaymentService
+```
 
 Admin owns no domain, no @Entity classes, no database tables. It reads and orchestrates.
 
