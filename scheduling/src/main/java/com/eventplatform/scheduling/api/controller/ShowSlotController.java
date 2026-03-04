@@ -5,6 +5,7 @@ import com.eventplatform.scheduling.api.dto.request.UpdateShowSlotRequest;
 import com.eventplatform.scheduling.api.dto.response.ShowSlotCancelResponse;
 import com.eventplatform.scheduling.api.dto.response.ShowSlotOccurrenceListResponse;
 import com.eventplatform.scheduling.api.dto.response.ShowSlotOccurrenceResponse;
+import com.eventplatform.scheduling.api.dto.response.ShowSlotPricingTierResponse;
 import com.eventplatform.scheduling.api.dto.response.ShowSlotResponse;
 import com.eventplatform.scheduling.api.dto.response.ShowSlotRetryResponse;
 import com.eventplatform.scheduling.api.dto.response.ShowSlotSubmitResponse;
@@ -123,6 +124,15 @@ public class ShowSlotController {
     ) {
         showSlotService.retrySync(organizationId, slotId);
         return new ShowSlotRetryResponse(ShowSlotStatus.PENDING_SYNC, "Retry initiated");
+    }
+
+    @GetMapping("/{id}/pricing-tiers")
+    @PreAuthorize("isAuthenticated()")
+    public List<ShowSlotPricingTierResponse> getPricingTiers(@PathVariable("id") Long slotId) {
+        return showSlotService.getPricingTiers(slotId)
+            .stream()
+            .map(showSlotMapper::toPricingTierResponse)
+            .toList();
     }
 
     @GetMapping("/{id}/occurrences")

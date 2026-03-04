@@ -3,6 +3,7 @@ package com.eventplatform.identity.api.controller;
 import com.eventplatform.identity.api.dto.request.UserSettingsUpsertRequest;
 import com.eventplatform.identity.api.dto.response.UserSettingsResponse;
 import com.eventplatform.identity.service.UserSettingsService;
+import com.eventplatform.shared.security.AuthenticatedUser;
 import com.eventplatform.shared.security.Roles;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,7 +27,7 @@ public class UserSettingsController {
     @GetMapping
     @PreAuthorize("hasRole('" + Roles.USER + "')")
     public UserSettingsResponse getMySettings(Authentication authentication) {
-        return userSettingsService.getMySettings((Long) authentication.getPrincipal());
+        return userSettingsService.getMySettings(((AuthenticatedUser) authentication.getPrincipal()).userId());
     }
 
     @PutMapping
@@ -35,6 +36,6 @@ public class UserSettingsController {
         Authentication authentication,
         @Valid @RequestBody UserSettingsUpsertRequest request
     ) {
-        return userSettingsService.upsertMySettings((Long) authentication.getPrincipal(), request);
+        return userSettingsService.upsertMySettings(((AuthenticatedUser) authentication.getPrincipal()).userId(), request);
     }
 }

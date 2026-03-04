@@ -2,6 +2,7 @@ package com.eventplatform.discoverycatalog.api;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -16,8 +17,10 @@ import com.eventplatform.discoverycatalog.domain.enums.VenueSyncStatus;
 import com.eventplatform.discoverycatalog.mapper.VenueMapper;
 import com.eventplatform.discoverycatalog.service.CityCatalogService;
 import com.eventplatform.discoverycatalog.service.EventCatalogService;
-import com.eventplatform.discoverycatalog.service.VenueService;
+import com.eventplatform.discoverycatalog.service.VenueServiceI;
 import com.eventplatform.discoverycatalog.service.VenueCatalogService;
+import com.eventplatform.shared.security.JwtAuthenticationFilter;
+import com.eventplatform.shared.security.JwtTokenProvider;
 import com.eventplatform.shared.common.exception.GlobalExceptionHandler;
 import com.eventplatform.shared.common.enums.SeatingMode;
 import com.eventplatform.shared.security.SecurityConfig;
@@ -26,7 +29,8 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -34,25 +38,38 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.TestPropertySource;
 
 @WebMvcTest(VenueAdminController.class)
-@Import({GlobalExceptionHandler.class, SecurityConfig.class})
+@Import({GlobalExceptionHandler.class, SecurityConfig.class, VenueAdminControllerTest.MockBeans.class})
 @TestPropertySource(properties = "app.default-org-id=1")
 class VenueAdminControllerTest {
+
+    @TestConfiguration
+    static class MockBeans {
+        @Bean
+        VenueServiceI venueService() { return mock(VenueServiceI.class); }
+        @Bean
+        VenueMapper venueMapper() { return mock(VenueMapper.class); }
+        @Bean
+        CityCatalogService cityCatalogService() { return mock(CityCatalogService.class); }
+        @Bean
+        EventCatalogService eventCatalogService() { return mock(EventCatalogService.class); }
+        @Bean
+        VenueCatalogService venueCatalogService() { return mock(VenueCatalogService.class); }
+        @Bean
+        JwtTokenProvider jwtTokenProvider() { return mock(JwtTokenProvider.class); }
+        @Bean
+        JwtAuthenticationFilter jwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+            return new JwtAuthenticationFilter(jwtTokenProvider);
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;
     @Autowired
     private ObjectMapper objectMapper;
-
-    @MockBean
-    private VenueService venueService;
-    @MockBean
+    @Autowired
+    private VenueServiceI venueService;
+    @Autowired
     private VenueMapper venueMapper;
-    @MockBean
-    private CityCatalogService cityCatalogService;
-    @MockBean
-    private EventCatalogService eventCatalogService;
-    @MockBean
-    private VenueCatalogService venueCatalogService;
 
     @Test
     @WithMockUser(roles = "ADMIN")

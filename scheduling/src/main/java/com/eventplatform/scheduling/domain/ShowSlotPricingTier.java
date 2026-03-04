@@ -15,6 +15,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "show_slot_pricing_tier")
@@ -46,6 +47,12 @@ public class ShowSlotPricingTier extends BaseEntity {
 
     @Column(name = "eb_inventory_tier_id")
     private String ebInventoryTierId;
+
+    @Column(name = "group_discount_threshold")
+    private Integer groupDiscountThreshold;   // nullable — null means no group discount
+
+    @Column(name = "group_discount_percent", precision = 5, scale = 2)
+    private BigDecimal groupDiscountPercent;  // nullable
 
     protected ShowSlotPricingTier() {
     }
@@ -89,6 +96,25 @@ public class ShowSlotPricingTier extends BaseEntity {
 
     public String getEbInventoryTierId() {
         return ebInventoryTierId;
+    }
+
+    public Integer getGroupDiscountThreshold() {
+        return groupDiscountThreshold;
+    }
+
+    public BigDecimal getGroupDiscountPercent() {
+        return groupDiscountPercent;
+    }
+
+    public void setGroupDiscount(Integer threshold, BigDecimal percent) {
+        if (threshold != null && threshold <= 0) {
+            throw new BusinessRuleException("Group discount threshold must be > 0", "INVALID_GROUP_THRESHOLD");
+        }
+        if (percent != null && (percent.compareTo(BigDecimal.ZERO) <= 0 || percent.compareTo(new BigDecimal("100")) > 0)) {
+            throw new BusinessRuleException("Group discount percent must be between 0 and 100", "INVALID_GROUP_PERCENT");
+        }
+        this.groupDiscountThreshold = threshold;
+        this.groupDiscountPercent   = percent;
     }
 
     public void attachTo(ShowSlot slot) {

@@ -10,6 +10,9 @@ public record ShowSlotPricingTierResponse(
     String currency,
     Integer quota,
     TierType tierType,
-    String ebTicketClassId
+    String ebTicketClassId,
+    String ebInventoryTierId,       // already in entity, was missing from DTO
+    Integer groupDiscountThreshold, // nullable
+    BigDecimal groupDiscountPercent // nullable
 ) {
 }

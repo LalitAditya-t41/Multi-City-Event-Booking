@@ -1,12 +1,13 @@
 package com.eventplatform.bookinginventory.service;
 
-import com.eventplatform.bookinginventory.service.client.SchedulingSlotClient;
-import com.eventplatform.bookinginventory.service.client.SchedulingSlotResponse;
-import com.eventplatform.shared.common.domain.Money;
+import com.eventplatform.shared.common.dto.PricingTierDto;
+import com.eventplatform.shared.common.dto.SlotSummaryDto;
 import com.eventplatform.shared.common.event.published.SlotDraftCreatedEvent;
 import com.eventplatform.shared.common.event.published.TicketSyncCompletedEvent;
 import com.eventplatform.shared.common.event.published.TicketSyncFailedEvent;
 import com.eventplatform.shared.common.enums.SeatingMode;
+import com.eventplatform.shared.common.service.SlotPricingReader;
+import com.eventplatform.shared.common.service.SlotSummaryReader;
 import com.eventplatform.shared.eventbrite.dto.request.EbInventoryTierRequest;
 import com.eventplatform.shared.eventbrite.dto.request.EbTicketClassRequest;
 import com.eventplatform.shared.eventbrite.exception.EbIntegrationException;
@@ -19,26 +20,31 @@ import org.springframework.stereotype.Service;
 public class SlotTicketSyncService {
 
     private final EbTicketService ebTicketService;
-    private final SchedulingSlotClient schedulingSlotClient;
+    private final SlotSummaryReader slotSummaryReader;
+    private final SlotPricingReader slotPricingReader;
     private final ApplicationEventPublisher eventPublisher;
 
     public SlotTicketSyncService(
         EbTicketService ebTicketService,
-        SchedulingSlotClient schedulingSlotClient,
+        SlotSummaryReader slotSummaryReader,
+        SlotPricingReader slotPricingReader,
         ApplicationEventPublisher eventPublisher
     ) {
         this.ebTicketService = ebTicketService;
-        this.schedulingSlotClient = schedulingSlotClient;
+        this.slotSummaryReader = slotSummaryReader;
+        this.slotPricingReader = slotPricingReader;
         this.eventPublisher = eventPublisher;
     }
 
     public void syncTickets(SlotDraftCreatedEvent event) {
         try {
-            SchedulingSlotResponse slot = schedulingSlotClient.getSlot(event.slotId());
-            List<EbTicketClassRequest> ticketClasses = slot.pricingTiers().stream()
+            SlotSummaryDto slot = slotSummaryReader.getSlotSummary(event.slotId());
+            List<PricingTierDto> tiers = slotPricingReader.getSlotPricing(event.slotId());
+
+            List<EbTicketClassRequest> ticketClasses = tiers.stream()
                 .map(tier -> new EbTicketClassRequest(
-                    tier.name(),
-                    new Money(tier.priceAmount(), tier.currency()),
+                    tier.tierName(),
+                    tier.price(),
                     tier.quota(),
                     tier.tierType()
                 ))
@@ -46,8 +52,8 @@ public class SlotTicketSyncService {
 
             ebTicketService.createTicketClasses(event.ebEventId(), ticketClasses);
 
-            List<EbInventoryTierRequest> inventoryTiers = slot.pricingTiers().stream()
-                .map(tier -> new EbInventoryTierRequest(tier.name(), tier.quota()))
+            List<EbInventoryTierRequest> inventoryTiers = tiers.stream()
+                .map(tier -> new EbInventoryTierRequest(tier.tierName(), tier.quota()))
                 .toList();
             ebTicketService.createInventoryTiers(event.ebEventId(), inventoryTiers);
 

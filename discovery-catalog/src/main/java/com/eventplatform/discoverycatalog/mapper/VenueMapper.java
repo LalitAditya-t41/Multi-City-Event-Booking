@@ -2,7 +2,9 @@ package com.eventplatform.discoverycatalog.mapper;
 
 import com.eventplatform.discoverycatalog.api.dto.request.CreateVenueRequest;
 import com.eventplatform.discoverycatalog.api.dto.response.VenueResponse;
+import com.eventplatform.discoverycatalog.api.dto.response.VenueSeatResponse;
 import com.eventplatform.discoverycatalog.domain.Venue;
+import com.eventplatform.discoverycatalog.domain.VenueSeat;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -10,6 +12,8 @@ import org.mapstruct.Mapping;
 public interface VenueMapper {
     @Mapping(target = "cityId", source = "cityId")
     VenueResponse toResponse(Venue venue);
+
+    VenueSeatResponse toSeatResponse(VenueSeat seat);
 
     default Venue toEntity(Long organizationId, CreateVenueRequest request) {
         String address = formatAddress(request.addressLine1(), request.addressLine2(), request.country());

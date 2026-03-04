@@ -7,7 +7,7 @@ import com.eventplatform.discoverycatalog.api.dto.response.VenueListResponse;
 import com.eventplatform.discoverycatalog.api.dto.response.VenueResponse;
 import com.eventplatform.discoverycatalog.domain.Venue;
 import com.eventplatform.discoverycatalog.mapper.VenueMapper;
-import com.eventplatform.discoverycatalog.service.VenueService;
+import com.eventplatform.discoverycatalog.service.VenueServiceI;
 import com.eventplatform.shared.security.Roles;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -27,10 +27,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/catalog")
 public class VenueAdminController {
 
-    private final VenueService venueService;
+    private final VenueServiceI venueService;
     private final VenueMapper venueMapper;
 
-    public VenueAdminController(VenueService venueService, VenueMapper venueMapper) {
+    public VenueAdminController(VenueServiceI venueService, VenueMapper venueMapper) {
         this.venueService = venueService;
         this.venueMapper = venueMapper;
     }

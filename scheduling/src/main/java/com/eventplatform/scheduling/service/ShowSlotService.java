@@ -9,6 +9,7 @@ import com.eventplatform.scheduling.domain.enums.ShowSlotStatus;
 import com.eventplatform.scheduling.exception.SchedulingNotFoundException;
 import com.eventplatform.scheduling.mapper.ShowSlotMapper;
 import com.eventplatform.scheduling.repository.ShowSlotOccurrenceRepository;
+import com.eventplatform.scheduling.repository.ShowSlotPricingTierRepository;
 import com.eventplatform.scheduling.repository.ShowSlotRepository;
 import com.eventplatform.scheduling.service.client.CatalogVenueResponse;
 import com.eventplatform.scheduling.service.client.VenueCatalogClient;
@@ -47,6 +48,7 @@ public class ShowSlotService {
 
     private final ShowSlotRepository showSlotRepository;
     private final ShowSlotOccurrenceRepository occurrenceRepository;
+    private final ShowSlotPricingTierRepository pricingTierRepository;
     private final ShowSlotMapper showSlotMapper;
     private final VenueCatalogClient venueCatalogClient;
     private final ConflictDetectionService conflictDetectionService;
@@ -59,6 +61,7 @@ public class ShowSlotService {
     public ShowSlotService(
         ShowSlotRepository showSlotRepository,
         ShowSlotOccurrenceRepository occurrenceRepository,
+        ShowSlotPricingTierRepository pricingTierRepository,
         ShowSlotMapper showSlotMapper,
         VenueCatalogClient venueCatalogClient,
         ConflictDetectionService conflictDetectionService,
@@ -70,6 +73,7 @@ public class ShowSlotService {
     ) {
         this.showSlotRepository = showSlotRepository;
         this.occurrenceRepository = occurrenceRepository;
+        this.pricingTierRepository = pricingTierRepository;
         this.showSlotMapper = showSlotMapper;
         this.venueCatalogClient = venueCatalogClient;
         this.conflictDetectionService = conflictDetectionService;
@@ -144,7 +148,8 @@ public class ShowSlotService {
                 slot.getEbEventId(),
                 organizationId,
                 slot.getVenueId(),
-                slot.getCityId()
+                slot.getCityId(),
+                slot.getSeatingMode()
             ));
             if (slot.isRecurring() && slot.getRecurrenceRule() != null) {
                 EbScheduleResponse scheduleResponse = ebScheduleService.createSchedule(organizationId, slot.getEbEventId(), slot.getRecurrenceRule());
@@ -264,6 +269,12 @@ public class ShowSlotService {
     @Transactional(readOnly = true)
     public ShowSlot getSlot(Long slotId) {
         return getSlotOrThrow(slotId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShowSlotPricingTier> getPricingTiers(Long slotId) {
+        getSlotOrThrow(slotId); // throws SchedulingNotFoundException if not found
+        return pricingTierRepository.findBySlotId(slotId);
     }
 
     @Transactional(readOnly = true)

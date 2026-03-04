@@ -20,6 +20,7 @@ import com.eventplatform.scheduling.exception.SchedulingNotFoundException;
 import com.eventplatform.scheduling.exception.SlotConflictException;
 import com.eventplatform.scheduling.mapper.ShowSlotMapper;
 import com.eventplatform.scheduling.repository.ShowSlotOccurrenceRepository;
+import com.eventplatform.scheduling.repository.ShowSlotPricingTierRepository;
 import com.eventplatform.scheduling.repository.ShowSlotRepository;
 import com.eventplatform.scheduling.service.client.CatalogVenueResponse;
 import com.eventplatform.scheduling.service.client.VenueCatalogClient;
@@ -56,6 +57,8 @@ class ShowSlotServiceTest {
     private ShowSlotRepository showSlotRepository;
     @Mock
     private ShowSlotOccurrenceRepository occurrenceRepository;
+    @Mock
+    private ShowSlotPricingTierRepository pricingTierRepository;
     @Mock
     private ShowSlotMapper showSlotMapper;
     @Mock
@@ -144,6 +147,8 @@ class ShowSlotServiceTest {
         ShowSlot slot = baseSlot();
         slot.addPricingTier(new ShowSlotPricingTier("General", new Money(BigDecimal.ZERO, "INR"), 10, TierType.FREE));
         when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
+        when(venueCatalogClient.getVenue(slot.getVenueId()))
+            .thenReturn(new CatalogVenueResponse(10L, 20L, "eb-1", "Venue", "Addr", 100, SeatingMode.GA));
         when(ebEventSyncService.createDraft(eq(1L), any())).thenReturn(new EbEventDto("eb-1", null, null, null, null, null, null, null, null, null));
 
         ShowSlot result = showSlotService.submitSlot(1L, 1L);
@@ -160,6 +165,8 @@ class ShowSlotServiceTest {
         ShowSlot slot = baseSlot();
         slot.addPricingTier(new ShowSlotPricingTier("General", new Money(BigDecimal.ZERO, "INR"), 10, TierType.FREE));
         when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
+        when(venueCatalogClient.getVenue(slot.getVenueId()))
+            .thenReturn(new CatalogVenueResponse(10L, 20L, "eb-1", "Venue", "Addr", 100, SeatingMode.GA));
         when(ebEventSyncService.createDraft(eq(1L), any())).thenThrow(new EbIntegrationException("boom"));
 
         assertThatThrownBy(() -> showSlotService.submitSlot(1L, 1L))
@@ -279,6 +286,30 @@ class ShowSlotServiceTest {
 
         assertThat(result).isFalse();
         assertThat(slot.getStatus()).isEqualTo(ShowSlotStatus.CANCELLED);
+    }
+
+    // --- getPricingTiers ---
+
+    @Test
+    void should_return_pricing_tiers_for_existing_slot() {
+        ShowSlot slot = baseSlot();
+        ShowSlotPricingTier tier = new ShowSlotPricingTier("General", new Money(BigDecimal.ZERO, "INR"), 50, TierType.FREE);
+        when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
+        when(pricingTierRepository.findBySlotId(1L)).thenReturn(List.of(tier));
+
+        List<ShowSlotPricingTier> result = showSlotService.getPricingTiers(1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getName()).isEqualTo("General");
+        verify(pricingTierRepository).findBySlotId(1L);
+    }
+
+    @Test
+    void should_throw_SchedulingNotFoundException_when_slot_not_found_for_getPricingTiers() {
+        when(showSlotRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> showSlotService.getPricingTiers(99L))
+            .isInstanceOf(SchedulingNotFoundException.class);
     }
 
     private CreateShowSlotRequest baseCreateRequest(SeatingMode seatingMode, String seatMapId) {
