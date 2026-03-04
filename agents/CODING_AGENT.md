@@ -348,8 +348,8 @@ and calls ACL facades for external systems. It owns no business logic itself —
 - Use constructor injection — never `@Autowired` on fields
 - One service per capability group (e.g. `BookingService`), not one per entity
 - Methods map to use cases, not CRUD operations
-- Never call a mapper — that is the controller's job
-- Never map fields manually
+- **Mapper ownership:** Controllers call the mapper to convert the returned domain object → response DTO. Services call the mapper to convert inbound request DTOs / commands → domain objects before persistence. Neither layer maps fields manually.
+- Never map fields manually in a service or controller — always delegate to a `@Mapper` class
 - Wrap multi-step operations in `@Transactional`
 - Never call another module's `@Service` directly — use REST or Events (exception: `admin/` read-only aggregation)
 - **CRITICAL: All external system calls go ONLY through ACL facade services from `shared/`. Never call Eventbrite or OpenAI HTTP directly. See "Eventbrite ACL Facades" section above in "Coding Standards".**
@@ -419,11 +419,43 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     @Query("SELECT b FROM Booking b WHERE b.userId = :userId ORDER BY b.createdAt DESC")
     List<Booking> findAllByUserIdOrderByCreatedAtDesc(@Param("userId") UUID userId);
 
+    // Paginated query — use Page<T> for any list endpoint exposed to the API
+    Page<Booking> findByUserId(UUID userId, Pageable pageable);
+
     // Projection for read-only use case
-    List<BookingSummaryProjection> findByShowSlotId(UUID showSlotId);
+    Page<BookingSummaryProjection> findByShowSlotId(UUID showSlotId, Pageable pageable);
 
     // Existence check — more efficient than findById
     boolean existsByUserIdAndShowSlotId(UUID userId, UUID showSlotId);
+}
+```
+
+### Pagination Rules
+
+- **Always use `Page<T>` and `Pageable` for any list endpoint** exposed via the API — never return unbounded `List<T>` from a controller.
+- Accept `Pageable` as a controller parameter via `@PageableDefault` — Spring auto-binds `?page=0&size=20&sort=createdAt,desc`.
+- Pass `Pageable` through service → repository unchanged. Never construct a `PageRequest` inside a service unless the page size is a business rule (e.g. max 8 seats).
+- Return `Page<ResponseDTO>` from the controller, wrapped in `ApiResponse`.
+
+```java
+// ✅ Correct paginated controller
+@GetMapping
+@PreAuthorize("hasRole('USER')")
+public ResponseEntity<ApiResponse<Page<BookingSummaryResponse>>> listBookings(
+        @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+    Page<Booking> page = bookingService.listBookings(pageable);
+    return ResponseEntity.ok(ApiResponse.success(page.map(bookingMapper::toSummaryResponse)));
+}
+
+// ✅ Correct paginated service method
+@Transactional(readOnly = true)
+public Page<Booking> listBookings(Pageable pageable) {
+    return bookingRepository.findAll(pageable);
+}
+
+// ❌ Wrong — unbounded list; will break under load
+public List<Booking> listBookings() {
+    return bookingRepository.findAll();
 }
 ```
 
@@ -581,6 +613,61 @@ public class BookingConfirmedListener {
 **Use `@TransactionalEventListener(phase = AFTER_COMMIT)`** for events that must not fire
 if the transaction rolls back (e.g. booking confirmed → generate ticket).
 Use `@EventListener` only for events that should fire regardless of transaction outcome.
+
+### Async Event Error Handling (Mandatory)
+
+`@Async` listeners run outside the original transaction. Uncaught exceptions are swallowed by the thread pool and will not surface to the caller. Every `@Async` listener **must** handle its own failures explicitly.
+
+**Rules:**
+- Wrap the delegated service call in a try/catch — log the error with full context at `ERROR` level
+- Never let an async listener throw silently — it will look like a success to the publisher
+- For business-critical side effects (e.g. e-ticket generation, wallet credit), publish a compensating event or persist a retry record so the operation can be retried
+- Configure a global `AsyncUncaughtExceptionHandler` in `shared/config/AsyncConfig` as a last-resort safety net
+
+```java
+// ✅ Correct async listener — explicit error handling
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class BookingConfirmedListener {
+
+    private final ETicketService eTicketService;
+    private final FailedEventRepository failedEventRepository; // for retry persistence
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async
+    public void onBookingConfirmed(BookingConfirmedEvent event) {
+        log.info("Handling BookingConfirmedEvent. bookingId={}", event.bookingId());
+        try {
+            eTicketService.generateTicket(event.bookingId());
+        } catch (Exception e) {
+            // Log with full context — never swallow silently
+            log.error("E-ticket generation failed after booking confirmed. bookingId={} userId={}",
+                event.bookingId(), event.userId(), e);
+            // Persist for retry — do not re-throw (async thread cannot propagate to caller)
+            failedEventRepository.save(FailedEvent.from(event, e.getMessage()));
+        }
+    }
+}
+
+// ✅ Correct global fallback in shared/config/AsyncConfig.java
+@Configuration
+@EnableAsync
+public class AsyncConfig implements AsyncConfigurer {
+
+    @Override
+    public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {
+        return (ex, method, params) ->
+            log.error("Unhandled async exception in method={}. params={}", method.getName(), params, ex);
+    }
+}
+
+// ❌ Wrong — exception silently swallowed, ticket never generated, no trace
+@Async
+public void onBookingConfirmed(BookingConfirmedEvent event) {
+    eTicketService.generateTicket(event.bookingId()); // if this throws, nobody knows
+}
+```
 
 ---
 
@@ -744,7 +831,75 @@ public class EbOrderService {
 
 ---
 
-## Dependency Injection Rules
+## Spring Security & JWT
+
+All security configuration lives in `shared/config/SecurityConfig` and `shared/security/`. No module defines its own security filter or `SecurityFilterChain`.
+
+### Where Things Live
+
+| Component | Location | Responsibility |
+|---|---|---|
+| `SecurityConfig` | `shared/config/SecurityConfig` | Filter chain, CORS, CSRF, route matchers |
+| `JwtAuthenticationFilter` | `shared/security/JwtAuthenticationFilter` | Validates JWT, populates `SecurityContext` |
+| `JwtTokenProvider` | `shared/security/JwtTokenProvider` | Mint and verify JWT tokens |
+| `CurrentUserArgumentResolver` | `shared/security/CurrentUserArgumentResolver` | Resolves `@CurrentUser` annotation in controllers |
+| `AppUserDetails` | `shared/security/AppUserDetails` | Wraps `UserPrincipal` claims for Spring Security |
+
+### Accessing the Authenticated User in Controllers
+
+Never call `SecurityContextHolder.getContext()` directly in controllers or services. Use the `@CurrentUser` annotation resolved by `CurrentUserArgumentResolver`.
+
+```java
+// ✅ Correct — @CurrentUser injected by resolver
+@GetMapping("/me/bookings")
+@PreAuthorize("hasRole('USER')")
+public ResponseEntity<ApiResponse<Page<BookingSummaryResponse>>> myBookings(
+        @CurrentUser UserPrincipal principal,
+        @PageableDefault(size = 20) Pageable pageable) {
+    return ResponseEntity.ok(ApiResponse.success(
+        bookingService.listForUser(principal.userId(), pageable)
+            .map(bookingMapper::toSummaryResponse)));
+}
+
+// ❌ Wrong — couples service to security context; untestable
+public Page<Booking> listForUser() {
+    UUID userId = (UUID) SecurityContextHolder.getContext()
+        .getAuthentication().getPrincipal(); // never do this in a service
+    return bookingRepository.findByUserId(userId, Pageable.unpaged());
+}
+```
+
+### Authorization Rules
+
+- Route-level security is declared in `SecurityConfig` (public routes, actuator, swagger)
+- Method-level security uses `@PreAuthorize` on controller methods — never on service methods
+- Role names follow `ROLE_` prefix convention: `hasRole('USER')`, `hasRole('ADMIN')`
+- Never hardcode role strings outside of `@PreAuthorize` annotations — define constants in `shared/security/Roles`
+
+```java
+// ✅ Correct — constants from shared
+@PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+
+// ❌ Wrong — magic string duplicated across codebase
+@PreAuthorize("hasRole('ADMIN')")
+```
+
+### JWT Claims Convention
+
+Claims extracted from the token and available on `UserPrincipal`:
+
+| Claim | Type | Description |
+|---|---|---|
+| `sub` | `UUID` | Internal user ID (`userId`) |
+| `email` | `String` | User email |
+| `roles` | `List<String>` | Granted roles |
+| `walletId` | `UUID` | Linked wallet ID |
+
+Never add module-specific claims to the JWT. If a service needs additional user context, fetch it via the `identity` module REST API.
+
+---
+
+
 
 Always use **constructor injection**. Never use field injection with `@Autowired`.
 
@@ -855,18 +1010,24 @@ String url = "https://api.eventbrite.com/v3/orders"; // wrong
 - [ ] Every new class is in the correct layer and package per `docs/MODULE_STRUCTURE_TEMPLATE.md`
 - [ ] No `@Service`, `@Component`, or `@Autowired` in `domain/` classes
 - [ ] No field mapping in services or controllers — all in `mapper/`
+- [ ] **Mapper ownership: services use mapper for request DTO → domain; controllers use mapper for domain → response DTO. Neither maps manually.**
 - [ ] **No external API calls inside module code — ALL through `shared/` ACL facades (Eventbrite, OpenAI)**
 - [ ] **Eventbrite: No module calls Eventbrite HTTP directly. All calls via EbEventSyncService, EbVenueService, EbTicketService, EbOrderService, EbAttendeeService, etc.**
 - [ ] **Eventbrite: Never attempt order creation, user creation, single-order cancel, seat locking, or cart persistence (not supported)**
 - [ ] No cross-module `@Service` or `@Repository` imports
 - [ ] `@Transactional` applied to all multi-step service methods
+- [ ] `@Transactional(readOnly = true)` applied to all read-only service methods
 - [ ] `@Valid` applied to all `@RequestBody` parameters
 - [ ] All exceptions extend `ResourceNotFoundException` or `BusinessRuleException` from `shared/`
 - [ ] No `@ControllerAdvice` or `@ExceptionHandler` defined in any module
 - [ ] All monetary values use `Money` — no `BigDecimal`, no `double`
 - [ ] All Spring Events use records with primitives/IDs/value objects — no `@Entity` in payloads
 - [ ] `@TransactionalEventListener(phase = AFTER_COMMIT)` used for post-commit listeners
+- [ ] **All `@Async` listeners have explicit try/catch with `ERROR` logging and failure persistence — no silent swallowing**
 - [ ] Constructor injection used everywhere — no `@Autowired` on fields
 - [ ] New Flyway migration file added for every schema change, with correct global version number
+- [ ] **All list-returning API endpoints use `Page<T>` and accept `Pageable` — no unbounded `List<T>` from controllers**
+- [ ] **`@CurrentUser UserPrincipal` used in controllers — never `SecurityContextHolder` in services**
+- [ ] **`@PreAuthorize` on controller methods only — never on service methods**
 - [ ] **admin/ Module: Reads can import module @Service directly. Writes MUST call owning module's REST API.**
 - [ ] **If feature touches multiple modules: Spring Events used for async reactions, never direct service calls**

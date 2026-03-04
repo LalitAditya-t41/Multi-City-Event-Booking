@@ -87,7 +87,7 @@ Modules never consume the raw webhook directly.
   - Create (org-scoped), update, publish, unpublish, cancel, delete events; pull org event catalog; verify sync integrity
   
 - **EbVenueService** (`shared/eventbrite/service/`)
-  - Read-only: List events at a venue. Venue creation/updates not available via API (Dashboard only).
+  - Create venues under an org (`POST /organizations/{org_id}/venues/`); update venues (`POST /venues/{venue_id}/`); list org venues (`GET /organizations/{org_id}/venues/`); list events at a venue (`GET /venues/{venue_id}/events/`).
   
 - **EbScheduleService** (`shared/eventbrite/service/`)
   - Create recurring event schedules and occurrences; retrieve series info
@@ -119,7 +119,7 @@ Modules never consume the raw webhook directly.
 
 > **Note:** `EbRefundService` does NOT submit refunds programmatically. Refund status is read from the order's `refund_request` field only. Actual refund initiation is handled by mimicking admin actions via Eventbrite org token (backend only).
 
-> **Note:** `EbVenueService` is read-only. Venue creation and updates are not exposed via Eventbrite's public API — they must be managed via the Eventbrite Dashboard.
+> **Note:** `EbVenueService` supports venue creation (`POST /organizations/{org_id}/venues/`) and updates (`POST /venues/{venue_id}/`). The Eventbrite API v3 exposes both endpoints. Venue creation in your app always pushes to Eventbrite and stores the returned `eb_venue_id`.
 
 ### Mock Eventbrite Service — Development & Testing
 
@@ -367,40 +367,22 @@ Key Point: Eventbrite has NO user creation or update API. Identity is 100% inter
   - Backend validates uniqueness in `users` table
   - Password is hashed (BCrypt) and stored
   - JWT token is issued — user is now authenticated
-  - `UserRegisteredEvent` is published
-- Eventbrite API Call (via `shared/` ACL)
-  - (none — no user creation API on Eventbrite)
+  - No publish Required we will be using the atendee publish that is built later on.
 
 **Step 2: Profile Setup**
 - Internal App (Your DB / Spring Boot)
   - User fills in profile details: display name, phone, city, avatar
   - Internal `users` table is updated
   - No sync to Eventbrite at this stage
-- Eventbrite API Call (via `shared/` ACL)
-  - `GET /users/me/` — only called if user explicitly linked their Eventbrite account via OAuth (optional)
 
 **Step 3: Preference Onboarding**
 - Internal App (Your DB / Spring Boot)
-  - User selects preferred genres, cities, price ranges, notification settings
-  - Stored in `user_preferences` table
+  - User selects preferred genres, cities, notification settings
+  - Store the preferences
   - Used for personalized event recommendations from internal catalog
-- Eventbrite API Call (via `shared/` ACL)
-  - (none — preferences are internal only)
 
-**Post-Purchase: User ↔ Eventbrite Link Established**
-- Internal App (Your DB / Spring Boot)
-  - User completes a purchase via Eventbrite Checkout Widget
-  - Eventbrite creates order with buyer email
-  - Your backend reads the order via `GET /orders/{order_id}/`
-  - Match order email to `users` table → store `eventbrite_order_id` against `user_id` in `bookings` table
-  - User is now linked to Eventbrite via their order history
-- Eventbrite API Call (via `shared/` ACL)
-  - `GET /orders/{order_id}/` — read order details post-checkout
-  - `GET /events/{event_id}/attendees/` — verify user appears as attendee
-
-**ACL Facades:** (none during registration) | `EbOrderService` + `EbAttendeeService` (post-purchase)  
-**DB Tables:** `users`, `user_preferences`, `user_wallets`  
-**Publishes:** `UserRegisteredEvent`
+- This is the basic flow of the user registration and onboarding
+- The JWT and authentication and API key like 
 
 ### FR4 — Seat Selection → Pricing Tier Validation → Cart Assembly
 **Module:** booking-inventory

@@ -7,8 +7,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.eventplatform.discoverycatalog.api.controller.CityCatalogController;
 import com.eventplatform.discoverycatalog.api.dto.response.CityListResponse;
 import com.eventplatform.discoverycatalog.api.dto.response.CityResponse;
+import com.eventplatform.discoverycatalog.mapper.VenueMapper;
 import com.eventplatform.discoverycatalog.service.CityCatalogService;
 import com.eventplatform.discoverycatalog.service.EventCatalogService;
+import com.eventplatform.discoverycatalog.service.VenueService;
 import com.eventplatform.discoverycatalog.service.VenueCatalogService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -40,6 +42,12 @@ class CityCatalogControllerTest {
 
     @MockBean
     private VenueCatalogService venueCatalogService;
+
+    @MockBean
+    private VenueService venueService;
+
+    @MockBean
+    private VenueMapper venueMapper;
 
     @Test
     void should_return_200_when_cities_listed() throws Exception {

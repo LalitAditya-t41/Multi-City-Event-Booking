@@ -21,6 +21,9 @@
         <module>shared</module>
         <module>discovery-catalog</module>
         <module>identity</module>
+        <module>scheduling</module>
+        <module>booking-inventory</module>
+        <module>admin</module>
     </modules>
 
     <properties>

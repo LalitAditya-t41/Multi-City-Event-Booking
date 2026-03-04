@@ -1,6 +1,8 @@
 package com.eventplatform.shared.eventbrite.service;
 
-import com.eventplatform.shared.eventbrite.dto.EbEventDto;
+import com.eventplatform.shared.eventbrite.dto.request.EbEventCreateRequest;
+import com.eventplatform.shared.eventbrite.dto.response.EbEventDto;
+import com.eventplatform.shared.eventbrite.dto.request.EbEventUpdateRequest;
 import java.util.List;
 
 public interface EbEventSyncService {
@@ -9,4 +11,12 @@ public interface EbEventSyncService {
     List<EbEventDto> listEventsByVenue(String venueId);
 
     EbEventDto getEventById(String eventId);
+
+    EbEventDto createDraft(Long organizationId, EbEventCreateRequest request);
+
+    EbEventDto updateEvent(Long organizationId, String eventId, EbEventUpdateRequest request);
+
+    void publishEvent(Long organizationId, String eventId);
+
+    void cancelEvent(Long organizationId, String eventId);
 }

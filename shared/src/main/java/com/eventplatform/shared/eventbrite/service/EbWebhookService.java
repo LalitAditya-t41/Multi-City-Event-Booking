@@ -1,6 +1,6 @@
 package com.eventplatform.shared.eventbrite.service;
 
-import com.eventplatform.shared.eventbrite.dto.EbWebhookRegistrationResult;
+import com.eventplatform.shared.eventbrite.dto.response.EbWebhookRegistrationResult;
 import java.util.List;
 
 public interface EbWebhookService {

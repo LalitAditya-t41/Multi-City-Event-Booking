@@ -7,7 +7,7 @@ import com.eventplatform.discoverycatalog.exception.CatalogSyncException;
 import com.eventplatform.discoverycatalog.repository.EventCatalogRepository;
 import com.eventplatform.discoverycatalog.repository.VenueRepository;
 import com.eventplatform.discoverycatalog.domain.Venue;
-import com.eventplatform.shared.eventbrite.dto.EbEventDto;
+import com.eventplatform.shared.eventbrite.dto.response.EbEventDto;
 import com.eventplatform.shared.eventbrite.exception.EbAuthException;
 import com.eventplatform.shared.eventbrite.exception.EbIntegrationException;
 import com.eventplatform.shared.eventbrite.service.EbEventSyncService;
