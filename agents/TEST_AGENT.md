@@ -165,6 +165,20 @@ Examples:
 
 ---
 
+## Known API Contract Changes (FR1–FR7) — Do Not Revert
+
+The following contract changes were applied during the FR1–FR7 implementation cycle. Any test that references the old shape will fail. Fix the test — do not revert the production code.
+
+| Change | Old | New | Affected Test Files |
+|---|---|---|---|
+| `CartResponse` discount field | `discountAmount` | `groupDiscountAmount` + `couponDiscountAmount` | `BookingInventoryControllerTest`, `CartServiceTest` |
+| `BookingConfirmedEvent` first param | `(cartId, seatIds, ...)` | `(bookingId, cartId, seatIds, ...)` | `PaymentServiceTest` (uses `ArgumentCaptor` — no change needed) |
+| `CartSnapshotReader` | single `getCartItems()` | `getCartItems()` + `getCartSummary()` | Any test mocking `CartSnapshotReader` must stub both methods |
+| Event listener annotation | `@EventListener` | `@TransactionalEventListener(phase = AFTER_COMMIT)` on post-commit side-effects | Any listener test using `ApplicationEventPublisher.publishEvent()` must use `@Transactional` test config |
+| `ShowSlotService.toEbCreateRequest()` | uses internal `venueId.toString()` | uses `venue.eventbriteVenueId()` from `venueCatalogClient.getVenue()` | `ShowSlotServiceTest` — must stub `venueCatalogClient.getVenue()` |
+
+---
+
 ## Completion Criteria
 
 Test Agent is complete only when:

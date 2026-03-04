@@ -825,7 +825,8 @@ Add these additional rules to any module that integrates with Eventbrite to enfo
                           target.getFullName().contains("EbOrderService.create")
             )
             .because("User registration and order creation are internal-only — Eventbrite has no API for these; " +
-                     "use identity module for users and booking module for orders; JavaScript SDK handles Eventbrite order creation");
+                     "use identity module for users; orders are created in the bookings table on Stripe payment confirmation; " +
+                     "EB Checkout Widget is removed");
 ```
 
 ### When to Add a New Arch Rule

@@ -2,7 +2,7 @@
 
 **Owner:** Lalit  
 **Domain:** EntertainmentTech  
-**Last Updated:** March 2026 — FR5 updated: Stripe replaces Eventbrite Checkout Widget for payments and refunds
+**Last Updated:** March 2026 — FR1–FR7 implemented: Stripe payment/refund backbone, promotions module scaffolded, pre-FR4/pre-FR7 bug and gap fixes applied (V36/V37 migrations)
 
 **Architecture:** Modular Monolith — Spring Boot 3.5.11, Java 21
 
@@ -21,9 +21,9 @@
 | discovery-catalog | Events, Venues, Cities, Eventbrite catalog sync | Bookings, Users, Payments |
 | scheduling | Show slots, time slot config, conflict validation, Eventbrite event sync | Bookings, Users |
 | identity | Users, JWT auth, profiles, preferences | Bookings, Payments, Events |
-| booking-inventory | Seats, SeatMap, Cart, Seat Lock State Machine, Pricing | Payments, Reviews, Users |
+| booking-inventory | Seats, SeatMap, Cart, Seat Lock State Machine, Pricing; `groupDiscountAmount` + `couponDiscountAmount` split on `Cart` entity (V36) | Payments, Reviews, Users |
 | payments-ticketing | Bookings, Payments (Stripe), E-Tickets, Cancellations, Refunds (Stripe), Wallet | Seats (reads cart only) |
-| promotions | Coupons, Promotions, Eligibility rules, EB discount sync | Bookings, Payments, Users |
+| promotions | Coupons, Promotions, Eligibility rules, EB discount sync; `CouponRedemption` table (V37); module scaffolded and wired into root pom.xml | Bookings, Payments, Users |
 | engagement | Reviews, Moderation, AI Chatbot, RAG pipeline | Bookings (reads attended status only) |
 
 - `admin/` — owns no domain. Orchestrates and aggregates across modules. No `@Entity` classes.
@@ -72,7 +72,7 @@ For hot-path, high-frequency reads in a modular monolith, a module may define a 
 Current implementations:
 - `SlotSummaryReader` (`shared/common/service/`) → implemented by `SlotSummaryReaderImpl` in `scheduling` → consumed by `booking-inventory` (slot validation path)
 - `SlotPricingReader` (`shared/common/service/`) → implemented by `SlotPricingReaderImpl` in `scheduling` → consumed by `booking-inventory` (pricing/provisioning path)
-- `CartSnapshotReader` (`shared/common/service/`) → implemented by `CartSnapshotReaderImpl` in `booking-inventory` → consumed by `payments-ticketing` (payment confirmation hot path — replaces internal HTTP `GET /internal/booking/carts/{cartId}/items`)
+- `CartSnapshotReader` (`shared/common/service/`) → implemented by `CartSnapshotReaderImpl` in `booking-inventory` → consumed by `payments-ticketing` (payment confirmation hot path — replaces internal HTTP `GET /internal/booking/carts/{cartId}/items`). Exposes two methods: `getCartItems(Long cartId) → List<CartItemSnapshotDto>` and `getCartSummary(Long cartId) → CartSummaryDto` (cart-level header: `orgId`, `slotId`, `couponCode`, `expiresAt`, `currency` — consumed by `promotions.CouponEligibilityService`)
 - `PaymentConfirmationReader` (`shared/common/service/`) → implemented by `PaymentConfirmationReaderImpl` in `payments-ticketing` → consumed by `booking-inventory` `PaymentTimeoutWatchdog` (replaces internal HTTP `GET /api/v1/internal/payments/by-cart/{cartId}`)
 
 Rules for this pattern:
@@ -90,9 +90,10 @@ When something important happens in Module A, it publishes a Spring `Application
 - payments-ticketing → publishes `PaymentFailedEvent`
 - booking-inventory → listens `PaymentFailedListener` → triggers seat lock rollback
 
-- payments-ticketing → publishes `BookingConfirmedEvent`
+- payments-ticketing → publishes `BookingConfirmedEvent` (fields: `bookingId`, `cartId`, `seatIds`, `stripePaymentIntentId`, `userId`)
 - engagement → listens `BookingConfirmedListener` → unlocks review eligibility
 - identity → listens `BookingConfirmedListener` → updates order history
+- promotions → listens `BookingConfirmedListener` → records `CouponRedemption` row (uses `bookingId`)
 
 ### Rule 3 — All Eventbrite API calls go through `shared/eventbrite/service/` only
 No module ever calls Eventbrite directly. The ACL facade services are the only entry point.
@@ -972,11 +973,14 @@ Tool Calling
 | payments-ticketing | `PaymentFailedEvent` | booking-inventory | Payment failed (Stripe decline/cancel) → rollback Redis seat locks |
 | payments-ticketing | `BookingConfirmedEvent` | engagement | Booking confirmed (Stripe succeeded) → unlock review eligibility |
 | payments-ticketing | `BookingConfirmedEvent` | identity | Booking confirmed (Stripe succeeded) → update user order history |
+| payments-ticketing | `BookingConfirmedEvent` | promotions | Booking confirmed → record `CouponRedemption` (uses `bookingId` from event) |
 | payments-ticketing | `BookingCancelledEvent` | booking-inventory | Cancellation → release Redis seat locks |
 | scheduling | `ShowSlotCreatedEvent` | booking-inventory | Slot created → provision seat map |
+| scheduling | `ShowSlotActivatedEvent` (carries `seatingMode`, `ebEventId`) | booking-inventory | Slot activated → seat provisioning for RESERVED mode |
 | scheduling | `ShowSlotCancelledEvent` | booking-inventory | Slot cancelled → release all seats |
 | scheduling | `ShowSlotCancelledEvent` | payments-ticketing | Slot cancelled → bulk Stripe refunds + EB event cancel (passive) |
-| promotions | `CouponAppliedEvent` | booking-inventory | Coupon applied → recompute cart total (discounted amount sent to Stripe) |
+| promotions | `CouponValidatedEvent` | (audit/analytics) | Coupon passed existence/expiry/usage checks — cart NOT yet modified |
+| promotions | `CouponAppliedEvent` | booking-inventory | Coupon committed → `CouponAppliedListener` sets `cart.couponDiscountAmount`; discounted total flows into Stripe PaymentIntent |
 | discovery-catalog | `EventCatalogUpdatedEvent` | engagement | Catalog updated → refresh RAG Elasticsearch index |
 
 ## 8. Shared Infrastructure
@@ -1008,11 +1012,14 @@ Tool Calling
 | `ElasticsearchConfig` | `shared/config/` | ES client for RAG vector store |
 | `SlotSummaryReader` | `shared/common/service/` | Read interface: `getSlotSummary(Long slotId) → SlotSummaryDto`; implemented by `scheduling/SlotSummaryReaderImpl` |
 | `SlotPricingReader` | `shared/common/service/` | Read interface: `getSlotPricing(Long slotId) → List<PricingTierDto>`; implemented by `scheduling/SlotPricingReaderImpl` |
-| `CartSnapshotReader` | `shared/common/service/` | Read interface: `getCartItems(Long cartId) → List<CartItemSnapshotDto>`; implemented by `booking-inventory/CartSnapshotReaderImpl`; consumed by `payments-ticketing` on payment confirmation hot path |
+| `CartSnapshotReader` | `shared/common/service/` | Read interface with two methods: `getCartItems(Long cartId) → List<CartItemSnapshotDto>` (line items) and `getCartSummary(Long cartId) → CartSummaryDto` (cart header); implemented by `booking-inventory/CartSnapshotReaderImpl`; consumed by `payments-ticketing` (payment hot path) and `promotions` (coupon eligibility) |
 | `PaymentConfirmationReader` | `shared/common/service/` | Read interface: `isPaymentConfirmed(Long cartId) → boolean`; implemented by `payments-ticketing/PaymentConfirmationReaderImpl`; consumed by `booking-inventory` `PaymentTimeoutWatchdog` |
 | `SlotSummaryDto` | `shared/common/dto/` | Record: `slotId, status, ebEventId, seatingMode, orgId, venueId, cityId, sourceSeatMapId` |
 | `PricingTierDto` | `shared/common/dto/` | Record: `tierId, tierName, price(Money), quota, tierType, ebTicketClassId, ebInventoryTierId, groupDiscountThreshold, groupDiscountPercent` |
 | `CartItemSnapshotDto` | `shared/common/dto/` | Record: `itemId, cartId, seatId, gaClaimId, ticketClassId, unitPrice, currency, quantity`; used by `CartSnapshotReader` |
+| `CartSummaryDto` | `shared/common/dto/` | Record: `cartId, orgId, slotId, couponCode, expiresAt, currency`; cart-level header for coupon eligibility checks in `promotions` |
+| `CouponAppliedEvent` | `shared/common/event/published/` | Record: `cartId, couponCode, discountAmountInSmallestUnit, currency, userId`; published by `promotions`, consumed by `booking-inventory.CouponAppliedListener` to set `cart.couponDiscountAmount` |
+| `CouponValidatedEvent` | `shared/common/event/published/` | Record: `cartId, couponCode, discountAmountInSmallestUnit, currency, userId`; published by `promotions` after passing eligibility checks — audit/analytics signal before cart mutation |
 
 ## 9. Hard Rules — Never Violate These
 
@@ -1056,6 +1063,6 @@ Tool Calling
 
 - All Flyway scripts live in `app/src/main/resources/db/migration/`
 - Naming: `V[n]__[verb]_[table].sql` — e.g. `V5__create_bookings.sql`
-- Version numbers are global across all modules — check the current highest before adding
+- Version numbers are global across all modules — check the current highest before adding (latest as of March 2026: `V37__create_promotions_tables.sql`)
 - Never modify an existing migration file — always add a new one
 - Table names use `snake_case`
