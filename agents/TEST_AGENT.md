@@ -1,7 +1,7 @@
 # TEST_AGENT.md — Testing Standards & Execution Agent
 
 > Read this file before writing or running tests.
-> This agent is responsible for test planning, test implementation, execution, failure fixing, and result logging.
+> This agent is responsible for test code implementation, execution, failure fixing, and result logging.
 
 ---
 
@@ -9,11 +9,12 @@
 
 This file defines the responsibilities of the **Test Agent**.
 
-- Build tests from `SPEC_*.md` Stage 8 test list (source of truth for test scope)
-- Follow project testing architecture in `docs/TESTING_GUIDE.md`
-- Execute tests and fix failures caused by new or changed code
-- Keep production code and test code aligned with module boundaries from `PRODUCT.md`
-- Produce a timestamped test result log in `test_result_folder/` at the repo root
+The **SPEC_GENERATOR** is the sole source of truth for what to test — it writes all test cases in Stage 8 of the `SPEC_*.md` file. The **TEST_AGENT does not decide what to test**. Its only job is to:
+
+- **Translate** the test cases written in `SPEC_*.md` Stage 8 into executable test code
+- **Run** those tests
+- **Fix** failures caused by new or changed code
+- **Log** results in a timestamped report in `test_result_folder/`
 
 ---
 
@@ -21,7 +22,8 @@ This file defines the responsibilities of the **Test Agent**.
 
 ### Test Agent MUST
 
-- Write tests for all layers listed in spec:
+- Read Stage 8 of the `SPEC_*.md` file and implement exactly those test cases — nothing more, nothing less
+- Write test code for all layers as specified in the test cases:
   - `domain/` (pure unit)
   - `service/` (Mockito orchestration)
   - `api/` (`@WebMvcTest` HTTP contract)
@@ -33,6 +35,8 @@ This file defines the responsibilities of the **Test Agent**.
 
 ### Test Agent MUST NOT
 
+- Decide what test cases to write — that is SPEC_GENERATOR's job
+- Add, remove, or modify test cases from Stage 8
 - Introduce unapproved features not present in `SPEC_*.md`
 - Change module ownership or dependency direction rules
 - Add module-level `@ControllerAdvice`
@@ -42,7 +46,7 @@ This file defines the responsibilities of the **Test Agent**.
 
 ## Inputs (Required Before Writing Tests)
 
-1. Confirmed feature spec: `SPEC_*.md`
+1. Confirmed feature spec with Stage 8 test cases: `SPEC_*.md` ← **primary input**
 2. Module ownership and boundaries: `PRODUCT.md`
 3. Layer/package standards: `docs/MODULE_STRUCTURE_TEMPLATE.md`
 4. Test patterns/rules: `docs/TESTING_GUIDE.md`
@@ -90,9 +94,9 @@ Examples:
 
 ## Execution Workflow
 
-1. Parse Stage 8 test list from the approved `SPEC_*.md`
-2. Generate/adjust tests by layer
-3. Run focused tests first (changed files only), then module suite
+1. Read Stage 8 test cases from the approved `SPEC_*.md` — do not interpret or expand them
+2. Implement each test case as code in the correct layer
+3. Run focused tests first (changed files only), then full module suite
 4. Capture failures
 5. Fix test or code issues
 6. Re-run until green (or blocked)
@@ -165,8 +169,8 @@ Examples:
 
 Test Agent is complete only when:
 
-- All feasible Stage 8 tests are implemented
-- Relevant tests are executed
+- All Stage 8 test cases from `SPEC_*.md` are implemented as code
+- All implemented tests are executed
 - Failures are fixed or explicitly documented as blocked
 - A timestamped result log is saved in `test_result_folder/`
 
@@ -174,6 +178,6 @@ Test Agent is complete only when:
 
 ## Handoff Contract
 
-- `SPEC_GENERATOR` defines what to test
+- `SPEC_GENERATOR` defines what to test — writes all test cases in Stage 8
 - `CODING_AGENT` implements production code
-- `TEST_AGENT` validates behavior, fixes test/logic defects, and publishes the final test report
+- `TEST_AGENT` writes test code for Stage 8 cases, runs them, fixes failures, and publishes the final test report
