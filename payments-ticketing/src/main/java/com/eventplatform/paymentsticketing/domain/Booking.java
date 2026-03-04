@@ -8,6 +8,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import java.time.Instant;
 
 @Entity
 @Table(name = "bookings")
@@ -28,6 +29,12 @@ public class Booking extends BaseEntity {
     @Column(name = "slot_id", nullable = false)
     private Long slotId;
 
+    @Column(name = "org_id")
+    private Long orgId;
+
+    @Column(name = "slot_start_time")
+    private Instant slotStartTime;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private BookingStatus status;
@@ -47,15 +54,31 @@ public class Booking extends BaseEntity {
     protected Booking() {
     }
 
-    public Booking(String bookingRef, Long cartId, Long userId, Long eventId, Long slotId, Long totalAmount, String currency) {
+    public Booking(
+        String bookingRef,
+        Long cartId,
+        Long userId,
+        Long eventId,
+        Long slotId,
+        Long orgId,
+        Instant slotStartTime,
+        Long totalAmount,
+        String currency
+    ) {
         this.bookingRef = bookingRef;
         this.cartId = cartId;
         this.userId = userId;
         this.eventId = eventId;
         this.slotId = slotId;
+        this.orgId = orgId;
+        this.slotStartTime = slotStartTime;
         this.totalAmount = totalAmount;
         this.currency = currency;
         this.status = BookingStatus.PENDING;
+    }
+
+    public Booking(String bookingRef, Long cartId, Long userId, Long eventId, Long slotId, Long totalAmount, String currency) {
+        this(bookingRef, cartId, userId, eventId, slotId, null, null, totalAmount, currency);
     }
 
     public void confirm(String stripePaymentIntentId, String stripeChargeId) {
@@ -87,6 +110,20 @@ public class Booking extends BaseEntity {
         this.status = BookingStatus.CANCELLED;
     }
 
+    public void cancelFromConfirmed() {
+        if (status == BookingStatus.CANCELLED) {
+            return;
+        }
+        if (status != BookingStatus.CONFIRMED && status != BookingStatus.CANCELLATION_PENDING) {
+            throw new BusinessRuleException("Booking cannot be cancelled from state " + status, "INVALID_BOOKING_STATE");
+        }
+        this.status = BookingStatus.CANCELLED;
+    }
+
+    public void updateTotalAmount(Long totalAmount) {
+        this.totalAmount = totalAmount;
+    }
+
     public void cancelDueToPaymentFailure() {
         if (status == BookingStatus.CANCELLED) {
             return;
@@ -116,6 +153,14 @@ public class Booking extends BaseEntity {
 
     public Long getSlotId() {
         return slotId;
+    }
+
+    public Long getOrgId() {
+        return orgId;
+    }
+
+    public Instant getSlotStartTime() {
+        return slotStartTime;
     }
 
     public BookingStatus getStatus() {

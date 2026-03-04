@@ -29,6 +29,7 @@ import com.eventplatform.shared.common.service.SlotSummaryReader;
 import com.eventplatform.shared.stripe.dto.StripePaymentIntentRequest;
 import com.eventplatform.shared.stripe.dto.StripePaymentIntentResponse;
 import com.eventplatform.shared.stripe.service.StripePaymentService;
+import java.time.Instant;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -36,8 +37,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 
 @Service
 public class PaymentService {
@@ -53,6 +58,7 @@ public class PaymentService {
     private final BookingRefGenerator bookingRefGenerator;
     private final SlotSummaryReader slotSummaryReader;
     private final CartSnapshotReader cartSnapshotReader;
+    private final RestClient restClient;
 
     public PaymentService(
         BookingRepository bookingRepository,
@@ -65,7 +71,8 @@ public class PaymentService {
         AfterCommitEventPublisher afterCommitEventPublisher,
         BookingRefGenerator bookingRefGenerator,
         SlotSummaryReader slotSummaryReader,
-        CartSnapshotReader cartSnapshotReader
+        CartSnapshotReader cartSnapshotReader,
+        @Value("${app.internal-base-url:http://localhost:8080}") String internalBaseUrl
     ) {
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
@@ -78,6 +85,7 @@ public class PaymentService {
         this.bookingRefGenerator = bookingRefGenerator;
         this.slotSummaryReader = slotSummaryReader;
         this.cartSnapshotReader = cartSnapshotReader;
+        this.restClient = RestClient.builder().baseUrl(internalBaseUrl).build();
     }
 
     @Transactional
@@ -99,10 +107,12 @@ public class PaymentService {
         }
 
         String bookingRef = bookingRefGenerator.nextRef();
-        Long eventId = event.slotId();
-        if (slotSummaryReader.getSlotSummary(event.slotId()) == null) {
+        var slotSummary = slotSummaryReader.getSlotSummary(event.slotId());
+        if (slotSummary == null) {
             throw new CartItemsFetchException("Unable to resolve slot details for cart=" + event.cartId());
         }
+        Long eventId = event.slotId();
+        Instant slotStartTime = fetchSlotTiming(event.slotId()).startTime();
 
         Booking booking = bookingRepository.save(new Booking(
             bookingRef,
@@ -110,6 +120,8 @@ public class PaymentService {
             event.userId(),
             eventId,
             event.slotId(),
+            slotSummary.orgId(),
+            slotStartTime,
             event.totalAmountInSmallestUnit(),
             event.currency()
         ));
@@ -318,6 +330,24 @@ public class PaymentService {
             rawResponse.pdfUrl(),
             rawResponse.status()
         );
+    }
+
+    private SlotTimingResponse fetchSlotTiming(Long slotId) {
+        SlotTimingResponse response = restClient.get()
+            .uri("/internal/scheduling/slots/{slotId}/timing", slotId)
+            .retrieve()
+            .onStatus(HttpStatusCode::isError, (request, httpResponse) -> {
+                throw new CartItemsFetchException("Unable to resolve slot timing for slotId=" + slotId);
+            })
+            .body(new ParameterizedTypeReference<>() {
+            });
+        if (response == null || response.startTime() == null) {
+            throw new CartItemsFetchException("Unable to resolve slot timing for slotId=" + slotId);
+        }
+        return response;
+    }
+
+    public record SlotTimingResponse(Long slotId, Instant startTime) {
     }
 
 }

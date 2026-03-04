@@ -1,8 +1,11 @@
 package com.eventplatform.paymentsticketing.api.controller;
 
+import com.eventplatform.paymentsticketing.api.dto.request.CancelItemsRequest;
 import com.eventplatform.paymentsticketing.api.dto.request.CancellationRequest;
 import com.eventplatform.paymentsticketing.api.dto.response.BookingResponse;
 import com.eventplatform.paymentsticketing.api.dto.response.BookingSummaryResponse;
+import com.eventplatform.paymentsticketing.api.dto.response.CancelItemsResponse;
+import com.eventplatform.paymentsticketing.api.dto.response.CancellationQuoteResponse;
 import com.eventplatform.paymentsticketing.api.dto.response.CancellationResponse;
 import com.eventplatform.paymentsticketing.service.BookingService;
 import com.eventplatform.paymentsticketing.service.CancellationService;
@@ -17,6 +20,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -59,5 +63,27 @@ public class BookingController {
     ) {
         AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
         return cancellationService.cancel(user.userId(), bookingRef, request.reason());
+    }
+
+    @GetMapping("/{bookingRef}/cancellation-quote")
+    @PreAuthorize("hasRole('" + Roles.USER + "')")
+    public CancellationQuoteResponse cancellationQuote(
+        Authentication authentication,
+        @PathVariable String bookingRef,
+        @RequestParam("bookingItemIds") java.util.List<Long> bookingItemIds
+    ) {
+        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+        return cancellationService.computeQuote(user.userId(), bookingRef, bookingItemIds);
+    }
+
+    @PostMapping("/{bookingRef}/cancel-items")
+    @PreAuthorize("hasRole('" + Roles.USER + "')")
+    public CancelItemsResponse cancelItems(
+        Authentication authentication,
+        @PathVariable String bookingRef,
+        @Valid @RequestBody CancelItemsRequest request
+    ) {
+        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+        return cancellationService.cancelItems(user.userId(), bookingRef, request.bookingItemIds(), request.reason());
     }
 }

@@ -23,6 +23,9 @@ public class CancellationRequest {
     @Column(name = "booking_id", nullable = false)
     private Long bookingId;
 
+    @Column(name = "booking_item_id")
+    private Long bookingItemId;
+
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
@@ -43,12 +46,17 @@ public class CancellationRequest {
     protected CancellationRequest() {
     }
 
-    public CancellationRequest(Long bookingId, Long userId, RefundReason reason) {
+    public CancellationRequest(Long bookingId, Long bookingItemId, Long userId, RefundReason reason) {
         this.bookingId = bookingId;
+        this.bookingItemId = bookingItemId;
         this.userId = userId;
         this.reason = reason;
         this.status = CancellationRequestStatus.PENDING;
         this.requestedAt = Instant.now();
+    }
+
+    public CancellationRequest(Long bookingId, Long userId, RefundReason reason) {
+        this(bookingId, null, userId, reason);
     }
 
     public void approve() {
@@ -67,6 +75,10 @@ public class CancellationRequest {
 
     public Long getBookingId() {
         return bookingId;
+    }
+
+    public Long getBookingItemId() {
+        return bookingItemId;
     }
 
     public Long getUserId() {
