@@ -42,10 +42,13 @@ scheduling            ← depends on shared + discovery-catalog (reads venue/eve
 identity              ← depends on shared only
     ↓
 booking-inventory     ← depends on shared + discovery-catalog (reads seat layout via REST);
-                          scheduling slot/pricing data via SlotSummaryReader + SlotPricingReader
-                          (shared interfaces, implemented in scheduling, injected at runtime — no HTTP)
+                          scheduling slot/pricing data via SlotSummaryReader + SlotPricingReader;
+                          payment confirmation status via PaymentConfirmationReader
+                          (all three: shared interfaces, implemented in owning module, injected at runtime — no HTTP)
     ↓
-payments-ticketing    ← depends on shared + booking-inventory + identity (reads via REST)
+payments-ticketing    ← depends on shared + booking-inventory + identity;
+                          cart snapshot data via CartSnapshotReader
+                          (shared interface, implemented in booking-inventory, injected at runtime — no HTTP)
     ↓
 promotions            ← depends on shared + booking-inventory + identity (reads via REST)
     ↓
@@ -69,6 +72,8 @@ For hot-path, high-frequency reads in a modular monolith, a module may define a 
 Current implementations:
 - `SlotSummaryReader` (`shared/common/service/`) → implemented by `SlotSummaryReaderImpl` in `scheduling` → consumed by `booking-inventory` (slot validation path)
 - `SlotPricingReader` (`shared/common/service/`) → implemented by `SlotPricingReaderImpl` in `scheduling` → consumed by `booking-inventory` (pricing/provisioning path)
+- `CartSnapshotReader` (`shared/common/service/`) → implemented by `CartSnapshotReaderImpl` in `booking-inventory` → consumed by `payments-ticketing` (payment confirmation hot path — replaces internal HTTP `GET /internal/booking/carts/{cartId}/items`)
+- `PaymentConfirmationReader` (`shared/common/service/`) → implemented by `PaymentConfirmationReaderImpl` in `payments-ticketing` → consumed by `booking-inventory` `PaymentTimeoutWatchdog` (replaces internal HTTP `GET /api/v1/internal/payments/by-cart/{cartId}`)
 
 Rules for this pattern:
 - Interface and DTOs MUST live in `shared/common/service/` and `shared/common/dto/` respectively — never in the owning module
@@ -1003,8 +1008,11 @@ Tool Calling
 | `ElasticsearchConfig` | `shared/config/` | ES client for RAG vector store |
 | `SlotSummaryReader` | `shared/common/service/` | Read interface: `getSlotSummary(Long slotId) → SlotSummaryDto`; implemented by `scheduling/SlotSummaryReaderImpl` |
 | `SlotPricingReader` | `shared/common/service/` | Read interface: `getSlotPricing(Long slotId) → List<PricingTierDto>`; implemented by `scheduling/SlotPricingReaderImpl` |
+| `CartSnapshotReader` | `shared/common/service/` | Read interface: `getCartItems(Long cartId) → List<CartItemSnapshotDto>`; implemented by `booking-inventory/CartSnapshotReaderImpl`; consumed by `payments-ticketing` on payment confirmation hot path |
+| `PaymentConfirmationReader` | `shared/common/service/` | Read interface: `isPaymentConfirmed(Long cartId) → boolean`; implemented by `payments-ticketing/PaymentConfirmationReaderImpl`; consumed by `booking-inventory` `PaymentTimeoutWatchdog` |
 | `SlotSummaryDto` | `shared/common/dto/` | Record: `slotId, status, ebEventId, seatingMode, orgId, venueId, cityId, sourceSeatMapId` |
 | `PricingTierDto` | `shared/common/dto/` | Record: `tierId, tierName, price(Money), quota, tierType, ebTicketClassId, ebInventoryTierId, groupDiscountThreshold, groupDiscountPercent` |
+| `CartItemSnapshotDto` | `shared/common/dto/` | Record: `itemId, cartId, seatId, gaClaimId, ticketClassId, unitPrice, currency, quantity`; used by `CartSnapshotReader` |
 
 ## 9. Hard Rules — Never Violate These
 

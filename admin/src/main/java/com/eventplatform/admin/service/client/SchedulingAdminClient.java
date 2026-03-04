@@ -48,4 +48,18 @@ public class SchedulingAdminClient {
             throw new IntegrationException("Failed to fetch mismatch slots", "SCHEDULING_INTEGRATION_ERROR");
         }
     }
+
+    public SchedulingSlotCancelResponse cancelSlot(Long orgId, Long slotId) {
+        try {
+            return restClient.post()
+                .uri(uriBuilder -> uriBuilder
+                    .path("/api/v1/scheduling/slots/{slotId}/cancel")
+                    .queryParam("orgId", orgId)
+                    .build(slotId))
+                .retrieve()
+                .body(SchedulingSlotCancelResponse.class);
+        } catch (RestClientResponseException ex) {
+            throw new IntegrationException("Failed to cancel slot", "SCHEDULING_INTEGRATION_ERROR");
+        }
+    }
 }

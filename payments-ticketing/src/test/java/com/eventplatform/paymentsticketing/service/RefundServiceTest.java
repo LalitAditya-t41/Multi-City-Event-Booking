@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.eventplatform.paymentsticketing.domain.Refund;
+import com.eventplatform.paymentsticketing.domain.enums.RefundCancellationType;
 import com.eventplatform.paymentsticketing.domain.enums.RefundReason;
 import com.eventplatform.paymentsticketing.domain.enums.RefundStatus;
 import com.eventplatform.paymentsticketing.repository.RefundRepository;
@@ -36,7 +37,15 @@ class RefundServiceTest {
 
     @Test
     void should_call_finalise_after_refund_when_webhook_status_is_succeeded() {
-        Refund refund = new Refund(91L, "re_123", 1000L, "inr", RefundReason.REQUESTED_BY_CUSTOMER, RefundStatus.PENDING);
+        Refund refund = new Refund(
+            91L,
+            "re_123",
+            1000L,
+            "inr",
+            RefundReason.REQUESTED_BY_CUSTOMER,
+            RefundStatus.PENDING,
+            RefundCancellationType.BUYER_FULL
+        );
         when(refundRepository.findByStripeRefundId("re_123")).thenReturn(Optional.of(refund));
         when(stripeRefundService.getRefund("re_123")).thenReturn(new StripeRefundResponse("re_123", "succeeded", 1000L, "inr"));
 
@@ -47,7 +56,15 @@ class RefundServiceTest {
 
     @Test
     void should_handle_failed_refund_without_publishing_cancel_event() {
-        Refund refund = new Refund(91L, "re_123", 1000L, "inr", RefundReason.REQUESTED_BY_CUSTOMER, RefundStatus.PENDING);
+        Refund refund = new Refund(
+            91L,
+            "re_123",
+            1000L,
+            "inr",
+            RefundReason.REQUESTED_BY_CUSTOMER,
+            RefundStatus.PENDING,
+            RefundCancellationType.BUYER_FULL
+        );
         when(refundRepository.findByStripeRefundId("re_123")).thenReturn(Optional.of(refund));
         when(stripeRefundService.getRefund("re_123")).thenReturn(new StripeRefundResponse("re_123", "failed", 1000L, "inr"));
 

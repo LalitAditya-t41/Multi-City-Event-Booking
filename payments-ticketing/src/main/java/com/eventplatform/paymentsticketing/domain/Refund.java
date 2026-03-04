@@ -1,6 +1,7 @@
 package com.eventplatform.paymentsticketing.domain;
 
 import com.eventplatform.paymentsticketing.domain.enums.RefundReason;
+import com.eventplatform.paymentsticketing.domain.enums.RefundCancellationType;
 import com.eventplatform.paymentsticketing.domain.enums.RefundStatus;
 import com.eventplatform.shared.common.domain.BaseEntity;
 import com.eventplatform.shared.common.exception.BusinessRuleException;
@@ -34,16 +35,29 @@ public class Refund extends BaseEntity {
     @Column(name = "status", nullable = false)
     private RefundStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancellation_type")
+    private RefundCancellationType cancellationType;
+
     protected Refund() {
     }
 
-    public Refund(Long bookingId, String stripeRefundId, Long amount, String currency, RefundReason reason, RefundStatus status) {
+    public Refund(
+        Long bookingId,
+        String stripeRefundId,
+        Long amount,
+        String currency,
+        RefundReason reason,
+        RefundStatus status,
+        RefundCancellationType cancellationType
+    ) {
         this.bookingId = bookingId;
         this.stripeRefundId = stripeRefundId;
         this.amount = amount;
         this.currency = currency;
         this.reason = reason;
         this.status = status;
+        this.cancellationType = cancellationType;
     }
 
     public void updateStatus(RefundStatus status) {
@@ -75,5 +89,9 @@ public class Refund extends BaseEntity {
 
     public RefundStatus getStatus() {
         return status;
+    }
+
+    public RefundCancellationType getCancellationType() {
+        return cancellationType;
     }
 }

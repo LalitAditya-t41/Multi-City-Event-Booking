@@ -24,15 +24,15 @@
 
 Full detail for each module is in `PRODUCT.md`. This table is a lookup only.
 
-| Module | Owns | Eventbrite ACL Facades Used |
+| Module | Owns | External ACL Facades Used |
 |---|---|---|
 | `discovery-catalog` | Events, Venues, Cities, catalog sync | `EbEventSyncService`, `EbTicketService` |
 | `scheduling` | Show slots, conflict validation | `EbEventSyncService` |
-| `identity` | Users, JWT, profiles, preferences, wallet | `EbAttendeeService` |
+| `identity` | Users, JWT, profiles, preferences, wallet | — |
 | `booking-inventory` | Seats, SeatMap, Cart, Pricing, Seat Lock State Machine | `EbTicketService` |
-| `payments-ticketing` | Bookings, Payments, E-Tickets, Cancellations, Refunds, Wallet | `EbOrderService`, `EbAttendeeService`, `EbRefundService` |
+| `payments-ticketing` | Bookings, Payments, E-Tickets, Cancellations, Refunds, Wallet | `StripePaymentService`, `StripeRefundService`, `StripeWebhookHandler` |
 | `promotions` | Coupons, Promotions, Eligibility rules | `EbDiscountSyncService` |
-| `engagement` | Reviews, Moderation, AI Chatbot (`service/chatbot/`), RAG pipeline | `EbEventSyncService` |
+| `engagement` | Reviews, Moderation, AI Chatbot (`service/chatbot/`), RAG pipeline | `EbEventSyncService`, `EbAttendeeService` |
 | `admin/` | No domain ownership. Orchestration and aggregation only. | — |
 | `shared/` | All external ACL facades, JWT, base classes, common DTOs, configs | — |
 
@@ -44,7 +44,7 @@ Canonical numbering and wording are owned by `PRODUCT.md` Section 9. These short
 
 1. No module imports another module's `@Service`, `@Entity`, or `@Repository`.
   - Exception: `admin/` MAY import module `@Service` beans for READ operations only; all writes MUST go through the owning module REST API.
-2. No module calls Eventbrite, Razorpay, or OpenAI HTTP directly — only through `shared/` ACL facades.
+2. No module calls Eventbrite, Stripe, or OpenAI HTTP directly — only through `shared/` ACL facades.
 3. ACL facade names are exactly as listed below — never invent new ones.
 4. Spring Events carry only primitives, IDs, enums, and value objects — never `@Entity` objects.
 5. One `GlobalExceptionHandler` in `shared/common/exception/` — never `@ControllerAdvice` in a module.
@@ -66,13 +66,25 @@ All 10 facades are in `shared/eventbrite/service/`. These are the ONLY things mo
 3. **EbScheduleService** — Create recurring event schedules and occurrences
 4. **EbTicketService** — Create/update ticket classes; manage inventory; check availability
 5. **EbCapacityService** — Retrieve and update event capacity tiers
-6. **EbOrderService** — Read orders post-checkout (NOT creation — JS SDK widget only)
-7. **EbAttendeeService** — List attendees; verify attendance for reviews
+6. **EbOrderService** — Read orders post-checkout (admin/ reporting only — NOT used in FR5/FR6 payment flows; JS SDK widget only creates orders)
+7. **EbAttendeeService** — List attendees; verify attendance for reviews (engagement only — FR8 attendance verification)
 8. **EbDiscountSyncService** — Create, update, delete discount codes
-9. **EbRefundService** — Read refund status only (NO submission API — workaround required)
+9. **EbRefundService** — INACTIVE for payments — all refunds go through `StripeRefundService`; original EB refund read-only API has no submission endpoint
 10. **EbWebhookService** — Mock/testing only; not used in production registration flow
 
 **See `docs/EVENTBRITE_INTEGRATION.md` for which module uses which facade and what gaps exist.**
+
+---
+
+## Stripe ACL Facades (payments-ticketing only)
+
+All 3 facades are in `shared/stripe/service/`. Only `payments-ticketing` calls these:
+
+1. **StripePaymentService** — Create PaymentIntents; confirm and capture payments
+2. **StripeRefundService** — Submit refunds; query refund status
+3. **StripeWebhookHandler** — Verify webhook signatures; parse `payment_intent.succeeded` / `payment_intent.payment_failed` / `charge.refunded` events
+
+**Hard Rule:** Never call `com.stripe.*` SDK classes directly from a module service — always delegate to the facade in `shared/stripe/service/`.
 
 ---
 

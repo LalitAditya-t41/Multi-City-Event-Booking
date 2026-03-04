@@ -1,6 +1,7 @@
 package com.eventplatform.paymentsticketing.domain;
 
 import com.eventplatform.paymentsticketing.domain.enums.BookingItemStatus;
+import com.eventplatform.shared.common.exception.BusinessRuleException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -59,6 +60,9 @@ public class BookingItem {
     }
 
     public void cancel() {
+        if (this.status == BookingItemStatus.CANCELLED) {
+            throw new BusinessRuleException("Booking item already cancelled", "DUPLICATE_ITEM_CANCELLATION");
+        }
         this.status = BookingItemStatus.CANCELLED;
     }
 

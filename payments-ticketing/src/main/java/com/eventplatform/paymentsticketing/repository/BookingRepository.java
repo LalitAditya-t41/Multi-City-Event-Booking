@@ -2,6 +2,7 @@ package com.eventplatform.paymentsticketing.repository;
 
 import com.eventplatform.paymentsticketing.domain.Booking;
 import com.eventplatform.paymentsticketing.domain.enums.BookingStatus;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,4 +17,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     boolean existsByCartIdAndStatus(Long cartId, BookingStatus status);
 
     Page<Booking> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+
+    List<Booking> findBySlotIdAndStatus(Long slotId, BookingStatus status);
 }
