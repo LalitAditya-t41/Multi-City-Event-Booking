@@ -187,7 +187,7 @@ class BookingInventoryControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new AddSeatRequest(50L, 200L, 1L, 1))))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.discountAmount.amount").value(100.00));
+            .andExpect(jsonPath("$.groupDiscountAmount.amount").value(100.00));
     }
 
     @Test
@@ -308,6 +308,7 @@ class BookingInventoryControllerTest {
             )),
             new Money(new BigDecimal("500.00"), "INR"),
             new Money(new BigDecimal("100.00"), "INR"),
+            new Money(new BigDecimal("0.00"), "INR"),
             new Money(new BigDecimal("400.00"), "INR")
         );
     }

@@ -51,10 +51,18 @@ public class Cart extends BaseEntity {
 
     @Embedded
     @AttributeOverrides({
-        @AttributeOverride(name = "amount", column = @Column(name = "discount_amount", nullable = false)),
+        @AttributeOverride(name = "amount",   column = @Column(name = "group_discount_amount", nullable = false)),
         @AttributeOverride(name = "currency", column = @Column(name = "currency", nullable = false))
     })
-    private Money discountAmount;
+    private Money groupDiscountAmount;
+
+    /**
+     * Coupon discount applied by promotions module via CouponAppliedEvent.
+     * Stored as raw BigDecimal — currency is inferred from groupDiscountAmount.currency().
+     * Default 0.00 (no coupon applied).
+     */
+    @Column(name = "coupon_discount_amount", nullable = false)
+    private java.math.BigDecimal couponDiscountAmount = java.math.BigDecimal.ZERO;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CartItem> items = new ArrayList<>();
@@ -69,7 +77,8 @@ public class Cart extends BaseEntity {
         this.seatingMode = seatingMode;
         this.status = CartStatus.PENDING;
         this.expiresAt = Instant.now().plus(ttl);
-        this.discountAmount = new Money(BigDecimal.ZERO, currency);
+        this.groupDiscountAmount  = new Money(BigDecimal.ZERO, currency);
+        this.couponDiscountAmount = BigDecimal.ZERO;
     }
 
     public void addItem(CartItem item) {
@@ -108,8 +117,21 @@ public class Cart extends BaseEntity {
         this.expiresAt = Instant.now().plus(ttl);
     }
 
-    public void setDiscountAmount(Money discountAmount) {
-        this.discountAmount = discountAmount;
+    public void setGroupDiscountAmount(Money groupDiscountAmount) {
+        this.groupDiscountAmount = groupDiscountAmount;
+    }
+
+    /** Returns the coupon discount as a Money using this cart's currency. */
+    public Money getCouponDiscountAmount() {
+        return new Money(couponDiscountAmount, groupDiscountAmount.currency());
+    }
+
+    /**
+     * Called by booking-inventory's CouponAppliedListener when promotions module
+     * confirms a coupon has been validated and applied to this cart.
+     */
+    public void setCouponDiscountAmount(java.math.BigDecimal amount) {
+        this.couponDiscountAmount = amount;
     }
 
     public Long getUserId() {
@@ -144,8 +166,8 @@ public class Cart extends BaseEntity {
         this.couponCode = couponCode;
     }
 
-    public Money getDiscountAmount() {
-        return discountAmount;
+    public Money getGroupDiscountAmount() {
+        return groupDiscountAmount;
     }
 
     public List<CartItem> getItems() {

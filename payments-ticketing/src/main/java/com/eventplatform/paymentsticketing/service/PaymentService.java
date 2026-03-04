@@ -245,6 +245,7 @@ public class PaymentService {
         }
 
         afterCommitEventPublisher.publish(new BookingConfirmedEvent(
+            booking.getId(),
             booking.getCartId(),
             seatIds,
             paymentIntentId,

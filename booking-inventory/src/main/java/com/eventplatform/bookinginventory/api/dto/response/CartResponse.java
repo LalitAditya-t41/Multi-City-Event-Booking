@@ -14,7 +14,8 @@ public record CartResponse(
     SeatingMode seatingMode,
     List<CartItemResponse> items,
     Money subtotal,
-    Money discountAmount,
+    Money groupDiscountAmount,
+    Money couponDiscountAmount,
     Money total
 ) {
 }

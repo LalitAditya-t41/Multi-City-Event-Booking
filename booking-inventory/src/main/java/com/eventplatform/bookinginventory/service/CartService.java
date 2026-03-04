@@ -267,8 +267,16 @@ public class CartService {
 
         List<CartItem> confirmedItems = new ArrayList<>(cart.getItems());
         CartPricingResult pricing = cartPricingService.recompute(cart, confirmedItems);
-        long totalAmountInSmallestUnit = pricing.total().amount()
-            .multiply(java.math.BigDecimal.valueOf(100)).longValue();
+
+        // Subtract coupon discount (set by promotions via CouponAppliedEvent) from the
+        // post-group-discount total.  Floor at zero to guard against oversized coupons.
+        java.math.BigDecimal netTotal = pricing.total().amount()
+            .subtract(cart.getCouponDiscountAmount().amount())
+            .max(java.math.BigDecimal.ZERO);
+        long totalAmountInSmallestUnit = netTotal
+            .multiply(java.math.BigDecimal.valueOf(100))
+            .setScale(0, java.math.RoundingMode.HALF_UP)
+            .longValue();
         String pricingCurrency = pricing.total().currency().toLowerCase();
 
         eventPublisher.publishEvent(new CartAssembledEvent(

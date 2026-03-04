@@ -210,7 +210,7 @@ class CartServiceTest {
         when(cartRepository.save(cart)).thenReturn(cart);
         when(cartMapper.toResponse(eq(cart), any(List.class), any(CartPricingResult.class), any(Map.class), any(Map.class)))
             .thenReturn(new CartResponse(900L, 56L, CartStatus.PENDING, cart.getExpiresAt(), SeatingMode.GA, List.of(),
-                new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR")));
+                new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR")));
 
         cartService.confirm(1L, 44L, "test@example.com", new ConfirmCartRequest(900L));
 
@@ -249,7 +249,7 @@ class CartServiceTest {
         ));
         when(cartMapper.toResponse(eq(cart), any(List.class), any(CartPricingResult.class), any(Map.class), any(Map.class)))
             .thenReturn(new CartResponse(902L, 58L, CartStatus.PENDING, cart.getExpiresAt(), SeatingMode.GA, List.of(),
-                new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR")));
+                new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR")));
 
         cartService.confirm(1L, 44L, "test@example.com", new ConfirmCartRequest(902L));
 
@@ -283,7 +283,7 @@ class CartServiceTest {
         ));
         when(cartMapper.toResponse(eq(cart), any(List.class), any(CartPricingResult.class), any(Map.class), any(Map.class)))
             .thenReturn(new CartResponse(900L, slot.slotId(), CartStatus.PENDING, cart.getExpiresAt(), slot.seatingMode(), List.of(),
-                new Money(new BigDecimal("1000.00"), "INR"), new Money(new BigDecimal("100.00"), "INR"), new Money(new BigDecimal("900.00"), "INR")));
+                new Money(new BigDecimal("1000.00"), "INR"), new Money(new BigDecimal("100.00"), "INR"), new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("900.00"), "INR")));
     }
 
     private Cart cart(Long userId, Long slotId, Long orgId, SeatingMode mode) {
