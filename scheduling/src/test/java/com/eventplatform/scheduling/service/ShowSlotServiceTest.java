@@ -38,7 +38,6 @@ import com.eventplatform.shared.eventbrite.service.EbCapacityService;
 import com.eventplatform.shared.eventbrite.service.EbEventSyncService;
 import com.eventplatform.shared.eventbrite.service.EbScheduleService;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -145,7 +144,7 @@ class ShowSlotServiceTest {
         ShowSlot slot = baseSlot();
         slot.addPricingTier(new ShowSlotPricingTier("General", new Money(BigDecimal.ZERO, "INR"), 10, TierType.FREE));
         when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
-        when(ebEventSyncService.createDraft(eq(1L), any())).thenReturn(new EbEventDto("eb-1", null, null, null, null, null, null, null, null, Instant.now()));
+        when(ebEventSyncService.createDraft(eq(1L), any())).thenReturn(new EbEventDto("eb-1", null, null, null, null, null, null, null, null, null));
 
         ShowSlot result = showSlotService.submitSlot(1L, 1L);
 
