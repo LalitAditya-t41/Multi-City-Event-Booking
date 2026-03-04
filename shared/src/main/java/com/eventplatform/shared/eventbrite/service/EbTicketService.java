@@ -12,4 +12,8 @@ public interface EbTicketService {
     List<EbInventoryTierResponse> createInventoryTiers(String eventId, List<EbInventoryTierRequest> tiers);
 
     String copySeatMap(String eventId, String sourceSeatMapId);
+
+    EbTicketClassResponse getTicketClass(String eventId, String ticketClassId);
+
+    List<EbTicketClassResponse> listTicketClasses(String eventId);
 }

@@ -6,6 +6,7 @@ import com.eventplatform.shared.eventbrite.dto.request.EbTicketClassRequest;
 import com.eventplatform.shared.eventbrite.dto.response.EbTicketClassResponse;
 import com.eventplatform.shared.eventbrite.exception.EbIntegrationException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -27,7 +28,7 @@ public class DefaultEbTicketService implements EbTicketService {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record TicketClassListResponse(List<EbTicketClassResponse> ticketClasses) {}
+    private record TicketClassListResponse(@JsonProperty("ticket_classes") List<EbTicketClassResponse> ticketClasses) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record InventoryTierListResponse(List<EbInventoryTierResponse> inventoryTiers) {}
@@ -102,6 +103,43 @@ public class DefaultEbTicketService implements EbTicketService {
             throw ex;
         } catch (Exception ex) {
             throw new EbIntegrationException("EB copySeatMap error: " + ex.getMessage(), ex);
+        }
+    }
+
+    @Override
+    public EbTicketClassResponse getTicketClass(String eventId, String ticketClassId) {
+        try {
+            return client.get()
+                .uri("/v3/events/{eventId}/ticket_classes/{ticketClassId}/", eventId, ticketClassId)
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, (req, resp2) -> {
+                    throw new EbIntegrationException("EB getTicketClass failed: " + resp2.getStatusCode());
+                })
+                .body(EbTicketClassResponse.class);
+        } catch (EbIntegrationException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new EbIntegrationException("EB getTicketClass error: " + ex.getMessage(), ex);
+        }
+    }
+
+    @Override
+    public List<EbTicketClassResponse> listTicketClasses(String eventId) {
+        try {
+            TicketClassListResponse response = client.get()
+                .uri("/v3/events/{eventId}/ticket_classes/", eventId)
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, (req, resp2) -> {
+                    throw new EbIntegrationException("EB listTicketClasses failed: " + resp2.getStatusCode());
+                })
+                .body(TicketClassListResponse.class);
+            return response == null || response.ticketClasses() == null
+                ? List.of()
+                : response.ticketClasses();
+        } catch (EbIntegrationException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new EbIntegrationException("EB listTicketClasses error: " + ex.getMessage(), ex);
         }
     }
 
