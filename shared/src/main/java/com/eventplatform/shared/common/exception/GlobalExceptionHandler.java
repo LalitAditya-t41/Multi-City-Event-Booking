@@ -8,6 +8,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import com.eventplatform.shared.stripe.exception.StripeWebhookSignatureException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -70,6 +71,18 @@ public class GlobalExceptionHandler {
             null
         );
         return ResponseEntity.status(401).body(response);
+    }
+
+    @ExceptionHandler(StripeWebhookSignatureException.class)
+    public ResponseEntity<ErrorResponse> handleStripeWebhookSignature(StripeWebhookSignatureException ex) {
+        ErrorResponse response = new ErrorResponse(
+            "INVALID_WEBHOOK_SIGNATURE",
+            "Invalid webhook signature",
+            400,
+            Instant.now(),
+            null
+        );
+        return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(Exception.class)

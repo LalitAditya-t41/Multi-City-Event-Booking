@@ -3,6 +3,7 @@ package com.eventplatform.paymentsticketing.domain;
 import com.eventplatform.paymentsticketing.domain.enums.RefundReason;
 import com.eventplatform.paymentsticketing.domain.enums.RefundStatus;
 import com.eventplatform.shared.common.domain.BaseEntity;
+import com.eventplatform.shared.common.exception.BusinessRuleException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -46,6 +47,9 @@ public class Refund extends BaseEntity {
     }
 
     public void updateStatus(RefundStatus status) {
+        if (this.status == RefundStatus.SUCCEEDED && status != RefundStatus.SUCCEEDED) {
+            throw new BusinessRuleException("Refund is terminal in SUCCEEDED state", "INVALID_REFUND_STATE");
+        }
         this.status = status;
     }
 

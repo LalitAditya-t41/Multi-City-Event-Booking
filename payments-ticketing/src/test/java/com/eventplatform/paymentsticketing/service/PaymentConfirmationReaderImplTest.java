@@ -14,14 +14,14 @@ class PaymentConfirmationReaderImplTest {
     private final PaymentConfirmationReaderImpl reader = new PaymentConfirmationReaderImpl(bookingRepository);
 
     @Test
-    void isPaymentConfirmed_returnsTrue_whenBookingIsConfirmed() {
+    void should_return_true_when_booking_exists_with_confirmed_status() {
         when(bookingRepository.existsByCartIdAndStatus(10L, BookingStatus.CONFIRMED)).thenReturn(true);
 
         assertThat(reader.isPaymentConfirmed(10L)).isTrue();
     }
 
     @Test
-    void isPaymentConfirmed_returnsFalse_whenCartIdNullOrNotConfirmed() {
+    void should_return_false_when_no_confirmed_booking_exists() {
         when(bookingRepository.existsByCartIdAndStatus(11L, BookingStatus.CONFIRMED)).thenReturn(false);
 
         assertThat(reader.isPaymentConfirmed(null)).isFalse();
