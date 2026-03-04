@@ -48,8 +48,8 @@ public class SeatLockAuditLog {
     @Column(name = "reason")
     private String reason;
 
-    @Column(name = "eb_order_id")
-    private String ebOrderId;
+    @Column(name = "booking_ref")
+    private String bookingRef;
 
     @Column(name = "occurred_at", nullable = false)
     private Instant occurredAt;
@@ -66,7 +66,7 @@ public class SeatLockAuditLog {
         SeatLockState toState,
         SeatLockEvent eventType,
         String reason,
-        String ebOrderId
+        String bookingRef
     ) {
         this.seatId = seatId;
         this.gaClaimId = gaClaimId;
@@ -76,7 +76,7 @@ public class SeatLockAuditLog {
         this.toState = toState;
         this.eventType = eventType;
         this.reason = reason;
-        this.ebOrderId = ebOrderId;
+        this.bookingRef = bookingRef;
     }
 
     @PrePersist

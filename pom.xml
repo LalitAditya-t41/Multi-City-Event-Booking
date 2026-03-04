@@ -23,6 +23,7 @@
         <module>identity</module>
         <module>scheduling</module>
         <module>booking-inventory</module>
+        <module>payments-ticketing</module>
         <module>admin</module>
     </modules>
 
@@ -43,6 +44,11 @@
                 <groupId>com.tngtech.archunit</groupId>
                 <artifactId>archunit-junit5</artifactId>
                 <version>${archunit.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.stripe</groupId>
+                <artifactId>stripe-java</artifactId>
+                <version>25.3.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

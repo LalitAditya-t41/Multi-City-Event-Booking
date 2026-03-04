@@ -2,11 +2,11 @@
 
 **Owner:** Lalit  
 **Domain:** EntertainmentTech  
-**Last Updated:** March 2026
+**Last Updated:** March 2026 — FR5 updated: Stripe replaces Eventbrite Checkout Widget for payments and refunds
 
 **Architecture:** Modular Monolith — Spring Boot 3.5.11, Java 21
 
-**External Integrations:** Eventbrite (ticketing + payments + orders) | OpenAI GPT-4o (AI assistant)
+**External Integrations:** Eventbrite (event listing sync + organizer webhooks only) | Stripe (payments + refunds) | OpenAI GPT-4o (AI assistant)
 
 ⚠ **Important:** This is the single source of truth for module ownership, boundaries, inter-module communication, and the Eventbrite ACL. Every agent and developer MUST read this before touching any module.
 
@@ -22,7 +22,7 @@
 | scheduling | Show slots, time slot config, conflict validation, Eventbrite event sync | Bookings, Users |
 | identity | Users, JWT auth, profiles, preferences | Bookings, Payments, Events |
 | booking-inventory | Seats, SeatMap, Cart, Seat Lock State Machine, Pricing | Payments, Reviews, Users |
-| payments-ticketing | Bookings, Payments, E-Tickets, Cancellations, Refunds, Wallet | Seats (reads cart only) |
+| payments-ticketing | Bookings, Payments (Stripe), E-Tickets, Cancellations, Refunds (Stripe), Wallet | Seats (reads cart only) |
 | promotions | Coupons, Promotions, Eligibility rules, EB discount sync | Bookings, Payments, Users |
 | engagement | Reviews, Moderation, AI Chatbot, RAG pipeline | Bookings (reads attended status only) |
 
@@ -41,7 +41,9 @@ scheduling            ← depends on shared + discovery-catalog (reads venue/eve
     ↓
 identity              ← depends on shared only
     ↓
-booking-inventory     ← depends on shared + discovery-catalog (reads event/venue via REST)
+booking-inventory     ← depends on shared + discovery-catalog (reads seat layout via REST);
+                          scheduling slot/pricing data via SlotSummaryReader + SlotPricingReader
+                          (shared interfaces, implemented in scheduling, injected at runtime — no HTTP)
     ↓
 payments-ticketing    ← depends on shared + booking-inventory + identity (reads via REST)
     ↓
@@ -60,6 +62,19 @@ app/                  ← entry point only
 
 ### Rule 1 — Never import another module's `@Service` or `@Repository` directly
 If Module B needs data from Module A, it calls Module A's REST endpoint.
+
+**Approved exception — Shared Reader Interfaces (in-process reads only):**
+For hot-path, high-frequency reads in a modular monolith, a module may define a read-only interface in `shared/common/service/` and implement it in the owning module. The consuming module injects the `shared/` interface — never the owning module's concrete `@Service`. This avoids HTTP overhead on the critical path while preserving module boundaries.
+
+Current implementations:
+- `SlotSummaryReader` (`shared/common/service/`) → implemented by `SlotSummaryReaderImpl` in `scheduling` → consumed by `booking-inventory` (slot validation path)
+- `SlotPricingReader` (`shared/common/service/`) → implemented by `SlotPricingReaderImpl` in `scheduling` → consumed by `booking-inventory` (pricing/provisioning path)
+
+Rules for this pattern:
+- Interface and DTOs MUST live in `shared/common/service/` and `shared/common/dto/` respectively — never in the owning module
+- Implementation is `@Transactional(readOnly = true)` — no writes
+- Consuming module caches results where appropriate (`CartPricingService.getSlotPricingCached()`) to avoid repeated reads
+- REST endpoints for the same data are preserved for admin/external consumers
 
 ### Rule 2 — Use Spring Events for async reactions
 When something important happens in Module A, it publishes a Spring `ApplicationEvent`. Other modules react by registering `@EventListener` methods. No direct calls.
@@ -99,27 +114,48 @@ Modules never consume the raw webhook directly.
   - Retrieve and update event capacity tiers; list org seat maps; attach seat map to event
   
 - **EbOrderService** (`shared/eventbrite/service/`)
-  - Retrieve order details post-checkout; list orders by event/org. **NO order creation via API** — orders created exclusively by Checkout Widget.
+  - Retrieve order details for org-level reporting only. **NOT used in FR5 or FR6 payment flows** — Stripe owns all payment and order management. Retained only for organizer-side admin reporting and orphan detection.
   
 - **EbAttendeeService** (`shared/eventbrite/service/`)
-  - Retrieve attendee records; list attendees by event. **NO attendee creation via API** — attendees created by Checkout Widget.
+  - Retrieve attendee records; list attendees by event. Used in FR8 (attendance verification for reviews) only. **No longer used in FR5 payment flows** — Stripe and internal DB own all booking records.
   
 - **EbDiscountSyncService** (`shared/eventbrite/service/`)
   - Create/update/delete discount codes at org level; sync usage with internal promotions. (Discounts scoped to org, applied to events at checkout.)
   
 - **EbRefundService** (`shared/eventbrite/service/`)
-  - Read refund request status only from order `refund_request` field. **NO refund submission API.**
+  - **Inactive for FR5/FR6.** All refunds are now processed via `StripeRefundService`. Retained in code for legacy compatibility only. Do NOT call for any new refund flow.
   
 - **EbWebhookService** (`shared/eventbrite/service/`)
   - **NOT USED in production.** Webhook registration not available via API; only via Dashboard. Mock service simulates webhook delivery for testing.
 
-> **Note:** `EbOrderService` does NOT create orders. Orders are created exclusively by the Eventbrite Checkout Widget (JS SDK). `EbOrderService` only reads orders after the widget fires the `onOrderComplete` callback.
+> **Note:** `EbOrderService` is **not used in FR5 (payment) or FR6 (refund) flows**. Stripe owns all payment, order, and refund processing. `EbOrderService` is retained only for organizer-side admin reporting.
 
-> **Note:** `EbAttendeeService` does NOT create attendees. Attendees are created automatically when the Checkout Widget completes an order. `EbAttendeeService` only reads attendee records.
+> **Note:** `EbAttendeeService` is used **only in FR8** (attendance verification before review submission). It reads attendee records to confirm the user attended the event.
 
-> **Note:** `EbRefundService` does NOT submit refunds programmatically. Refund status is read from the order's `refund_request` field only. Actual refund initiation is handled by mimicking admin actions via Eventbrite org token (backend only).
+> **Note:** `EbRefundService` is **inactive**. All refunds are processed via Stripe (`StripeRefundService`). The EB facade is retained in code for legacy compatibility only.
 
 > **Note:** `EbVenueService` supports venue creation (`POST /organizations/{org_id}/venues/`) and updates (`POST /venues/{venue_id}/`). The Eventbrite API v3 exposes both endpoints. Venue creation in your app always pushes to Eventbrite and stores the returned `eb_venue_id`.
+
+### Stripe ACL Facade Services (Payments & Refunds)
+
+All Stripe-related calls go through these three facades in `shared/stripe/service/`. No module calls Stripe HTTP directly.
+
+- **StripePaymentService** (`shared/stripe/service/`)
+  - `POST /v1/payment_intents` — create PaymentIntent; returns `client_secret` for frontend Stripe Element
+  - `GET /v1/payment_intents/{id}` — retrieve and verify status (`succeeded`) and `amount_received` before confirming booking
+  - Stores `stripe_payment_intent_id` and `stripe_charge_id` (`latest_charge`) in `payments` table
+
+- **StripeRefundService** (`shared/stripe/service/`)
+  - `POST /v1/refunds` — create full or partial refund by `payment_intent` ID; supports `reason` field
+  - `GET /v1/refunds/{id}` — retrieve async refund status (`pending`, `succeeded`, `failed`)
+  - Saves `stripe_refund_id` to `refunds` table
+
+- **StripeWebhookHandler** (`shared/stripe/service/`)
+  - Verifies `Stripe-Signature` header via `Webhook.constructEvent(payload, sigHeader, whsecret)`
+  - Routes events as Spring Events: `payment_intent.succeeded` → idempotent booking confirm; `payment_intent.payment_failed` / `payment_intent.canceled` → `PaymentFailedEvent`; `refund.updated` → update refund status; `refund.failed` → alert ops + notify user
+  - Registered via Stripe Dashboard (Test mode) at `POST /api/webhooks/stripe`
+
+> **Stripe Sandbox:** Use `sk_test_...` / `pk_test_...` keys. Test card `4242 4242 4242 4242` for success, `4000 0000 0000 0002` for decline, `4000 0000 0000 7726` for async refund simulation. See `docs/FR5-reworked-v2.md` and `docs/stripe-api-reference.md` for full test card matrix.
 
 ### Mock Eventbrite Service — Development & Testing
 
@@ -169,7 +205,7 @@ Modules never consume the raw webhook directly.
 
 ## 5. Eventbrite Integration Principles
 
-**Core Architecture:** Your internal DB is the primary source of truth. Eventbrite is the ticketing/payment backbone. Every entity is created internally first — then pushed to Eventbrite. The `eventbrite_event_id` returned from each push is stored in your DB and is the bridge between both systems.
+**Core Architecture:** Your internal DB is the primary source of truth. **Stripe is the payment and refund backbone** (FR5, FR6). **Eventbrite is a passive event listing sync layer** — it hosts the public event listing, tracks ticket class capacity, and fires organizer-side webhooks (`event.updated`, `event.unpublished`). Every entity is created internally first — then pushed to Eventbrite for listing purposes. The `eventbrite_event_id` returned from each push is stored in your DB and is the bridge for listing sync.
 
 ### 5.1 Internal-First, Then Eventbrite
 
@@ -179,19 +215,20 @@ The pattern for every flow that touches Eventbrite is always:
 2. Internal DB is updated / validated first
 3. Eventbrite API is called via `shared/` ACL facade
 4. Eventbrite returns ID or confirmation
-5. Your DB stores the Eventbrite ID (`eventbrite_event_id`, `eventbrite_order_id`, etc.)
+5. Your DB stores the Eventbrite ID (`eventbrite_event_id`, `eventbrite_venue_id`, etc.)
 6. Both systems are now in sync — your DB is source of truth
+7. For payments and refunds: Stripe is called instead of Eventbrite — `stripe_payment_intent_id` and `stripe_charge_id` are stored in your `payments` table
 
 ### 5.2 The `eventbrite_event_id` is the Spine of the System
 
 Every downstream flow depends on `eventbrite_event_id` being present and valid in your DB:
-- FR5 (Payment) — Eventbrite Checkout Widget needs a valid `event_id` to render
-- FR6 (Cancellation) — Eventbrite cancel API needs a valid event tied to a valid order
+- FR5 (Payment) — event listing on Eventbrite uses the `event_id`; Stripe drives the actual payment, so EB checkout widget is **not required** for payment to succeed, but EB passive sync still depends on `eventbrite_event_id` being valid
+- FR6 (Cancellation — organizer-initiated) — `event.updated` / `event.unpublished` webhooks from EB identify the event to bulk-cancel via `eventbrite_event_id`
 - FR7 (Discounts) — Eventbrite discount codes are scoped to `event_id`
-- FR8 (Reviews) — Verifying attended booking requires a confirmed Eventbrite order under that `event_id`
+- FR8 (Reviews) — Verifying attended booking cross-references Eventbrite attendee list by `event_id`
 - FR10 (Seat Lock) — Availability check hits Eventbrite `ticket_classes` for that `event_id`
 
-Without FR2 sync: If `eventbrite_event_id` is null or orphaned, the entire chain breaks. No tickets can be sold, no orders created, no refunds processed.
+Without FR2 sync: If `eventbrite_event_id` is null or orphaned, EB listing sync and capacity tracking break. However, payments (FR5) and refunds (FR6 buyer-initiated) are fully functional through Stripe regardless.
 
 ### 5.3 What Eventbrite Cannot Do — Internal Responsibilities
 
@@ -202,11 +239,11 @@ Without FR2 sync: If `eventbrite_event_id` is null or orphaned, the entire chain
 | "Venue creation — POST /organizations/{org_id}/venues/ is available via EbVenueService.createVenue(). Admin creates venues in your app; they are pushed to Eventbrite and eb_venue_id is stored. Venue updates via POST /venues/{venue_id}/. The Eventbrite Dashboard can also manage venues independently — VenueReconciliationJob detects and flags drift."|
 | Seat locking | No seat lock API on Eventbrite. The entire state machine (Redis + Spring State Machine) is internal. |
 | Cart management | No cart API on Eventbrite. Cart assembly and group discount rules are internal. |
-| Order creation | No order creation API. Orders are created exclusively via the Eventbrite Checkout Widget (JS SDK). Backend only reads orders post-creation. |
-| Attendee creation | No attendee creation API. Attendees are created automatically by Checkout Widget when orders are placed. Backend only reads attendee records. |
-| Payment processing | Eventbrite Checkout Widget handles all payments (credit card, debit, UPI, Eventbrite wallet, PayPal, etc.). Backend reads orders post-creation via EbOrderService. |
-| Single order cancel | No per-order cancel API. Only full event cancel exists. Per-order cancellation is mimicked via org admin token. |
-| Refund submission | No programmatic refund API. Refund status is embedded in order `refund_request` field only. Read-only access. |
+| Order creation | Orders are created **internally** in your `bookings` table when Stripe payment is confirmed. No order creation via Eventbrite API at any point. |
+| Attendee creation | Attendee records for FR8 attendance verification come from the Eventbrite attendee list (organizer hosted the event). No attendee creation API called by this app. |
+| Payment processing | **Stripe** handles all payments. Backend creates a `PaymentIntent` (`POST /v1/payment_intents`), frontend renders Stripe Payment Element with `client_secret`, user pays, backend verifies via `GET /v1/payment_intents/{id}`. Eventbrite has no role in payment. |
+| Single order cancel (buyer) | Buyer cancellations call `POST /v1/refunds` via `StripeRefundService`. Full or partial refund by `payment_intent` ID. No Eventbrite API call for buyer-initiated cancellations. |
+| Refund submission | All refunds use `StripeRefundService.createRefund()` — programmatic, synchronous or async. Refund status tracked via `refund.updated` webhook. Eventbrite has no refund role. |
 | Webhook registration | No webhook API. Webhooks are registered via Eventbrite Dashboard only. This app simulates webhooks for testing/development. |
 | Reviews | No reviews API on Eventbrite. Entire review system is internal. Attendance verification uses attendee read API. |
 | Public event search | `GET /events/search/` is deprecated. Event discovery is limited to your org's events. |
@@ -427,13 +464,13 @@ AVAILABLE
 SOFT_LOCKED  (held for cart session TTL via Redis)
     │  [CONFIRM]  CartTtlGuard + HardLockAction
     ▼
-HARD_LOCKED  (held during Eventbrite checkout)
-    │  [PAY] — user goes through Eventbrite Checkout Widget
+HARD_LOCKED  (held during Stripe checkout)
+    │  [PAY] — user goes through Stripe Payment Element (frontend)
     ▼
 PAYMENT_PENDING
-    │  [CONFIRM_PAYMENT] onOrderComplete callback fires    [RELEASE] on failure
-    ▼                                                            ▼
-CONFIRMED (eventbrite_order_id stored in DB)          RELEASED → AVAILABLE
+    │  [CONFIRM_PAYMENT] backend verifies PaymentIntent.status=succeeded    [RELEASE] on failure
+    ▼                                                                              ▼
+CONFIRMED (stripe_payment_intent_id stored in booking)                  RELEASED → AVAILABLE
 ```
 
 **ACL Facades:** `EbTicketService`  
@@ -441,184 +478,229 @@ CONFIRMED (eventbrite_order_id stored in DB)          RELEASED → AVAILABLE
 **Redis Keys:** `seat:lock:{seatId}`  
 **Publishes:** `CartAssembledEvent` → payments-ticketing
 
-### FR5 — Payment via Eventbrite Checkout Widget → Booking Confirmation → E-Ticket Generation
+### FR5 — Payment via Stripe → Booking Confirmation → E-Ticket Generation
 **Module:** payments-ticketing
 
-Key Point: There is NO Order creation API on Eventbrite. Orders are created exclusively through the Eventbrite Checkout Widget (JS SDK: `eb_widgets.js`). Your backend reads the order AFTER the widget fires the `onOrderComplete` callback. Payment processing, attendee creation, and order placement are all handled by Eventbrite internally.
+**Key Point:** Eventbrite is removed from the payment and order flow entirely. **Stripe (sandbox `sk_test_...`)** owns checkout, payment processing, and refunds. Your backend creates and controls all orders internally. Eventbrite is retained **only** as a passive sync layer — event listing sync and `event.updated` / `event.unpublished` webhooks for organizer-initiated event cancellations.
 
-**Step 1: Checkout Widget Embed**
-- Internal App (Your DB / Spring Boot)
-  - `CartAssembledEvent` received by payments-ticketing
-  - Backend prepares checkout context: `event_id`, `ticket_class_id`, `promo_code` (if any), `attendee_email`
-  - Frontend receives `event_id` and renders the Eventbrite Checkout Widget
-- Eventbrite API Call (via `shared/` ACL)
-  - (JS SDK — not a REST API call)
-
-The Checkout Widget is embedded as a popup modal triggered by the Buy Tickets button:
-
-```html
-<button id="eb-checkout-trigger">Buy Tickets</button>
-<script src="https://www.eventbrite.com/static/widgets/eb_widgets.js"></script>
-window.EBWidgets.createWidget({
-  widgetType: 'checkout',
-  eventId: '{eventbrite_event_id}',
-  ticketClassId: '{ticket_class_id}',
-  modal: true,
-  modalTriggerElementId: 'eb-checkout-trigger',
-  promoCode: '{coupon_code_if_any}',
-  attendeeEmail: '{user_email}',
-  onOrderComplete: function(orderId) { 
-    fetch('/api/payments/confirm-order', {
-      method: 'POST',
-      body: JSON.stringify({ orderId: orderId })
-    });
-  }
-});
+**Architecture Overview:**
+```
+Your App (Spring Boot)
+├── Stripe API           → PaymentIntent, confirm, refund (full programmatic control)
+├── Your DB              → orders, bookings, payments, refunds, e-tickets
+└── Eventbrite API       → event listing sync + event.updated / event.unpublished webhooks only
 ```
 
-**Step 2: User Completes Payment in Eventbrite Widget**
-- Eventbrite Checkout Widget
-  - User enters attendee details (name, email, custom questions)
-  - User selects payment method (credit card, debit, UPI, Eventbrite wallet, PayPal, etc.)
-  - Payment is processed by Eventbrite's payment processor (Stripe, etc.)
-  - Eventbrite creates Order internally
-  - Eventbrite creates Attendee record linked to the order
-  - `onOrderComplete` JS callback fires in your frontend with the `order_id`
-- Eventbrite API Call (via `shared/` ACL)
-  - (Eventbrite handles payment internally — no external payment gateway call)
-
-**Step 3: Frontend Notifies Backend**
+**Step 1: Stripe PaymentIntent Creation**
 - Internal App (Your DB / Spring Boot)
-  - Frontend `onOrderComplete` callback sends `order_id` to backend
-  - Backend receives `order_id` and validates it
-  - No double-submit: check if booking already exists for this `order_id`
-- Eventbrite API Call (via `shared/` ACL)
-  - `GET /orders/{order_id}/` — read order to confirm it exists and status is `placed`
+  - `CartAssembledEvent` received by `payments-ticketing`
+  - Backend calculates total `amount` from cart snapshot (in smallest currency unit — paise for INR)
+  - Backend calls `StripePaymentService.createPaymentIntent()` via `shared/stripe/service/`
+  - `client_secret` from response returned to frontend only — never stored server-side
+  - `stripe_payment_intent_id` stored in `payments` table with status `PENDING`
+- Stripe API Call (via `shared/stripe/` ACL)
+  - `POST /v1/payment_intents` — `amount`, `currency=inr`, `automatic_payment_methods[enabled]=true`, `receipt_email`, `metadata[booking_ref]`, `metadata[event_id]`, `metadata[user_id]`
+  - **Save to DB:** `id` (`pi_...`) as `stripe_payment_intent_id` in `payments` table
 
-**Step 4: Booking Confirmation**
+**Step 2: User Completes Payment via Stripe Payment Element (Frontend)**
+- Frontend
+  - Stripe Payment Element rendered using `client_secret` received from Step 1
+  - User enters card details
+  - `stripe.confirmPayment()` called on form submit with a `return_url`
+  - On success, Stripe redirects to `return_url` with `payment_intent` as query param
+  - Frontend sends `payment_intent_id` to backend via `POST /api/payments/confirm-order`
+
+**Stripe Sandbox Test Cards (key ones):**
+
+| Scenario | Card Number | Result |
+|---|---|---|
+| Success (Visa) | `4242 4242 4242 4242` | `succeeded` |
+| Success (India) | `4000 0035 6000 0008` | `succeeded` |
+| Generic decline | `4000 0000 0000 0002` | `card_declined` |
+| Insufficient funds | `4000 0000 0000 9995` | `card_declined` / `insufficient_funds` |
+| 3DS required → succeeds | `4000 0025 0000 3155` | `requires_action` → `succeeded` |
+| Async refund → pending then success | `4000 0000 0000 7726` | Refund `pending` → `succeeded` |
+
+> For all test cards: use any future expiry (e.g. `12/34`) and any CVC. Use `pm_card_visa` for server-side test code.
+
+**Step 3: Backend Confirms Payment**
 - Internal App (Your DB / Spring Boot)
-  - Backend receives `order_id` from frontend callback
-  - Internal booking record created in `bookings` table with status `CONFIRMED`
+  - Backend retrieves PaymentIntent from Stripe to verify `status`
+  - Idempotency check: if `booking` already exists for this `payment_intent_id`, return existing
+  - Only proceed if `status = succeeded` AND `amount_received == amount`
+- Stripe API Call (via `shared/stripe/` ACL)
+  - `GET /v1/payment_intents/{id}` via `StripePaymentService.retrievePaymentIntent()`
+  - **Save to DB:** `latest_charge` (`ch_...`) as `stripe_charge_id` in `payments` and `bookings` tables
+
+**Step 4: Booking Confirmation (Internal)**
+- Internal App (Your DB / Spring Boot)
+  - Internal `booking` record created in `bookings` table with `status=CONFIRMED`
   - `booking_items` created from cart snapshot
-  - Seat locks transitioned from HARD_LOCKED → CONFIRMED
+  - Seat locks transitioned from `HARD_LOCKED` → `CONFIRMED`
+  - `stripe_payment_intent_id` and `stripe_charge_id` saved to booking
   - `BookingConfirmedEvent` published
-- Eventbrite API Call (via `shared/` ACL)
-  - `GET /orders/{order_id}/` — read full order details (costs, buyer email, status, attendee info)
-  - `GET /events/{event_id}/attendees/` — verify attendee created by Eventbrite
-  - `GET /events/{event_id}/attendees/{attendee_id}/` — get attendee barcode/QR if Eventbrite native ticketing used
+- Stripe API Call: (none at this step — booking is 100% internal)
+- Eventbrite API Call: (none at this step — order is owned entirely by your system)
+
+**DB Tables Updated:**
+
+| Table | Fields Set |
+|---|---|
+| `bookings` | `status=CONFIRMED`, `stripe_payment_intent_id`, `stripe_charge_id` |
+| `booking_items` | created from cart snapshot |
+| `payments` | `amount`, `currency`, `stripe_payment_intent_id`, `stripe_charge_id`, `status=SUCCESS` |
 
 **Step 5: E-Ticket Generation**
 - Internal App (Your DB / Spring Boot)
   - `ETicket` record created in `e_tickets` table
-  - QR code generated from booking reference + attendee barcode (from Eventbrite)
-  - PDF e-ticket generated internally (not from Eventbrite)
-  - E-ticket stored in object storage, download link returned to user
-  - Booking confirmation email sent with e-ticket attached
-- Eventbrite API Call (via `shared/` ACL)
-  - `GET /orders/{order_id}/?expand=attendees` — get attendee barcodes from Eventbrite ticket
-  - `GET /events/{event_id}/attendees/{attendee_id}/` — get attendee check-in barcode for QR
+  - QR code generated internally from `booking_reference` + `booking_item_id` — **no EB barcode**
+  - PDF e-ticket generated and stored in object storage
+  - Download link returned to user; confirmation email sent with e-ticket attached
+- Eventbrite API Call: (none at this step)
 
-**Also: Webhook for Order Events (Safety Net — Dashboard-Configured)**
-- Webhook (Parallel Path)
-  - Internal App (Your DB / Spring Boot)
-    - `EbWebhookDispatcher` receives `order.placed` event from Eventbrite
-    - Dispatched as Spring Event → payments-ticketing listens
-    - Used as a secondary confirmation if frontend callback was missed
-    - Idempotent: check if booking already created before creating duplicate
-  - Eventbrite API Call (via `shared/` ACL)
-    - **NO API for webhook registration** — Webhooks configured via Eventbrite Dashboard only
-    - Once configured, Eventbrite POSTs `order.placed`, `order.updated`, `attendee.updated` to your endpoint
-    - (Webhook is a safety net — not the primary confirmation path)
+**Step 6: Stripe Webhooks — Safety Net + Async Confirmation**
+
+Register once in Stripe Dashboard (Test mode) at `POST /api/webhooks/stripe`. Handled by `StripeWebhookHandler` in `shared/stripe/service/`.
+
+| Webhook Event | Your Action |
+|---|---|
+| `payment_intent.succeeded` | Idempotent booking confirmation — skip if already `CONFIRMED` |
+| `payment_intent.payment_failed` | Publish `PaymentFailedEvent` → release seat locks → clear cart |
+| `payment_intent.canceled` | Same as `payment_intent.payment_failed` |
+| `refund.created` | Record in `refunds` table if not already present |
+| `refund.updated` | Update `refunds.status` (e.g. `pending` → `succeeded`) |
+| `refund.failed` | Alert ops team, mark `refunds.status=FAILED`, notify user |
+
+> Signature verification: `Webhook.constructEvent(payload, sigHeader, whsec_...)` before any processing.
+
+**Eventbrite — Passive Sync Only (what EB still does)**
+
+| Action in Your App | EB API Call | Purpose |
+|---|---|---|
+| Organizer creates event | `POST /organizations/{org_id}/events/` | Public listing on EB |
+| Organizer updates event | `POST /events/{event_id}/` | Keep listing accurate |
+| Organizer creates ticket types | `POST /events/{event_id}/ticket_classes/` (free, zero cost) | Capacity tracking only |
+| Organizer cancels event | `POST /events/{event_id}/cancel/` | Mark EB listing cancelled |
+
+**Inbound EB Webhooks (passive only):**
+
+| EB Webhook Event | Your Action |
+|---|---|
+| `event.updated` (status → cancelled) | Trigger internal bulk cancellation → `StripeRefundService.createRefund()` for all `CONFIRMED` bookings |
+| `event.unpublished` | Treat as organizer-initiated cancellation → same bulk refund flow |
+
+> `order.placed`, `order.refunded`, `order.updated` EB webhooks are **not registered** — all order and payment state lives in your system via Stripe.
 
 **Payment Success Path:**
 ```
-User clicks Buy → Widget rendered → User enters payment details → Eventbrite processes payment
-  → Order created on Eventbrite → Attendee created on Eventbrite → onOrderComplete fires
-  → Frontend POST to backend → Backend reads order via EbOrderService
-  → Internal booking created → E-ticket generated → User receives email
+User clicks Pay
+  → Backend: POST /v1/payment_intents → status=requires_payment_method (via StripePaymentService)
+  → client_secret sent to frontend
+  → Stripe Payment Element rendered
+  → User enters card → stripe.confirmPayment() called
+  → Stripe processes → redirects to return_url
+  → Frontend sends payment_intent_id to POST /api/payments/confirm-order
+  → Backend: GET /v1/payment_intents/{id} → status=succeeded → latest_charge saved
+  → Internal booking CONFIRMED → E-ticket generated → confirmation email sent
+  → Stripe fires payment_intent.succeeded webhook (safety net — idempotent)
 ```
 
 **Payment Failure Path:**
 ```
-User clicks Buy → Widget rendered → User enters payment (fails) → Widget closes
-  → onOrderComplete never fires → Eventbrite order NOT created
-  → Frontend detects widget closed → triggers PaymentFailedEvent
-  → PaymentFailedListener → RollbackAction (Redis locks released)
-  → Cart cleared → User can retry or abandon
+User clicks Pay
+  → Stripe Payment Element → payment fails (declined, 3DS fail, etc.)
+  → stripe.confirmPayment() returns error → frontend shows error, does NOT call backend confirm
+  → Frontend fires POST /api/payments/failed with payment_intent_id
+  → Backend publishes PaymentFailedEvent
+  → Seat locks released (HARD_LOCKED → AVAILABLE)
+  → Cart cleared → user notified → user can retry
+  → Stripe fires payment_intent.payment_failed webhook (backend safety net)
 ```
 
-**ACL Facades:** `EbOrderService`, `EbAttendeeService`  
-**DB Tables:** `bookings`, `booking_items`, `e_tickets`  
-**External System:** Eventbrite (payment + order + attendee creation)  
+**ACL Facades:** `StripePaymentService`, `StripeWebhookHandler`  
+**DB Tables:** `bookings`, `booking_items`, `payments`, `e_tickets`  
+**External System:** Stripe (payment processing, webhooks)  
 **Publishes:** `BookingConfirmedEvent` → engagement + identity | `PaymentFailedEvent` → booking-inventory  
 **Listens to:** `CartAssembledEvent` (from booking-inventory)
 
 ### FR6 — Cancellation Request → Refund Policy Engine → Wallet Credit
 **Module:** payments-ticketing
 
-Key Point: There is NO single-order cancel or programmatic refund API on Eventbrite. `POST /events/{event_id}/cancel/` cancels the ENTIRE event, not one order. Per-order cancellation is achieved by acting as the org admin via your org OAuth token to mimic the cancellation action on Eventbrite's side.
+**Key Point:** All refunds are processed programmatically via **Stripe** (`StripeRefundService`). No Eventbrite API calls are involved in buyer-initiated cancellations. Full and partial refunds are driven by `stripe_payment_intent_id` stored in the `bookings` table. Organizer-initiated bulk cancellations are triggered by `event.updated` / `event.unpublished` EB webhooks and also use Stripe for refunds.
 
 **Step 1: User Requests Cancellation**
 - Internal App (Your DB / Spring Boot)
-  - User submits cancellation request in your app
+  - User submits `POST /api/bookings/{booking_ref}/cancel`
   - `CancellationRequest` record created in `cancellation_requests` table
   - Internal refund policy evaluated: >48h full refund | 24-48h partial | <24h no refund
+  - Booking status set to `CANCELLATION_PENDING`
   - Cancellation is permitted or denied based on policy
-- Eventbrite API Call (via `shared/` ACL)
-  - `GET /orders/{order_id}/` — read current order status and `refund_request` fields
-  - `GET /events/{event_id}/orders?refund_request_statuses=pending` — check if refund already in flight
+- Stripe API Call: (none yet — policy check is internal)
+- Eventbrite API Call: (none)
 
-**Step 2: Cancel Order on Eventbrite (Mimicking Admin)**
+**Step 2: Stripe Refund Issued**
 - Internal App (Your DB / Spring Boot)
-  - Backend acts as the org admin using your org-level OAuth token
-  - Navigates Eventbrite's order management on behalf of admin
-  - Cancellation is scoped to the specific `order_id` stored in your DB
-  - This is not a dedicated cancel API — it uses admin-scoped token to trigger cancellation
-- Eventbrite API Call (via `shared/` ACL)
-  - `POST /events/{event_id}/cancel/` — only if cancelling the ENTIRE show slot (bulk cancel)
-  - For single order: org-level OAuth token used to access Eventbrite order management
-  - `GET /orders/{order_id}/` — poll to confirm order status changed to cancelled
+  - Backend retrieves `stripe_payment_intent_id` from `bookings` table
+  - Calls `StripeRefundService.createRefund()` via `shared/stripe/service/`
+- Stripe API Call (via `shared/stripe/` ACL)
+  - **Full refund:** `POST /v1/refunds` with `payment_intent=pi_...`, `reason=requested_by_customer`
+  - **Partial refund:** `POST /v1/refunds` with `payment_intent=pi_...`, `amount=<paise>`, `reason=requested_by_customer`
+  - **Save to DB:** `id` (`re_...`) as `stripe_refund_id` in `refunds` table; initial status (`succeeded` or `pending`)
+  - Async case: if `status=pending`, Stripe fires `refund.updated` webhook when resolved
 
-**Step 3: Refund Status Tracking**
+**Step 3: Booking Cancellation (Internal DB)**
 - Internal App (Your DB / Spring Boot)
-  - Internal `refund_policy` calculates refund amount based on time-to-event
-  - Refund record created in `wallet_transactions` table
   - Booking status set to `CANCELLED` in `bookings` table
-  - `BookingCancelledEvent` published → booking-inventory releases seats
-- Eventbrite API Call (via `shared/` ACL)
-  - `GET /events/{event_id}/orders?refund_request_statuses=completed` — verify refund processed
-  - `GET /events/{event_id}/orders?refund_request_statuses=denied` — handle denial case
-  - `GET /orders/{order_id}/` — read final refund status from order object
+  - `booking_items` status set to `CANCELLED`
+  - `e_tickets` status set to `VOIDED`
+  - `refunds` record created/updated with `stripe_refund_id`, `amount`, `reason`, `status`
+  - `BookingCancelledEvent` published → booking-inventory releases seat locks
+- Stripe API Call: (none — DB update is internal)
 
-**Step 4: Wallet Credit**
+**Step 4: Wallet Credit (Optional Platform Credit)**
 - Internal App (Your DB / Spring Boot)
-  - Approved refund amount credited to user's internal wallet (`user_wallets` table)
-  - Wallet transaction record created
-  - User notified of refund amount and wallet credit
+  - If refund is partial (e.g. cancellation fee deducted), platform may credit remainder to wallet
+  - Wallet transaction record created in `wallet_transactions` table
+  - User notified of refund amount to card + any wallet credit
   - Wallet balance available for future bookings
-- Eventbrite API Call (via `shared/` ACL)
-  - (none — wallet is 100% internal)
+- Stripe API Call: (none — wallet is 100% internal)
 
-**Bulk Cancellation (Entire Show Slot Cancelled)**
+**Async Refund Handling (Webhook Path)**
+- Stripe fires `refund.updated` webhook when `pending` → `succeeded`
+- `StripeWebhookHandler` routes to `refundService.updateStatus(refundId, status)`
+- If `refund.failed`: ops team alerted, user notified of failure
+
+**Bulk Cancellation (Organizer-Initiated via EB Webhook)**
+- Trigger: EB fires `event.updated` (status → cancelled) or `event.unpublished` to `POST /api/webhooks/eventbrite`
 - Internal App (Your DB / Spring Boot)
-  - `ShowSlotCancelledEvent` received from scheduling module
-  - All bookings for that slot iterated
-  - Each booking cancelled and refunded per policy
-  - All seats released via `BookingCancelledEvent`
+  - `EbWebhookDispatcher` receives event → dispatched as Spring Event
+  - `ShowSlotCancelledEvent` published → booking-inventory releases all seats
+  - payments-ticketing iterates all `CONFIRMED` bookings for that `event_id`
+  - For each booking: `StripeRefundService.createRefund(payment_intent_id, reason=requested_by_customer)`
+  - All bookings → `CANCELLED`, all `e_tickets` → `VOIDED`, all `refunds` records created
 - Eventbrite API Call (via `shared/` ACL)
-  - `POST /events/{event_id}/cancel/` — cancel the entire event on Eventbrite
-  - `GET /events/{event_id}/orders/` — retrieve all orders for bulk refund processing
-  - `GET /events/{event_id}/orders?refund_request_statuses=completed` — verify all refunds processed
+  - `POST /events/{event_id}/cancel/` — confirm EB listing is marked cancelled (already done by organizer)
 
-**ACL Facades:** `EbOrderService`, `EbRefundService`  
-**DB Tables:** `bookings`, `cancellation_requests`, `wallet_transactions`  
+**Cancellation & Refund Path Summary:**
+```
+User requests cancellation → Backend validates policy
+  → POST /v1/refunds (payment_intent=..., reason=requested_by_customer) via StripeRefundService
+  → Refund status: succeeded (immediate) or pending (async)
+  → Booking → CANCELLED, E-ticket → VOIDED, Seat locks → released
+  → BookingCancelledEvent published → inventory + engagement notified
+  → If refund async: Stripe fires refund.updated → refundService.updateStatus()
+  → If refund.failed: ops alerted, user notified of failure
+```
+
+**ACL Facades:** `StripeRefundService`, `StripeWebhookHandler`, `EbEventSyncService` (bulk cancel only)  
+**DB Tables:** `bookings`, `booking_items`, `cancellation_requests`, `refunds`, `e_tickets`, `wallet_transactions`  
 **Publishes:** `BookingCancelledEvent` → booking-inventory  
-**Listens to:** `CartAssembledEvent` | `ShowSlotCancelledEvent`
+**Listens to:** `ShowSlotCancelledEvent` (from scheduling, via EB webhook dispatcher)
 
 ### FR7 — Offer & Coupon Engine → Eligibility Check → Discount Application
 **Module:** promotions
 
-Discounts work on two levels: internal promotions (your DB) and Eventbrite discount codes (applied at checkout widget). Both must be kept in sync.
+Discounts are applied **entirely internally**. Coupon eligibility is validated and the discount is computed before the Stripe `PaymentIntent` is created (reducing the `amount` sent to Stripe). Eventbrite discount codes (`EbDiscountSyncService`) are optionally synced to EB listing for marketing purposes only — they are no longer passed at checkout since the EB Checkout Widget is removed.
 
 **Step 1: Admin Creates Promotion**
 - Internal App (Your DB / Spring Boot)
@@ -637,19 +719,19 @@ Discounts work on two levels: internal promotions (your DB) and Eventbrite disco
   - Internal eligibility checks: validity, usage limit, user eligibility
   - Internal group discount rules checked against cart seat count
   - Discount amount computed internally
-  - If valid: coupon passed to Eventbrite Checkout Widget as `promoCode` parameter
+  - If valid: `CouponAppliedEvent` published so booking-inventory can recompute cart total with discounted price
+  - Discounted `amount` is then used when creating the Stripe `PaymentIntent` (Step 1 of FR5)
 - Eventbrite API Call (via `shared/` ACL)
   - `GET /organizations/{org_id}/discounts/` — list org discounts for validation
   - `GET /discounts/{discount_id}/` — read discount rules and current usage count
 
-**Step 3: Discount Applied at Checkout**
+**Step 3: Discount Applied at Checkout (Stripe)**
 - Internal App (Your DB / Spring Boot)
-  - `CouponAppliedEvent` published → booking-inventory recomputes cart total
-  - Eventbrite widget receives `promoCode` → applies discount at payment step
-  - Order is placed with discount already factored in by Eventbrite
-- Eventbrite API Call (via `shared/` ACL)
-  - `promoCode` passed to `window.EBWidgets.createWidget()` — applies at widget checkout
-  - `GET /orders/{order_id}/` — verify discount was applied in order costs
+  - `CouponAppliedEvent` published → booking-inventory recomputes cart total with discounted price
+  - Discounted total used as `amount` in `POST /v1/payment_intents` during FR5 Step 1
+  - No Eventbrite call — discount is entirely internal at this stage
+- Stripe API Call: (via FR5 path) `POST /v1/payment_intents` with discounted `amount`
+- Eventbrite API Call: (none)
 
 **Step 4: Post-Redemption Sync**
 - Internal App (Your DB / Spring Boot)
@@ -784,29 +866,28 @@ Key Point: Eventbrite has no seat lock API. The entire state machine runs on Spr
 - Internal App (Your DB / Spring Boot)
   - `CartTtlGuard`: checks cart session still within TTL
   - `HardLockAction`: Redis lock extended/reinforced for checkout duration
-  - User proceeds to Eventbrite checkout widget
-- Eventbrite API Call (via `shared/` ACL)
-  - (none — locking is internal Redis)
+  - User proceeds to Stripe Payment Element (frontend)
+- Stripe API Call: (none at this transition — lock is internal Redis)
 
 **HARD_LOCKED → PAYMENT_PENDING → CONFIRMED**
 - Internal App (Your DB / Spring Boot)
-  - User completes Eventbrite checkout
-  - `onOrderComplete` fires → backend receives `order_id`
+  - User completes Stripe checkout (frontend `stripe.confirmPayment()` succeeds)
+  - Frontend sends `payment_intent_id` to `POST /api/payments/confirm-order`
+  - Backend verifies `PaymentIntent.status = succeeded` via `StripePaymentService.retrievePaymentIntent()`
   - Seat transitions to `CONFIRMED`
-  - `eventbrite_order_id` stored in DB against seat and booking
-- Eventbrite API Call (via `shared/` ACL)
-  - `GET /orders/{order_id}/` — confirm order is in placed status
-  - `GET /events/{event_id}/attendees/` — verify attendee record created
+  - `stripe_payment_intent_id` and `stripe_charge_id` stored in `bookings` table
+- Stripe API Call (via `shared/stripe/` ACL)
+  - `GET /v1/payment_intents/{id}` — verify `status=succeeded` and `amount_received==amount`
+- Eventbrite API Call: (none)
 
 **Any State → RELEASED (Rollback)**
 - Internal App (Your DB / Spring Boot)
-  - `PaymentFailedEvent` received (payment failure or widget closed)
+  - `PaymentFailedEvent` received (`stripe.confirmPayment()` returns error, or `payment_intent.payment_failed` webhook fires)
   - `PaymentFailedListener` → `RollbackAction` triggered
   - Redis lock released atomically
   - Seat returns to `AVAILABLE`
   - Cart cleared from internal DB
-- Eventbrite API Call (via `shared/` ACL)
-  - (none — rollback is internal Redis + DB)
+- Stripe API Call: (none — rollback is internal Redis + DB)
 
 **Concurrent Conflict Resolution**
 - Internal App (Your DB / Spring Boot)
@@ -882,15 +963,15 @@ Tool Calling
 
 | Publisher | Event | Consumer | Purpose |
 |---|---|---|---|
-| booking-inventory | `CartAssembledEvent` | payments-ticketing | Cart ready → initiate Eventbrite checkout |
-| payments-ticketing | `PaymentFailedEvent` | booking-inventory | Payment failed → rollback Redis seat locks |
-| payments-ticketing | `BookingConfirmedEvent` | engagement | Booking confirmed → unlock review eligibility |
-| payments-ticketing | `BookingConfirmedEvent` | identity | Booking confirmed → update user order history |
+| booking-inventory | `CartAssembledEvent` | payments-ticketing | Cart ready → create Stripe PaymentIntent + return `client_secret` to frontend |
+| payments-ticketing | `PaymentFailedEvent` | booking-inventory | Payment failed (Stripe decline/cancel) → rollback Redis seat locks |
+| payments-ticketing | `BookingConfirmedEvent` | engagement | Booking confirmed (Stripe succeeded) → unlock review eligibility |
+| payments-ticketing | `BookingConfirmedEvent` | identity | Booking confirmed (Stripe succeeded) → update user order history |
 | payments-ticketing | `BookingCancelledEvent` | booking-inventory | Cancellation → release Redis seat locks |
 | scheduling | `ShowSlotCreatedEvent` | booking-inventory | Slot created → provision seat map |
 | scheduling | `ShowSlotCancelledEvent` | booking-inventory | Slot cancelled → release all seats |
-| scheduling | `ShowSlotCancelledEvent` | payments-ticketing | Slot cancelled → trigger bulk refund + EB cancel |
-| promotions | `CouponAppliedEvent` | booking-inventory | Coupon applied → recompute cart total |
+| scheduling | `ShowSlotCancelledEvent` | payments-ticketing | Slot cancelled → bulk Stripe refunds + EB event cancel (passive) |
+| promotions | `CouponAppliedEvent` | booking-inventory | Coupon applied → recompute cart total (discounted amount sent to Stripe) |
 | discovery-catalog | `EventCatalogUpdatedEvent` | engagement | Catalog updated → refresh RAG Elasticsearch index |
 
 ## 8. Shared Infrastructure
@@ -899,7 +980,8 @@ Tool Calling
 
 | Package | External System | Services |
 |---|---|---|
-| `shared/eventbrite/` | Eventbrite API | `EbEventSyncService`, `EbVenueService`, `EbScheduleService`, `EbTicketService`, `EbCapacityService`, `EbOrderService`, `EbAttendeeService`, `EbDiscountSyncService`, `EbRefundService`, `EbWebhookService` |
+| `shared/eventbrite/` | Eventbrite API | `EbEventSyncService`, `EbVenueService`, `EbScheduleService`, `EbTicketService`, `EbCapacityService`, `EbOrderService` (reporting only), `EbAttendeeService` (FR8 only), `EbDiscountSyncService`, `EbRefundService` (inactive), `EbWebhookService` |
+| `shared/stripe/` | Stripe API | `StripePaymentService`, `StripeRefundService`, `StripeWebhookHandler` |
 | `shared/openai/` | OpenAI GPT-4o | `OpenAiChatService`, `OpenAiEmbeddingService` |
 
 ### Shared Common Classes
@@ -919,22 +1001,27 @@ Tool Calling
 | `JwtAuthenticationFilter` | `shared/security/` | Spring Security filter — registered once |
 | `RedisConfig` | `shared/config/` | Redisson bean for distributed seat locking |
 | `ElasticsearchConfig` | `shared/config/` | ES client for RAG vector store |
+| `SlotSummaryReader` | `shared/common/service/` | Read interface: `getSlotSummary(Long slotId) → SlotSummaryDto`; implemented by `scheduling/SlotSummaryReaderImpl` |
+| `SlotPricingReader` | `shared/common/service/` | Read interface: `getSlotPricing(Long slotId) → List<PricingTierDto>`; implemented by `scheduling/SlotPricingReaderImpl` |
+| `SlotSummaryDto` | `shared/common/dto/` | Record: `slotId, status, ebEventId, seatingMode, orgId, venueId, cityId, sourceSeatMapId` |
+| `PricingTierDto` | `shared/common/dto/` | Record: `tierId, tierName, price(Money), quota, tierType, ebTicketClassId, ebInventoryTierId, groupDiscountThreshold, groupDiscountPercent` |
 
 ## 9. Hard Rules — Never Violate These
 
 1. `app/` has zero business logic. No `@Service`, no `@Entity`, no `@Repository`.
 2. `shared/` has zero dependency on any module. It knows nothing about bookings, users, or events.
-3. No module imports another module's `@Entity` class or `@Repository` interface.
-4. No module calls Eventbrite HTTP directly — only through `shared/eventbrite/service/`.
+3. No module imports another module's `@Entity` class, `@Repository` interface, or concrete `@Service` bean. The sole approved exception is shared reader interfaces defined in `shared/common/service/` — see Rule 1 above.
+4. No module calls Eventbrite HTTP directly — only through `shared/eventbrite/service/`. No module calls Stripe HTTP directly — only through `shared/stripe/service/`.
 5. Spring Events carry only primitive values, IDs, enums, and value objects — never `@Entity` objects.
 6. `admin/` defines no `@Entity` and owns no database table.
 7. Dependency direction is strictly downward — no circular imports between modules.
 8. One `GlobalExceptionHandler` in `shared/common/exception/` — never add `@ControllerAdvice` in a module.
-9. Internal DB is always updated FIRST before any Eventbrite API call is made.
-10. `eventbrite_event_id` is never null in production — if null, block FR4, FR5, FR6, FR7, FR8, FR10.
-11. The Checkout Widget (JS SDK) is the ONLY way orders are created on Eventbrite — no backend order creation.
-12. Per-order cancellation and refunds use org admin token mimic — document this clearly in `EbRefundService`.
-13. Eventbrite Checkout Widget is the ONLY way payments are accepted and orders are created. No backend order creation API exists on Eventbrite. Payment processing is 100% Eventbrite-handled. Backend reads orders AFTER widget fires onOrderComplete callback via `EbOrderService`.
+9. Internal DB is always updated FIRST before any Eventbrite or Stripe API call is made.
+10. `eventbrite_event_id` is never null in production for events that require EB listing sync — if null, block FR7, FR8, FR10 (EB availability check). FR5 (Stripe payments) and FR6 (Stripe refunds) operate independently of `eventbrite_event_id`.
+11. All payments are accepted and processed via **Stripe** (`StripePaymentService`). No payment processing through Eventbrite. The Eventbrite Checkout Widget is removed — do NOT use or reference it.
+12. All refunds are submitted programmatically via **Stripe** (`StripeRefundService` — `POST /v1/refunds`). Do NOT use `EbRefundService` for any refund submission. Do NOT mimic admin actions on Eventbrite for refunds.
+13. Stripe `client_secret` is sent to the frontend ONLY — never log, store, or return it from the backend. `stripe_payment_intent_id` (`pi_...`) and `stripe_charge_id` (`ch_...`) are stored in the `payments` and `bookings` tables.
+14. Stripe webhook endpoint (`POST /api/webhooks/stripe`) MUST verify the `Stripe-Signature` header via `Webhook.constructEvent()` before any processing. Reject any request where verification fails with HTTP 400.
 
 ## 10. Where to Put New Code
 
@@ -955,6 +1042,7 @@ Tool Calling
 | New external system integration | `shared/[system-acl]/` (never inside a module) |
 | Admin read/aggregate view | `admin/service/` + `admin/api/controller/` |
 | New Eventbrite API call | `shared/eventbrite/service/` — add to appropriate facade only |
+| New Stripe API call | `shared/stripe/service/` — add to `StripePaymentService`, `StripeRefundService`, or `StripeWebhookHandler` only |
 
 ## 11. Flyway Migration Conventions
 

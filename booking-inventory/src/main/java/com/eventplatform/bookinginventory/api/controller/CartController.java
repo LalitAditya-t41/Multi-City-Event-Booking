@@ -54,7 +54,7 @@ public class CartController {
     @PreAuthorize("hasRole('" + Roles.USER + "')")
     public CartResponse confirm(Authentication authentication, @Valid @RequestBody ConfirmCartRequest request) {
         AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return cartService.confirm(user.userId(), user.orgId(), request);
+        return cartService.confirm(user.userId(), user.orgId(), user.email(), request);
     }
 
     @PostMapping("/abandon")

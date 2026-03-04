@@ -18,7 +18,7 @@ public class SeatLockStateMachineConfig {
             SeatLockEvent.RELEASE, SeatLockState.AVAILABLE
         ));
         transitions.put(SeatLockState.HARD_LOCKED, Map.of(
-            SeatLockEvent.CHECKOUT_INITIATE, SeatLockState.PAYMENT_PENDING,
+            SeatLockEvent.PAYMENT_INITIATE, SeatLockState.PAYMENT_PENDING,
             SeatLockEvent.RELEASE, SeatLockState.AVAILABLE
         ));
         transitions.put(SeatLockState.PAYMENT_PENDING, Map.of(

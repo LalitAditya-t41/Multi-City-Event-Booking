@@ -15,7 +15,7 @@ public class ConfirmAction {
     }
 
     public void apply(Seat seat, SeatActionContext context) {
-        seat.confirm(context.orderId());
+        seat.confirm(context.bookingRef());
         seatLockRedisService.release(seat.getId(), context.userId());
     }
 }

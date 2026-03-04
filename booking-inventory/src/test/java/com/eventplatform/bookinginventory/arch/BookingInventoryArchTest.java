@@ -89,8 +89,10 @@ class BookingInventoryArchTest {
     @Test
     void should_only_publish_events_with_primitives_ids_enums_no_entities() {
         RecordComponent[] components = CartAssembledEvent.class.getRecordComponents();
+        // CartAssembledEvent: cartId, slotId, userId, orgId (Long x4), ebEventId, couponCode,
+        // currency, userEmail (String x4), totalAmountInSmallestUnit (long primitive) — no entities
         assertThat(Arrays.stream(components).map(c -> c.getType().getSimpleName()))
-            .containsOnly("Long", "Long", "Long", "Long", "String", "String");
+            .containsOnly("Long", "long", "String");
     }
 
     @Test

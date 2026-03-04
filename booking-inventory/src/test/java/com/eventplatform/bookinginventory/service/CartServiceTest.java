@@ -212,7 +212,7 @@ class CartServiceTest {
             .thenReturn(new CartResponse(900L, 56L, CartStatus.PENDING, cart.getExpiresAt(), SeatingMode.GA, List.of(),
                 new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR")));
 
-        cartService.confirm(1L, 44L, new ConfirmCartRequest(900L));
+        cartService.confirm(1L, 44L, "test@example.com", new ConfirmCartRequest(900L));
 
         ArgumentCaptor<CartAssembledEvent> captor = ArgumentCaptor.forClass(CartAssembledEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
@@ -226,7 +226,7 @@ class CartServiceTest {
         ReflectionTestUtils.setField(cart, "expiresAt", Instant.now().minusSeconds(1));
         when(cartRepository.findById(901L)).thenReturn(Optional.of(cart));
 
-        assertThatThrownBy(() -> cartService.confirm(1L, 44L, new ConfirmCartRequest(901L)))
+        assertThatThrownBy(() -> cartService.confirm(1L, 44L, "test@example.com", new ConfirmCartRequest(901L)))
             .isInstanceOf(BaseException.class);
 
         verify(eventPublisher, never()).publishEvent(any());
@@ -251,7 +251,7 @@ class CartServiceTest {
             .thenReturn(new CartResponse(902L, 58L, CartStatus.PENDING, cart.getExpiresAt(), SeatingMode.GA, List.of(),
                 new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR"), new Money(new BigDecimal("0.00"), "INR")));
 
-        cartService.confirm(1L, 44L, new ConfirmCartRequest(902L));
+        cartService.confirm(1L, 44L, "test@example.com", new ConfirmCartRequest(902L));
 
         assertThat(cart.getExpiresAt()).isAfter(before.plus(Duration.ofMinutes(20)));
     }
