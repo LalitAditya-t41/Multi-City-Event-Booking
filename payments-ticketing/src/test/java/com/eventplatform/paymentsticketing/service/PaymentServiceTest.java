@@ -35,9 +35,15 @@ import com.eventplatform.shared.common.service.CartSnapshotReader;
 import com.eventplatform.shared.common.service.SlotSummaryReader;
 import com.eventplatform.shared.stripe.dto.StripePaymentIntentResponse;
 import com.eventplatform.shared.stripe.service.StripePaymentService;
+import com.sun.net.httpserver.HttpServer;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.nio.charset.StandardCharsets;
+import java.time.temporal.ChronoUnit;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -73,9 +79,25 @@ class PaymentServiceTest {
     private CartSnapshotReader cartSnapshotReader;
 
     private PaymentService paymentService;
+    private HttpServer slotTimingServer;
+    private String slotTimingBaseUrl;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
+        slotTimingServer = HttpServer.create(new InetSocketAddress(0), 0);
+        slotTimingServer.createContext("/internal/scheduling/slots/21/timing", exchange -> {
+            Instant startTime = Instant.now().plus(72, ChronoUnit.HOURS);
+            String body = "{\"slotId\":21,\"startTime\":\"" + startTime + "\"}";
+            byte[] payload = body.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, payload.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(payload);
+            }
+        });
+        slotTimingServer.start();
+        slotTimingBaseUrl = "http://localhost:" + slotTimingServer.getAddress().getPort();
+
         paymentService = new PaymentService(
             bookingRepository,
             paymentRepository,
@@ -87,8 +109,16 @@ class PaymentServiceTest {
             afterCommitEventPublisher,
             bookingRefGenerator,
             slotSummaryReader,
-            cartSnapshotReader
+            cartSnapshotReader,
+            slotTimingBaseUrl
         );
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (slotTimingServer != null) {
+            slotTimingServer.stop(0);
+        }
     }
 
     @Test

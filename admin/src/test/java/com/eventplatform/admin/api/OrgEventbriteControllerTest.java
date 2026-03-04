@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.eventplatform.admin.api.controller.OrgEventbriteController;
 import com.eventplatform.admin.service.OrgDashboardService;
 import com.eventplatform.admin.service.OrgOAuthService;
+import com.eventplatform.admin.service.client.SchedulingAdminClient;
 import com.eventplatform.shared.common.exception.GlobalExceptionHandler;
 import com.eventplatform.shared.common.exception.ValidationException;
 import com.eventplatform.shared.eventbrite.exception.EbAuthException;
@@ -54,6 +55,8 @@ class OrgEventbriteControllerTest {
     private OrgOAuthService orgOAuthService;
     @MockBean
     private OrgDashboardService orgDashboardService;
+    @MockBean
+    private SchedulingAdminClient schedulingAdminClient;
 
     @Test
     @WithMockUser(roles = "ADMIN")
