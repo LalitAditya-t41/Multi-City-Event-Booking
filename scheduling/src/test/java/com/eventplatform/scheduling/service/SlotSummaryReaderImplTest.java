@@ -28,7 +28,7 @@ class SlotSummaryReaderImplTest {
     private SlotSummaryReaderImpl slotSummaryReader;
 
     @Test
-    void should_return_slot_summary_dto_when_slot_exists() {
+    void should_return_SlotSummaryDto_with_all_fields_mapped_when_slot_exists() {
         ShowSlot slot = baseSlot();
         ReflectionTestUtils.setField(slot, "id", 55L);
         slot.setEbEventId("eb-55");
@@ -48,7 +48,7 @@ class SlotSummaryReaderImplTest {
     }
 
     @Test
-    void should_throw_ResourceNotFoundException_when_slot_missing() {
+    void should_throw_ResourceNotFoundException_when_slot_absent() {
         when(showSlotRepository.findById(88L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> slotSummaryReader.getSlotSummary(88L))
@@ -57,7 +57,7 @@ class SlotSummaryReaderImplTest {
     }
 
     @Test
-    void should_map_ebEventId_and_seatingMode_correctly() {
+    void should_map_orgId_from_ShowSlot_getOrganizationId() {
         ShowSlot slot = baseSlot();
         ReflectionTestUtils.setField(slot, "id", 101L);
         slot.setEbEventId("eb-101");
@@ -66,8 +66,19 @@ class SlotSummaryReaderImplTest {
 
         SlotSummaryDto result = slotSummaryReader.getSlotSummary(101L);
 
-        assertThat(result.ebEventId()).isEqualTo("eb-101");
-        assertThat(result.seatingMode()).isEqualTo(SeatingMode.RESERVED);
+        assertThat(result.orgId()).isEqualTo(99L);
+    }
+
+    @Test
+    void should_map_status_as_string_via_enum_name() {
+        ShowSlot slot = baseSlot();
+        ReflectionTestUtils.setField(slot, "id", 102L);
+
+        when(showSlotRepository.findById(102L)).thenReturn(Optional.of(slot));
+
+        SlotSummaryDto result = slotSummaryReader.getSlotSummary(102L);
+
+        assertThat(result.status()).isEqualTo("DRAFT");
     }
 
     private ShowSlot baseSlot() {

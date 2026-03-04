@@ -33,7 +33,7 @@ class SlotPricingReaderImplTest {
     private SlotPricingReaderImpl slotPricingReader;
 
     @Test
-    void should_return_pricing_list_when_tiers_exist() {
+    void should_return_mapped_list_of_PricingTierDto_when_tiers_exist() {
         ShowSlotPricingTier tier = new ShowSlotPricingTier(
             "VIP",
             new Money(new BigDecimal("1500.00"), "INR"),
@@ -60,7 +60,7 @@ class SlotPricingReaderImplTest {
     }
 
     @Test
-    void should_return_empty_list_when_no_tiers_configured() {
+    void should_return_empty_list_when_no_tiers_for_slot() {
         when(showSlotRepository.existsById(12L)).thenReturn(true);
         when(showSlotPricingTierRepository.findBySlotId(12L)).thenReturn(List.of());
 
@@ -70,7 +70,7 @@ class SlotPricingReaderImplTest {
     }
 
     @Test
-    void should_map_group_discount_fields_correctly() {
+    void should_map_tierId_tierName_price_groupDiscount_correctly() {
         ShowSlotPricingTier tier = new ShowSlotPricingTier(
             "Group",
             new Money(new BigDecimal("600.00"), "INR"),
@@ -85,12 +85,15 @@ class SlotPricingReaderImplTest {
 
         PricingTierDto dto = slotPricingReader.getSlotPricing(13L).getFirst();
 
+        assertThat(dto.tierId()).isEqualTo(777L);
+        assertThat(dto.tierName()).isEqualTo("Group");
+        assertThat(dto.price().amount()).isEqualByComparingTo("600.00");
         assertThat(dto.groupDiscountThreshold()).isEqualTo(6);
         assertThat(dto.groupDiscountPercent()).isEqualByComparingTo("15.50");
     }
 
     @Test
-    void should_throw_ResourceNotFoundException_when_slot_missing() {
+    void should_throw_ResourceNotFoundException_when_slot_does_not_exist() {
         when(showSlotRepository.existsById(404L)).thenReturn(false);
 
         assertThatThrownBy(() -> slotPricingReader.getSlotPricing(404L))
