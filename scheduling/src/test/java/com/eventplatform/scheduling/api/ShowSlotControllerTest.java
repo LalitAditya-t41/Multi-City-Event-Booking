@@ -2,7 +2,9 @@ package com.eventplatform.scheduling.api;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -12,8 +14,10 @@ import com.eventplatform.scheduling.api.controller.ShowSlotController;
 import com.eventplatform.scheduling.api.dto.request.CreateShowSlotRequest;
 import com.eventplatform.scheduling.api.dto.request.PricingTierRequest;
 import com.eventplatform.scheduling.api.dto.request.UpdateShowSlotRequest;
+import com.eventplatform.scheduling.api.dto.response.ShowSlotPricingTierResponse;
 import com.eventplatform.scheduling.api.dto.response.ShowSlotResponse;
 import com.eventplatform.scheduling.domain.ShowSlot;
+import com.eventplatform.scheduling.domain.ShowSlotPricingTier;
 import com.eventplatform.scheduling.domain.enums.ShowSlotStatus;
 import com.eventplatform.scheduling.domain.enums.TierType;
 import com.eventplatform.scheduling.exception.SlotConflictException;
@@ -24,6 +28,8 @@ import com.eventplatform.shared.common.exception.GlobalExceptionHandler;
 import com.eventplatform.shared.common.exception.BusinessRuleException;
 import com.eventplatform.shared.common.enums.SeatingMode;
 import com.eventplatform.shared.eventbrite.exception.EbIntegrationException;
+import com.eventplatform.shared.security.JwtAuthenticationFilter;
+import com.eventplatform.shared.security.JwtTokenProvider;
 import com.eventplatform.shared.security.SecurityConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
@@ -32,7 +38,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -41,17 +48,30 @@ import org.springframework.test.context.ContextConfiguration;
 
 @WebMvcTest(ShowSlotController.class)
 @ContextConfiguration(classes = com.eventplatform.scheduling.SchedulingTestApplication.class)
-@Import({GlobalExceptionHandler.class, SecurityConfig.class})
+@Import({GlobalExceptionHandler.class, SecurityConfig.class, ShowSlotControllerTest.MockBeans.class})
 class ShowSlotControllerTest {
+
+    @TestConfiguration
+    static class MockBeans {
+        @Bean
+        ShowSlotService showSlotService() { return mock(ShowSlotService.class); }
+        @Bean
+        ShowSlotMapper showSlotMapper() { return mock(ShowSlotMapper.class); }
+        @Bean
+        JwtTokenProvider jwtTokenProvider() { return mock(JwtTokenProvider.class); }
+        @Bean
+        JwtAuthenticationFilter jwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+            return new JwtAuthenticationFilter(jwtTokenProvider);
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;
     @Autowired
     private ObjectMapper objectMapper;
-
-    @MockBean
+    @Autowired
     private ShowSlotService showSlotService;
-    @MockBean
+    @Autowired
     private ShowSlotMapper showSlotMapper;
 
     @Test
@@ -165,6 +185,29 @@ class ShowSlotControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(baseCreateRequest())))
             .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser
+    void should_return_200_with_pricing_tiers_for_authenticated_user() throws Exception {
+        ShowSlotPricingTier tier = new ShowSlotPricingTier("General",
+            new com.eventplatform.shared.common.domain.Money(BigDecimal.ZERO, "INR"), 50,
+            com.eventplatform.scheduling.domain.enums.TierType.FREE);
+        ShowSlotPricingTierResponse response = new ShowSlotPricingTierResponse(
+            1L, "General", BigDecimal.ZERO, "INR", 50, TierType.FREE, null, null, null, null);
+        when(showSlotService.getPricingTiers(1L)).thenReturn(List.of(tier));
+        when(showSlotMapper.toPricingTierResponse(tier)).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/scheduling/slots/1/pricing-tiers"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].name").value("General"))
+            .andExpect(jsonPath("$[0].tierType").value("FREE"));
+    }
+
+    @Test
+    void should_return_401_when_unauthenticated_requests_pricing_tiers() throws Exception {
+        mockMvc.perform(get("/api/v1/scheduling/slots/1/pricing-tiers"))
+            .andExpect(status().isUnauthorized());
     }
 
     private CreateShowSlotRequest baseCreateRequest() {

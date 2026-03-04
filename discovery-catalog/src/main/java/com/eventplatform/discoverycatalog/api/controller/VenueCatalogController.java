@@ -2,6 +2,7 @@ package com.eventplatform.discoverycatalog.api.controller;
 
 import com.eventplatform.discoverycatalog.api.dto.response.VenueListResponse;
 import com.eventplatform.discoverycatalog.api.dto.response.VenueResponse;
+import com.eventplatform.discoverycatalog.api.dto.response.VenueSeatLayoutResponse;
 import com.eventplatform.discoverycatalog.service.VenueCatalogService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,5 +37,10 @@ public class VenueCatalogController {
     @GetMapping("/venues/{id}")
     public VenueResponse getVenue(@PathVariable("id") Long venueId) {
         return venueCatalogService.getVenue(venueId);
+    }
+
+    @GetMapping("/venues/{venueId}/seat-layout")
+    public VenueSeatLayoutResponse getSeatLayout(@PathVariable Long venueId) {
+        return venueCatalogService.getVenueSeatLayout(venueId);
     }
 }

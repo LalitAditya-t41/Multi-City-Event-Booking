@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class VenueService {
+public class VenueService implements VenueServiceI {
 
     private final VenueRepository venueRepository;
     private final CityRepository cityRepository;

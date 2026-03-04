@@ -2,6 +2,7 @@ package com.eventplatform.identity.api.controller;
 
 import com.eventplatform.identity.api.dto.response.UserWalletResponse;
 import com.eventplatform.identity.service.UserWalletService;
+import com.eventplatform.shared.security.AuthenticatedUser;
 import com.eventplatform.shared.security.Roles;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -22,6 +23,6 @@ public class UserWalletController {
     @GetMapping
     @PreAuthorize("hasRole('" + Roles.USER + "')")
     public UserWalletResponse getMyWallet(Authentication authentication) {
-        return userWalletService.getWallet((Long) authentication.getPrincipal());
+        return userWalletService.getWallet(((AuthenticatedUser) authentication.getPrincipal()).userId());
     }
 }

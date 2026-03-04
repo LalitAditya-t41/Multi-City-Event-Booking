@@ -14,6 +14,7 @@ import com.eventplatform.identity.service.PreferenceOptionsService;
 import com.eventplatform.identity.service.UserSettingsService;
 import com.eventplatform.identity.service.UserWalletService;
 import com.eventplatform.shared.common.exception.ValidationException;
+import com.eventplatform.shared.security.AuthenticatedUser;
 import com.eventplatform.shared.security.JwtAuthenticationFilter;
 import com.eventplatform.shared.security.SecurityConfig;
 import java.time.LocalDate;
@@ -112,7 +113,7 @@ class UserSettingsControllerTest {
 
     private UsernamePasswordAuthenticationToken userAuthentication() {
         return new UsernamePasswordAuthenticationToken(
-            1L,
+            new AuthenticatedUser(1L, "USER", null),
             null,
             List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );

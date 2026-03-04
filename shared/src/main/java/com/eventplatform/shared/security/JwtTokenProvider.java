@@ -48,16 +48,22 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(Long userId, String role) {
+        return generateToken(userId, role, null);
+    }
+
+    public String generateToken(Long userId, String role, Long orgId) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        var builder = Jwts.builder()
             .subject(String.valueOf(userId))
             .claim(SecurityConstants.TOKEN_CLAIM_ROLE, role)
             .claim(SecurityConstants.TOKEN_CLAIM_TYPE, SecurityConstants.TOKEN_TYPE_ACCESS)
             .id(UUID.randomUUID().toString())
             .issuedAt(Date.from(now))
-            .expiration(Date.from(now.plusSeconds(SecurityConstants.ACCESS_TOKEN_TTL_S)))
-            .signWith(privateKey, Jwts.SIG.RS256)
-            .compact();
+            .expiration(Date.from(now.plusSeconds(SecurityConstants.ACCESS_TOKEN_TTL_S)));
+        if (orgId != null) {
+            builder.claim("orgId", orgId);
+        }
+        return builder.signWith(privateKey, Jwts.SIG.RS256).compact();
     }
 
     public boolean validateToken(String token) {
@@ -80,6 +86,15 @@ public class JwtTokenProvider {
     public String extractRole(String token) {
         Claims claims = parseClaims(token);
         return claims.get(SecurityConstants.TOKEN_CLAIM_ROLE, String.class);
+    }
+
+    public Long extractOrgId(String token) {
+        Claims claims = parseClaims(token);
+        Object raw = claims.get("orgId");
+        if (raw instanceof Number n) {
+            return n.longValue();
+        }
+        return null;
     }
 
     private Claims parseClaims(String token) {

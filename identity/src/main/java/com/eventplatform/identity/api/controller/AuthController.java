@@ -13,6 +13,7 @@ import com.eventplatform.identity.api.dto.response.MessageResponse;
 import com.eventplatform.identity.api.dto.response.RegisterResponse;
 import com.eventplatform.identity.api.dto.response.UserProfileResponse;
 import com.eventplatform.identity.service.AuthService;
+import com.eventplatform.shared.security.AuthenticatedUser;
 import com.eventplatform.shared.security.Roles;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -83,6 +84,6 @@ public class AuthController {
     }
 
     private Long currentUserId(Authentication authentication) {
-        return (Long) authentication.getPrincipal();
+        return ((AuthenticatedUser) authentication.getPrincipal()).userId();
     }
 }
