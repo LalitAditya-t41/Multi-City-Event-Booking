@@ -39,6 +39,7 @@ public class StripePaymentService {
                 .setDescription(request.description())
                 .setCaptureMethod(PaymentIntentCreateParams.CaptureMethod.valueOf(
                     stripeConfig.getCaptureMethod().toUpperCase().replace("-", "_")))
+                .putAllMetadata(request.metadata() == null ? java.util.Map.of() : request.metadata())
                 .build();
 
             RequestOptions options = RequestOptions.builder()
@@ -92,7 +93,8 @@ public class StripePaymentService {
             intent.getClientSecret(),
             intent.getStatus(),
             intent.getAmount(),
-            intent.getCurrency()
+            intent.getCurrency(),
+            intent.getLatestCharge() == null ? null : intent.getLatestCharge()
         );
     }
 }

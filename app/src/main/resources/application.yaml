@@ -33,6 +33,11 @@ stripe:
   payment-intent:
     capture-method: automatic
 
+payments:
+  cancellation:
+    fee-percent: 0
+    window-hours: 24
+
 eventbrite:
   base-url: http://localhost:8888
   api-key: ${EVENTBRITE_API_KEY:mock-token}

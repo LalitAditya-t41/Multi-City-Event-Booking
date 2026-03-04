@@ -9,8 +9,8 @@ import com.eventplatform.bookinginventory.repository.CartItemRepository;
 import com.eventplatform.bookinginventory.repository.SeatLockAuditLogRepository;
 import com.eventplatform.bookinginventory.repository.SeatRepository;
 import com.eventplatform.bookinginventory.service.CartService;
-import com.eventplatform.bookinginventory.service.client.PaymentStatusClient;
 import com.eventplatform.bookinginventory.service.redis.SeatLockRedisService;
+import com.eventplatform.shared.common.service.PaymentConfirmationReader;
 import java.time.Instant;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -22,10 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Scheduled watchdog that releases HARD_LOCKED / PAYMENT_PENDING seat locks
  * whose TTL has expired without a confirmed Stripe payment.
  *
- * <p>Payment confirmation check delegates to {@link PaymentStatusClient} which
- * calls {@code GET /internal/payments/by-cart/{cartId}/status} in payments-ticketing.
- * If the call fails (module not yet live, network issue), the default is {@code false}
- * — safe because confirmed payments always transition the seat to CONFIRMED state first.
+ * <p>Payment confirmation check delegates to {@link PaymentConfirmationReader}
+ * from shared/common/service.
  */
 @Slf4j
 @Component
@@ -35,7 +33,7 @@ public class PaymentTimeoutWatchdog {
     private final CartItemRepository cartItemRepository;
     private final SeatLockAuditLogRepository auditRepository;
     private final SeatLockRedisService seatLockRedisService;
-    private final PaymentStatusClient paymentStatusClient;
+    private final PaymentConfirmationReader paymentConfirmationReader;
     private final CartService cartService;
 
     public PaymentTimeoutWatchdog(
@@ -43,14 +41,14 @@ public class PaymentTimeoutWatchdog {
         CartItemRepository cartItemRepository,
         SeatLockAuditLogRepository auditRepository,
         SeatLockRedisService seatLockRedisService,
-        PaymentStatusClient paymentStatusClient,
+        PaymentConfirmationReader paymentConfirmationReader,
         CartService cartService
     ) {
         this.seatRepository = seatRepository;
         this.cartItemRepository = cartItemRepository;
         this.auditRepository = auditRepository;
         this.seatLockRedisService = seatLockRedisService;
-        this.paymentStatusClient = paymentStatusClient;
+        this.paymentConfirmationReader = paymentConfirmationReader;
         this.cartService = cartService;
     }
 
@@ -98,12 +96,12 @@ public class PaymentTimeoutWatchdog {
 
     /**
      * Checks whether a confirmed payment exists for the cart that contains this seat.
-     * Uses PaymentStatusClient (REST call to payments-ticketing internal API).
+     * Uses shared PaymentConfirmationReader.
      */
     private boolean isPaymentConfirmed(Seat seat) {
         Long cartId = cartItemRepository.findFirstBySeatId(seat.getId())
             .map(item -> item.getCart().getId())
             .orElse(null);
-        return paymentStatusClient.isPaymentConfirmed(cartId);
+        return paymentConfirmationReader.isPaymentConfirmed(cartId);
     }
 }

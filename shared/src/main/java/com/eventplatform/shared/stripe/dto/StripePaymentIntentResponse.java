@@ -14,5 +14,6 @@ public record StripePaymentIntentResponse(
     String clientSecret,
     String status,
     long amount,
-    String currency
+    String currency,
+    String latestCharge
 ) {}

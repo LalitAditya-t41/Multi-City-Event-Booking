@@ -1,7 +1,7 @@
 package com.eventplatform.paymentsticketing.domain.enums;
 
-public enum PaymentStatus {
+public enum RefundStatus {
     PENDING,
-    SUCCESS,
+    SUCCEEDED,
     FAILED
 }

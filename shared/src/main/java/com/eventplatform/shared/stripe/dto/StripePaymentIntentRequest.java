@@ -14,5 +14,6 @@ public record StripePaymentIntentRequest(
     String currency,
     String receiptEmail,
     String description,
-    String idempotencyKey
+    String idempotencyKey,
+    java.util.Map<String, String> metadata
 ) {}
