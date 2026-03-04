@@ -24,6 +24,7 @@
         <module>scheduling</module>
         <module>booking-inventory</module>
         <module>payments-ticketing</module>
+        <module>promotions</module>
         <module>admin</module>
     </modules>
 

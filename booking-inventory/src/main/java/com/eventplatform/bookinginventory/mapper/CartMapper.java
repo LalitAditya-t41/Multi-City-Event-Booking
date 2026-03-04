@@ -43,6 +43,7 @@ public interface CartMapper {
             responses,
             pricing.subtotal(),
             pricing.discount(),
+            cart.getCouponDiscountAmount(),
             pricing.total()
         );
     }

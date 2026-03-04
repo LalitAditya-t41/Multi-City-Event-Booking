@@ -84,8 +84,8 @@ public class CartPricingService {
 
     public CartPricingResult recompute(Cart cart, List<CartItem> items) {
         if (items.isEmpty()) {
-            Money zero = new Money(BigDecimal.ZERO, cart.getDiscountAmount().currency());
-            cart.setDiscountAmount(zero);
+            Money zero = new Money(BigDecimal.ZERO, cart.getGroupDiscountAmount().currency());
+            cart.setGroupDiscountAmount(zero);
             return new CartPricingResult(zero, zero, zero, Map.of());
         }
 
@@ -134,7 +134,7 @@ public class CartPricingService {
         Money subtotal = new Money(subtotalAmount.setScale(2, RoundingMode.HALF_UP), currency);
         Money discount = new Money(totalDiscount.setScale(2, RoundingMode.HALF_UP), currency);
         Money total = new Money(subtotal.amount().subtract(discount.amount()).setScale(2, RoundingMode.HALF_UP), currency);
-        cart.setDiscountAmount(discount);
+        cart.setGroupDiscountAmount(discount);
 
         return new CartPricingResult(subtotal, discount, total, itemDiscounts);
     }
