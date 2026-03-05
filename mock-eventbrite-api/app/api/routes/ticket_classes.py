@@ -108,8 +108,8 @@ def create_ticket_class(event_id: str, body: dict, db: Session = Depends(get_db)
         raise ApiError("ARGUMENTS_ERROR", "Missing ticket_class object.", 400)
     payload = TicketClassCreate(**body["ticket_class"])
 
-    if payload.cost is None and not payload.free and not payload.donation:
-        raise ApiError("NO_COST", "A price must be set for a charged ticket.", 400)
+    # Allow free/inventory-tier ticket classes (no cost required in mock for capacity tracking)
+    is_free = payload.free or payload.donation or payload.cost is None
 
     new_id = f"ticket_{int(datetime.utcnow().timestamp())}"
     tc = TicketClass(
@@ -121,7 +121,7 @@ def create_ticket_class(event_id: str, body: dict, db: Session = Depends(get_db)
         cost=_parse_cost(payload.cost),
         fee=None,
         donation=payload.donation or False,
-        free=payload.free or False,
+        free=is_free,
         minimum_quantity=payload.minimum_quantity,
         maximum_quantity=payload.maximum_quantity,
         capacity=payload.capacity or payload.quantity_total,

@@ -1,0 +1,3346 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Multi-City Event Booking \u2014 Full E2E (FR1\u2013FR8 + FR10)",
+    "description": "Complete collection covering all functional flows:\n\n- FR1: City, Venue & Event Discovery\n- FR2: Show Scheduling & Slot Management (Admin)\n- FR3: User Registration, Auth & Profile\n- FR4: Seat Selection & Cart Assembly\n- FR5: Payment via Stripe & Booking Confirmation\n- FR6: Cancellation & Stripe Refund\n- FR7: Coupon Engine & Discount Application\n- FR8: Review Submission & Auto-Moderation\n- FR10: Seat Lock State Machine (Hero Feature)\n- Admin: Admin Endpoints Reference\n- Health: Actuator & Debug endpoints\n\nBase URL: http://localhost:8080\nImport the companion environment: multi-city-event-booking.postman_environment.json",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:8080"
+    }
+  ],
+  "item": [
+    {
+      "name": "\ud83d\udd0d Health Check",
+      "item": [
+        {
+          "name": "App Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/actuator/health",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "pm.test('App UP', () => pm.expect(j.status).to.eql('UP'));",
+                  "pm.test('DB UP', () => pm.expect(j.components.db.status).to.eql('UP'));",
+                  "pm.test('Redis UP', () => pm.expect(j.components.redis.status).to.eql('UP'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Swagger UI Docs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/swagger-ui/index.html",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "swagger-ui",
+                "index.html"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OpenAPI JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/v3/api-docs",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "FR1 \u2014 City, Venue & Event Discovery",
+      "description": "Module: discovery-catalog. No auth required for read endpoints.",
+      "item": [
+        {
+          "name": "1.1 Get All Cities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/catalog/cities",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "catalog",
+                "cities"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "const cities = j.cities ?? data ?? [];",
+                  "pm.test('Has cities array', () => pm.expect(cities).to.be.an('array'));",
+                  "if (cities.length > 0) {",
+                  "  pm.environment.set('CITY_ID', cities[0].id);",
+                  "  console.log('CITY_ID set to', cities[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 Get Venues by City",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/catalog/venues?cityId={{CITY_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "catalog",
+                "venues"
+              ],
+              "query": [
+                {
+                  "key": "cityId",
+                  "value": "{{CITY_ID}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "if (data && data.length > 0) {",
+                  "  pm.environment.set('VENUE_ID', data[0].id);",
+                  "  console.log('VENUE_ID set to', data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.3 Get Venue by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/catalog/venues/{{VENUE_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "catalog",
+                "venues",
+                "{{VENUE_ID}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.4 Get Venue Seat Layout",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/catalog/venues/{{VENUE_ID}}/seat-layout",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "catalog",
+                "venues",
+                "{{VENUE_ID}}",
+                "seat-layout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.5 Get Event Catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/catalog/events?cityId={{CITY_ID}}&page=0&size=20",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "catalog",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "cityId",
+                  "value": "{{CITY_ID}}"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "if (data && data.content && data.content.length > 0) {",
+                  "  pm.environment.set('EVENT_ID', data.content[0].id);",
+                  "  pm.environment.set('SLOT_ID', data.content[0].slotId);",
+                  "  console.log('EVENT_ID set to', data.content[0].id);",
+                  "  console.log('SLOT_ID set to', data.content[0].slotId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.6 Search Events by Genre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/catalog/events?cityId={{CITY_ID}}&genre=MUSIC&page=0&size=20",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "catalog",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "cityId",
+                  "value": "{{CITY_ID}}"
+                },
+                {
+                  "key": "genre",
+                  "value": "MUSIC"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR2 \u2014 Show Scheduling (Admin)",
+      "description": "Module: scheduling. Requires ROLE_ADMIN JWT. Run 'FR3 \u2014 Admin Login' first.",
+      "item": [
+        {
+          "name": "2.1 Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@eventplatform.com\",\n  \"password\": \"Admin@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/login",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "const adminAccessToken = j.accessToken ?? data?.accessToken;",
+                  "if (adminAccessToken) {",
+                  "  pm.environment.set('ADMIN_TOKEN', adminAccessToken);",
+                  "  console.log('\u2705 ADMIN_TOKEN saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.2 Create Show Slot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"venueId\": 1,\n  \"description\": \"An epic rock concert featuring top artists\",\n  \"startTime\": \"2026-06-15T19:00:00\",\n  \"endTime\": \"2026-06-15T22:00:00\",\n  \"seatingMode\": \"RESERVED\",\n  \"pricingTiers\": [\n    {\n      \"name\": \"GENERAL\",\n      \"priceAmount\": 50000,\n      \"currency\": \"INR\",\n      \"quota\": 200,\n      \"tierType\": \"GENERAL_ADMISSION\"\n    },\n    {\n      \"name\": \"VIP\",\n      \"priceAmount\": 150000,\n      \"currency\": \"INR\",\n      \"quota\": 50,\n      \"tierType\": \"RESERVED\"\n    }\n  ],\n  \"title\": \"Rock Night 2026\",\n  \"capacity\": 200,\n  \"isRecurring\": false,\n  \"sourceSeatMapId\": \"seatmap-venue-1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/scheduling/slots?orgId=1",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scheduling",
+                "slots"
+              ],
+              "query": [
+                {
+                  "key": "orgId",
+                  "value": "1",
+                  "disabled": false
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "if (data && data.id) {",
+                  "  pm.environment.set('SLOT_ID', data.id);",
+                  "  console.log('\u2705 SLOT_ID set to', data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.3 Submit/Publish Slot to Eventbrite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/scheduling/slots/{{SLOT_ID}}/submit?orgId=1",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scheduling",
+                "slots",
+                "{{SLOT_ID}}",
+                "submit"
+              ],
+              "query": [
+                {
+                  "key": "orgId",
+                  "value": "1",
+                  "disabled": false
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "pm.test('Slot ACTIVE', () => pm.expect(data.status).to.eql('ACTIVE'));",
+                  "console.log('\u23f3 Wait 1-2s for seat provisioning event to process...');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.4 Get Slot Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/scheduling/slots/{{SLOT_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scheduling",
+                "slots",
+                "{{SLOT_ID}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.5 Get Pricing Tiers for Slot",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/scheduling/slots/{{SLOT_ID}}/pricing-tiers",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scheduling",
+                "slots",
+                "{{SLOT_ID}}",
+                "pricing-tiers"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "if (data && data.length > 0) {",
+                  "  pm.environment.set('PRICING_TIER_ID', data[0].id);",
+                  "  console.log('PRICING_TIER_ID set to', data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.6 List All Slots",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/scheduling/slots?orgId=1",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scheduling",
+                "slots"
+              ],
+              "query": [
+                {
+                  "key": "orgId",
+                  "value": "1",
+                  "disabled": false
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.7 Check Scheduling Conflicts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/scheduling/slots/mismatches",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scheduling",
+                "slots",
+                "mismatches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR3 \u2014 User Registration & Auth",
+      "description": "Module: identity. Register, login, profile, wallet, preferences.",
+      "item": [
+        {
+          "name": "3.1 Register New User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/register",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "const userId = j.userId ?? data?.userId;",
+                  "if (userId) {",
+                  "  pm.environment.set('USER_ID', userId);",
+                  "  console.log('\u2705 USER_ID saved:', userId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.2 Login (User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/login",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "const accessToken = j.accessToken ?? data?.accessToken;",
+                  "const refreshToken = j.refreshToken ?? data?.refreshToken;",
+                  "if (accessToken) {",
+                  "  pm.environment.set('USER_TOKEN', accessToken);",
+                  "  if (refreshToken) pm.environment.set('REFRESH_TOKEN', refreshToken);",
+                  "  console.log('\u2705 USER_TOKEN refreshed');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.3 Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/me",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.4 Get Preference Options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/preferences/options",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "preferences",
+                "options"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "const options = data.options ?? [];",
+                  "const cityOptions = options.filter(o => o.type === 'CITY');",
+                  "const genreOptions = options.filter(o => o.type === 'GENRE');",
+                  "pm.test('Has city options', () => pm.expect(cityOptions.length).to.be.greaterThan(0));",
+                  "pm.test('Has genre options', () => pm.expect(genreOptions.length).to.be.greaterThan(0));",
+                  "if (cityOptions[0]) pm.environment.set('PREFERRED_CITY_OPTION_ID', cityOptions[0].id);",
+                  "if (genreOptions[0]) pm.environment.set('PREFERRED_GENRE_OPTION_ID_1', genreOptions[0].id);",
+                  "if (genreOptions[1]) pm.environment.set('PREFERRED_GENRE_OPTION_ID_2', genreOptions[1].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.5 Update User Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Test User\",\n  \"phone\": \"+919999999999\",\n  \"dob\": \"1998-01-15\",\n  \"address\": \"Mumbai\",\n  \"preferredCityOptionId\": {{PREFERRED_CITY_OPTION_ID}},\n  \"preferredGenreOptionIds\": [{{PREFERRED_GENRE_OPTION_ID_1}}, {{PREFERRED_GENRE_OPTION_ID_2}}],\n  \"notificationOptIn\": true\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/users/me/settings",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "me",
+                "settings"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.6 Get Wallet Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/users/me/wallet",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "me",
+                "wallet"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.7 Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{REFRESH_TOKEN}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/token/refresh",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "token",
+                "refresh"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "const refreshedAccessToken = j.accessToken ?? data?.accessToken;",
+                  "if (refreshedAccessToken) {",
+                  "  pm.environment.set('USER_TOKEN', refreshedAccessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.8 Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Test@1234\",\n  \"newPassword\": \"NewTest@5678\",\n  \"confirmPassword\": \"NewTest@5678\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/password/change",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "password",
+                "change"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.9 \u274c Register Duplicate Email (Negative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/register",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR4 \u2014 Seat Selection & Cart Assembly",
+      "description": "Module: booking-inventory. Requires ROLE_USER JWT. Pre-req: FR2 slot must be ACTIVE.",
+      "item": [
+        {
+          "name": "4.1 Get Available Seats for Slot",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/booking/shows/{{SLOT_ID}}/available-seats",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "booking",
+                "shows",
+                "{{SLOT_ID}}",
+                "available-seats"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "const seats = data.seats ?? data.availableSeats ?? [];",
+                  "if (seats.length > 0) {",
+                  "  const s0 = seats[0];",
+                  "  pm.environment.set('SEAT_ID_1', s0.seatId ?? s0.id);",
+                  "  pm.environment.set('SEAT_ID_2', seats[1] ? (seats[1].seatId ?? seats[1].id) : (s0.seatId ?? s0.id) + 1);",
+                  "  pm.environment.set('PRICING_TIER_ID', s0.tierId ?? s0.pricingTierId ?? 1);",
+                  "  console.log('SEAT_ID_1 set to', s0.seatId ?? s0.id);",
+                  "  console.log('PRICING_TIER_ID set to', s0.tierId ?? s0.pricingTierId ?? 1);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.2 Add Seat to Cart (Triggers Redis Soft Lock)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/booking/cart/add-seat",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "booking",
+                "cart",
+                "add-seat"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "if (data && data.cartId) {",
+                  "  pm.environment.set('CART_ID', data.cartId);",
+                  "  console.log('\u2705 CART_ID set to', data.cartId);",
+                  "  console.log('Verify: redis-cli keys seat:lock:*');",
+                  "}",
+                  "if (data && data.items && data.items.length > 0) {",
+                  "  pm.environment.set('CART_ITEM_ID', data.items[0].itemId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.3 Add Second Seat (Group Discount Test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/booking/cart/add-seat",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "booking",
+                "cart",
+                "add-seat"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.4 View Cart",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/booking/cart/{{CART_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "booking",
+                "cart",
+                "{{CART_ID}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.5 Remove Cart Item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/booking/cart/items/{{CART_ITEM_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "booking",
+                "cart",
+                "items",
+                "{{CART_ITEM_ID}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.6 Confirm Cart (Hard Lock \u2192 PaymentIntent Created)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": {{CART_ID}},\n  \"couponCode\": null\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/booking/cart/confirm",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "booking",
+                "cart",
+                "confirm"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "console.log('\u2705 Cart confirmed \u2014 HARD_LOCKED. Now call 5.1 Checkout Summary to get PAYMENT_INTENT_ID');",
+                  "console.log('cartId:', data.cartId, 'status:', data.status);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.6b Confirm Cart WITH Coupon (FR7 integration)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": {{CART_ID}},\n  \"couponCode\": \"{{COUPON_CODE}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/booking/cart/confirm",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "booking",
+                "cart",
+                "confirm"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "if (data && data.paymentIntentId) {",
+                  "  pm.environment.set('PAYMENT_INTENT_ID', data.paymentIntentId);",
+                  "  console.log('\u2705 Coupon applied, PAYMENT_INTENT_ID set to', data.paymentIntentId);",
+                  "  console.log('Discounted amount:', data.amount);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.7 Abandon Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": {{CART_ID}}\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/booking/cart/abandon",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "booking",
+                "cart",
+                "abandon"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.8 \u274c Add Already-Locked Seat (Conflict Test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/booking/cart/add-seat",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "booking",
+                "cart",
+                "add-seat"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR5 \u2014 Payment via Stripe & Booking Confirmation",
+      "description": "Module: payments-ticketing. Pre-req: Cart confirmed (4.6), PAYMENT_INTENT_ID set. Run stripe CLI to confirm payment first.",
+      "item": [
+        {
+          "name": "5.1 Get Checkout Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/payments/checkout/{{CART_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                "checkout",
+                "{{CART_ID}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "if (data && data.paymentIntentId) {",
+                  "  pm.environment.set('PAYMENT_INTENT_ID', data.paymentIntentId);",
+                  "  pm.environment.set('CLIENT_SECRET', data.clientSecret ?? '');",
+                  "  if (data.bookingRef) pm.environment.set('BOOKING_REF', data.bookingRef);",
+                  "  console.log('\u2705 PAYMENT_INTENT_ID:', data.paymentIntentId);",
+                  "  console.log('client_secret:', data.clientSecret);",
+                  "  console.log('Run: stripe payment_intents confirm', data.paymentIntentId, '--payment-method=pm_card_visa');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.2 Confirm Payment (Backend Verification)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentIntentId\": \"{{PAYMENT_INTENT_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/payments/confirm",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                "confirm"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "if (data && data.bookingRef) {",
+                  "  pm.environment.set('BOOKING_REF', data.bookingRef);",
+                  "  console.log('\u2705 BOOKING_REF set to', data.bookingRef);",
+                  "  console.log('Verify Redis is empty: redis-cli keys seat:lock:*');",
+                  "}",
+                  "pm.test('Booking CONFIRMED', () => pm.expect(data.status).to.eql('CONFIRMED'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.3 Handle Payment Failure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentIntentId\": \"{{PAYMENT_INTENT_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/payments/failed",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                "failed"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.4 Get All My Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/bookings",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.5 Get Booking by Reference",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/bookings/{{BOOKING_REF}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{BOOKING_REF}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "pm.test('Booking CONFIRMED', () => pm.expect(data.status).to.eql('CONFIRMED'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.6 Download E-Ticket",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/tickets/{{BOOKING_REF}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "{{BOOKING_REF}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "const tickets = data.tickets ?? (Array.isArray(data) ? data : [data]);",
+                  "pm.test('Has tickets', () => pm.expect(tickets).to.be.an('array').that.is.not.empty);",
+                  "console.log('Tickets count:', tickets.length);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.7 Webhook \u2014 Simulate Stripe payment_intent.succeeded",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Stripe-Signature",
+                "value": "t=1234567890,v1=test_signature_dev_only"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"evt_test_001\",\n  \"type\": \"payment_intent.succeeded\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"{{PAYMENT_INTENT_ID}}\",\n      \"status\": \"succeeded\",\n      \"amount\": 150000,\n      \"amount_received\": 150000,\n      \"currency\": \"inr\",\n      \"latest_charge\": \"ch_test_001\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/webhooks/stripe",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "webhooks",
+                "stripe"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Signature check will fail in prod \u2014 use Stripe CLI for real webhook testing",
+                  "console.log('Use Stripe CLI for production webhook: stripe listen --forward-to http://localhost:8080/api/v1/webhooks/stripe');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR6 \u2014 Cancellation & Stripe Refund",
+      "description": "Module: payments-ticketing. Pre-req: confirmed booking (BOOKING_REF set).",
+      "item": [
+        {
+          "name": "6.1 Get Cancellation Quote",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/bookings/{{BOOKING_REF}}/cancellation-quote",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{BOOKING_REF}}",
+                "cancellation-quote"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "console.log('Refund amount:', data.refundAmount);",
+                  "console.log('Policy applied:', data.policyApplied);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.2 Cancel Full Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"REQUESTED_BY_CUSTOMER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/bookings/{{BOOKING_REF}}/cancel",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{BOOKING_REF}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "pm.test('Booking CANCELLED', () => pm.expect(data.status).to.eql('CANCELLED'));",
+                  "console.log('Stripe refundId:', data.refundId);",
+                  "console.log('Refund amount:', data.refundAmount);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.3 Cancel Specific Items (Partial Cancellation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"REQUESTED_BY_CUSTOMER\",\n  \"bookingItemIds\": [\n    1\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/bookings/{{BOOKING_REF}}/cancel-items",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{BOOKING_REF}}",
+                "cancel-items"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.4 Admin \u2014 View Cancellation Policies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/cancellation-policies",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "cancellation-policies"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.5 Admin \u2014 Create Cancellation Policy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orgId\": 1,\n  \"tiers\": [\n    {\n      \"hoursBeforeEvent\": 48,\n      \"refundPercent\": 100,\n      \"sortOrder\": 1\n    },\n    {\n      \"hoursBeforeEvent\": 24,\n      \"refundPercent\": 50,\n      \"sortOrder\": 2\n    },\n    {\n      \"hoursBeforeEvent\": 0,\n      \"refundPercent\": 0,\n      \"sortOrder\": 3\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/cancellation-policies",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "cancellation-policies"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR7 \u2014 Coupon Engine & Discounts",
+      "description": "Module: promotions. Admin creates promos/coupons, user validates and applies them.",
+      "item": [
+        {
+          "name": "7.1 Admin \u2014 Create Promotion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Welcome Discount\",\n  \"description\": \"10% off for new users\",\n  \"discountType\": \"PERCENTAGE\",\n  \"discountValue\": 10,\n  \"maxUsageCount\": 100,\n  \"validFrom\": \"2026-01-01T00:00:00\",\n  \"validUntil\": \"2026-12-31T23:59:59\",\n  \"minCartValue\": 50000,\n  \"orgId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/promotions",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "promotions"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "if (data && data.id) {",
+                  "  pm.environment.set('PROMOTION_ID', data.id);",
+                  "  console.log('\u2705 PROMOTION_ID set to', data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.2 Admin \u2014 Create Coupon under Promotion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"WELCOME10\",\n  \"maxRedemptions\": 100,\n  \"perUserLimit\": 1\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/promotions/{{PROMOTION_ID}}/coupons",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "promotions",
+                "{{PROMOTION_ID}}",
+                "coupons"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.3 Admin \u2014 Sync Coupon to Eventbrite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/promotions/coupons/WELCOME10/sync",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "promotions",
+                "coupons",
+                "WELCOME10",
+                "sync"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.4 User \u2014 Validate Coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"couponCode\": \"{{COUPON_CODE}}\",\n  \"cartId\": {{CART_ID}}\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/promotions/validate",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "pm.test('Coupon valid', () => pm.expect(data.valid).to.be.true);",
+                  "console.log('Discount amount:', data.discountAmount);",
+                  "console.log('New total:', data.newTotal);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.5 User \u2014 Remove Coupon from Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/promotions/cart/{{CART_ID}}/coupon",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "promotions",
+                "cart",
+                "{{CART_ID}}",
+                "coupon"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.6 Admin \u2014 View Coupon Usage",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/promotions/coupons/WELCOME10/usage",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "promotions",
+                "coupons",
+                "WELCOME10",
+                "usage"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.7 \u274c Apply Expired Coupon (Negative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"couponCode\": \"EXPIRED_CODE\",\n  \"cartId\": {{CART_ID}}\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/promotions/validate",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "promotions",
+                "validate"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR8 \u2014 Review Submission & Moderation",
+      "description": "Module: engagement. Pre-req: confirmed booking. BookingConfirmedEvent must have unlocked ReviewEligibility.",
+      "item": [
+        {
+          "name": "8.1 Submit Review (Happy Path \u2014 Clean Content)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": {{EVENT_ID}},\n  \"rating\": 5,\n  \"title\": \"Absolutely incredible show!\",\n  \"body\": \"The performances were outstanding. The venue was great, sound quality was perfect. Highly recommend to anyone who loves live music!\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/engagement/reviews",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "engagement",
+                "reviews"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "if (data && data.reviewId) {",
+                  "  pm.environment.set('REVIEW_ID', data.reviewId);",
+                  "  console.log('\u2705 REVIEW_ID set to', data.reviewId);",
+                  "  console.log('Status:', data.status, '(wait 1-2s for OpenAI moderation \u2192 PUBLISHED)');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.2 View Published Reviews for Event",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/engagement/reviews/events/{{EVENT_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "engagement",
+                "reviews",
+                "events",
+                "{{EVENT_ID}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.3 Get Review Summary (Aggregate Rating)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/engagement/reviews/events/{{EVENT_ID}}/summary",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "engagement",
+                "reviews",
+                "events",
+                "{{EVENT_ID}}",
+                "summary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "console.log('Average rating:', data.averageRating, 'Total reviews:', data.totalReviews);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.4 View My Reviews",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/engagement/reviews/me",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "engagement",
+                "reviews",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.5 \u274c Submit Flagged Review (Auto-Rejection Test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": {{EVENT_ID}},\n  \"rating\": 1,\n  \"title\": \"Terrible show\",\n  \"body\": \"I hate this. Kill all the performers, this was the worst show ever\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/engagement/reviews",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "engagement",
+                "reviews"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 (async moderation will REJECT)', () => pm.response.to.have.status(201));",
+                  "console.log('Wait 2s then check DB: SELECT status FROM reviews ORDER BY id DESC LIMIT 1; \u2192 Expected: REJECTED');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.6 \u274c Submit Second Review for Same Event (Duplicate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": {{EVENT_ID}},\n  \"rating\": 4,\n  \"title\": \"Another review\",\n  \"body\": \"Trying to submit a second review for the same event.\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/engagement/reviews",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "engagement",
+                "reviews"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.7 Admin \u2014 View Moderation Queue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/engagement/reviews?status=PENDING_MODERATION",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "engagement",
+                "reviews"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PENDING_MODERATION"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.8 Admin \u2014 Manual Approve Review",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"APPROVE\",\n  \"reason\": \"Content verified as appropriate by human review\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/engagement/reviews/{{REVIEW_ID}}/moderate",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "engagement",
+                "reviews",
+                "{{REVIEW_ID}}",
+                "moderate"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.9 Admin \u2014 Manual Reject Review",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"REJECT\",\n  \"reason\": \"Content violates community guidelines \u2014 aggressive language detected\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/engagement/reviews/{{REVIEW_ID}}/moderate",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "engagement",
+                "reviews",
+                "{{REVIEW_ID}}",
+                "moderate"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FR10 \u2014 Seat Lock State Machine (Hero Feature)",
+      "description": "Distributed seat locking via Redis + Spring State Machine. Tests full state transitions.",
+      "item": [
+        {
+          "name": "10.1 Check Seat State (AVAILABLE)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/booking/shows/{{SLOT_ID}}/available-seats",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "booking",
+                "shows",
+                "{{SLOT_ID}}",
+                "available-seats"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "const seats = data.seats ?? data.availableSeats ?? [];",
+                  "const tiers = data.tiers ?? data.gaTiers ?? [];",
+                  "const totalAvail = seats.length + tiers.reduce((s,t)=>s+(t.available||0),0);",
+                  "pm.test('Has available seats', () => pm.expect(totalAvail).to.be.greaterThan(0));",
+                  "console.log('State: AVAILABLE \u2014 seats ready to lock, count:', totalAvail);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.2 Soft Lock Seat (AVAILABLE \u2192 SOFT_LOCKED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/booking/cart/add-seat",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "booking",
+                "cart",
+                "add-seat"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "pm.environment.set('CART_ID', data.cartId);",
+                  "console.log('State: SOFT_LOCKED \u2192 Verify: redis-cli ttl seat:lock:' + pm.environment.get('SEAT_ID_1'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.3 Hard Lock (SOFT_LOCKED \u2192 HARD_LOCKED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": {{CART_ID}},\n  \"couponCode\": null\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/booking/cart/confirm",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "booking",
+                "cart",
+                "confirm"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "pm.environment.set('PAYMENT_INTENT_ID', data.paymentIntentId);",
+                  "console.log('State: HARD_LOCKED \u2014 PaymentIntent created:', data.paymentIntentId);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.4 Rollback (HARD_LOCKED \u2192 RELEASED \u2192 AVAILABLE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{USER_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentIntentId\": \"{{PAYMENT_INTENT_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/payments/failed",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                "failed"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "console.log('State: RELEASED \u2192 AVAILABLE');",
+                  "console.log('Verify: SELECT status FROM seats WHERE id = ' + pm.environment.get('SEAT_ID_1') + '; \u2192 AVAILABLE');",
+                  "console.log('Verify: redis-cli keys seat:lock:* \u2192 empty');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.5 View Seat Lock Audit Log (via Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/booking/seats/audit-log?slotId={{SLOT_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "booking",
+                "seats",
+                "audit-log"
+              ],
+              "query": [
+                {
+                  "key": "slotId",
+                  "value": "{{SLOT_ID}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "console.log('Audit log entries:', data ? data.length : 0);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "\ud83d\udd27 Admin Endpoints",
+      "description": "Admin-only operations. Requires ADMIN_TOKEN.",
+      "item": [
+        {
+          "name": "A.1 Create Venue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Crystal Palace\",\n  \"address\": \"42 Park Road, Delhi\",\n  \"cityId\": 1,\n  \"capacity\": 1000,\n  \"orgId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/catalog/venues",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "catalog",
+                "venues"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "A.2 Sync Venue to Eventbrite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/catalog/venues/{{VENUE_ID}}/sync",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "catalog",
+                "venues",
+                "{{VENUE_ID}}",
+                "sync"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "A.3 Get Flagged Venues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/catalog/venues/flagged",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "catalog",
+                "venues",
+                "flagged"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "A.4 Cancel Slot (Bulk Cancel All Bookings)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Venue unavailable due to maintenance\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/slots/{{SLOT_ID}}/cancel",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "slots",
+                "{{SLOT_ID}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "A.5 Retry Eventbrite Sync for Slot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/scheduling/slots/{{SLOT_ID}}/retry-sync",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "scheduling",
+                "slots",
+                "{{SLOT_ID}}",
+                "retry-sync"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "A.6 Flagged Slots Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ADMIN_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/scheduling/slots/flagged",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "scheduling",
+                "slots",
+                "flagged"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "\ud83d\udd01 Mock Eventbrite Admin",
+      "description": "Direct calls to the Mock Eventbrite service (port 8888) for debugging and state reset.",
+      "item": [
+        {
+          "name": "EB.1 Mock Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{MOCK_EB_URL}}/mock/dashboard",
+              "host": [
+                "{{MOCK_EB_URL}}"
+              ],
+              "path": [
+                "mock",
+                "dashboard"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "EB.2 Reset Mock State",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{MOCK_EB_URL}}/mock/reset",
+              "host": [
+                "{{MOCK_EB_URL}}"
+              ],
+              "path": [
+                "mock",
+                "reset"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const data = j.data ?? j;",
+                  "console.log(j.message);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "EB.3 List Org Events",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer mock-token"
+              }
+            ],
+            "url": {
+              "raw": "{{MOCK_EB_URL}}/v3/organizations/org_1/events/",
+              "host": [
+                "{{MOCK_EB_URL}}"
+              ],
+              "path": [
+                "v3",
+                "organizations",
+                "org_1",
+                "events",
+                ""
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "EB.4 Get Event Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer mock-token"
+              }
+            ],
+            "url": {
+              "raw": "{{MOCK_EB_URL}}/v3/events/event_1/",
+              "host": [
+                "{{MOCK_EB_URL}}"
+              ],
+              "path": [
+                "v3",
+                "events",
+                "event_1",
+                ""
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "EB.5 Trigger Eventbrite Webhook (Slot Cancel Simulation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"webhookTargetUrl\": \"{{BASE_URL}}/api/v1/webhooks/eventbrite\"\n}"
+            },
+            "url": {
+              "raw": "{{MOCK_EB_URL}}/mock/config",
+              "host": [
+                "{{MOCK_EB_URL}}"
+              ],
+              "path": [
+                "mock",
+                "config"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
