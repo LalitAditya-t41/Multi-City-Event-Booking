@@ -9,14 +9,14 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class BookingConfirmedListener {
 
-    private final CouponRedemptionService couponRedemptionService;
+  private final CouponRedemptionService couponRedemptionService;
 
-    public BookingConfirmedListener(CouponRedemptionService couponRedemptionService) {
-        this.couponRedemptionService = couponRedemptionService;
-    }
+  public BookingConfirmedListener(CouponRedemptionService couponRedemptionService) {
+    this.couponRedemptionService = couponRedemptionService;
+  }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onBookingConfirmed(BookingConfirmedEvent event) {
-        couponRedemptionService.onBookingConfirmed(event.bookingId(), event.cartId(), event.userId());
-    }
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onBookingConfirmed(BookingConfirmedEvent event) {
+    couponRedemptionService.onBookingConfirmed(event.bookingId(), event.cartId(), event.userId());
+  }
 }

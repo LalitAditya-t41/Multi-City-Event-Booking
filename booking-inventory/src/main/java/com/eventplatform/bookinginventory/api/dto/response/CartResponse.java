@@ -16,6 +16,4 @@ public record CartResponse(
     Money subtotal,
     Money groupDiscountAmount,
     Money couponDiscountAmount,
-    Money total
-) {
-}
+    Money total) {}

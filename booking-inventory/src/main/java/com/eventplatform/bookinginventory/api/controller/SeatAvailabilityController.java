@@ -13,15 +13,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/booking/shows")
 public class SeatAvailabilityController {
 
-    private final SeatAvailabilityService seatAvailabilityService;
+  private final SeatAvailabilityService seatAvailabilityService;
 
-    public SeatAvailabilityController(SeatAvailabilityService seatAvailabilityService) {
-        this.seatAvailabilityService = seatAvailabilityService;
-    }
+  public SeatAvailabilityController(SeatAvailabilityService seatAvailabilityService) {
+    this.seatAvailabilityService = seatAvailabilityService;
+  }
 
-    @GetMapping("/{slotId}/available-seats")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public AvailableSeatsEnvelopeResponse getAvailableSeats(@PathVariable Long slotId) {
-        return seatAvailabilityService.getAvailability(slotId);
-    }
+  @GetMapping("/{slotId}/available-seats")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public AvailableSeatsEnvelopeResponse getAvailableSeats(@PathVariable Long slotId) {
+    return seatAvailabilityService.getAvailability(slotId);
+  }
 }

@@ -9,5 +9,4 @@ import org.springframework.context.annotation.ComponentScan;
 @SpringBootConfiguration
 @EnableAutoConfiguration
 @ComponentScan(basePackageClasses = {ShowSlotController.class, GlobalExceptionHandler.class})
-public class SchedulingTestApplication {
-}
+public class SchedulingTestApplication {}

@@ -9,6 +9,4 @@ public record SlotDraftCreatedEvent(
     List<Long> pricingTierIds,
     SeatingMode seatingMode,
     Long orgId,
-    String sourceSeatMapId
-) {
-}
+    String sourceSeatMapId) {}

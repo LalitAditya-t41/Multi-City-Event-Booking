@@ -8,14 +8,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class CartAssembledListener {
 
-    private final PaymentService paymentService;
+  private final PaymentService paymentService;
 
-    public CartAssembledListener(PaymentService paymentService) {
-        this.paymentService = paymentService;
-    }
+  public CartAssembledListener(PaymentService paymentService) {
+    this.paymentService = paymentService;
+  }
 
-    @EventListener
-    public void onCartAssembled(CartAssembledEvent event) {
-        paymentService.createCheckout(event);
-    }
+  @EventListener
+  public void onCartAssembled(CartAssembledEvent event) {
+    paymentService.createCheckout(event);
+  }
 }

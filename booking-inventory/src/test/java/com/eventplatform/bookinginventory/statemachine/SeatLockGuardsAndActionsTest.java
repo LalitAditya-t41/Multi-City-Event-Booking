@@ -42,250 +42,257 @@ import org.springframework.test.util.ReflectionTestUtils;
 @ExtendWith(MockitoExtension.class)
 class SeatLockGuardsAndActionsTest {
 
-    @Mock
-    private SeatLockRedisService seatLockRedisService;
+  @Mock private SeatLockRedisService seatLockRedisService;
 
-    @Test
-    void should_pass_when_seat_is_AVAILABLE() {
-        Seat seat = seat();
-        ReflectionTestUtils.setField(seat, "id", 10L);
-        AvailabilityGuard guard = new AvailabilityGuard(seatLockRedisService);
-        when(seatLockRedisService.acquire(eq(10L), eq(1L), any(Duration.class)))
-            .thenReturn(SeatLockRedisService.AcquireResult.ACQUIRED);
+  @Test
+  void should_pass_when_seat_is_AVAILABLE() {
+    Seat seat = seat();
+    ReflectionTestUtils.setField(seat, "id", 10L);
+    AvailabilityGuard guard = new AvailabilityGuard(seatLockRedisService);
+    when(seatLockRedisService.acquire(eq(10L), eq(1L), any(Duration.class)))
+        .thenReturn(SeatLockRedisService.AcquireResult.ACQUIRED);
 
-        boolean allowed = guard.canSelect(seat, 1L, Duration.ofMinutes(5));
+    boolean allowed = guard.canSelect(seat, 1L, Duration.ofMinutes(5));
 
-        assertThat(allowed).isTrue();
-    }
+    assertThat(allowed).isTrue();
+  }
 
-    @Test
-    void should_pass_when_seat_is_SOFT_LOCKED_and_expired() {
-        Seat seat = seat();
-        ReflectionTestUtils.setField(seat, "id", 11L);
-        seat.softLock(99L, Duration.ofMinutes(1));
-        ReflectionTestUtils.setField(seat, "lockedUntil", Instant.now().minusSeconds(1));
+  @Test
+  void should_pass_when_seat_is_SOFT_LOCKED_and_expired() {
+    Seat seat = seat();
+    ReflectionTestUtils.setField(seat, "id", 11L);
+    seat.softLock(99L, Duration.ofMinutes(1));
+    ReflectionTestUtils.setField(seat, "lockedUntil", Instant.now().minusSeconds(1));
 
-        AvailabilityGuard guard = new AvailabilityGuard(seatLockRedisService);
-        when(seatLockRedisService.acquire(eq(11L), eq(1L), any(Duration.class)))
-            .thenReturn(SeatLockRedisService.AcquireResult.ACQUIRED);
+    AvailabilityGuard guard = new AvailabilityGuard(seatLockRedisService);
+    when(seatLockRedisService.acquire(eq(11L), eq(1L), any(Duration.class)))
+        .thenReturn(SeatLockRedisService.AcquireResult.ACQUIRED);
 
-        boolean allowed = guard.canSelect(seat, 1L, Duration.ofMinutes(5));
+    boolean allowed = guard.canSelect(seat, 1L, Duration.ofMinutes(5));
 
-        assertThat(allowed).isTrue();
-    }
+    assertThat(allowed).isTrue();
+  }
 
-    @Test
-    void should_fail_when_redis_returns_CONFLICT() {
-        Seat seat = seat();
-        ReflectionTestUtils.setField(seat, "id", 12L);
-        AvailabilityGuard guard = new AvailabilityGuard(seatLockRedisService);
-        when(seatLockRedisService.acquire(eq(12L), eq(1L), any(Duration.class)))
-            .thenReturn(SeatLockRedisService.AcquireResult.CONFLICT);
+  @Test
+  void should_fail_when_redis_returns_CONFLICT() {
+    Seat seat = seat();
+    ReflectionTestUtils.setField(seat, "id", 12L);
+    AvailabilityGuard guard = new AvailabilityGuard(seatLockRedisService);
+    when(seatLockRedisService.acquire(eq(12L), eq(1L), any(Duration.class)))
+        .thenReturn(SeatLockRedisService.AcquireResult.CONFLICT);
 
-        boolean allowed = guard.canSelect(seat, 1L, Duration.ofMinutes(5));
+    boolean allowed = guard.canSelect(seat, 1L, Duration.ofMinutes(5));
 
-        assertThat(allowed).isFalse();
-    }
+    assertThat(allowed).isFalse();
+  }
 
-    @Test
-    void should_fail_when_seat_is_SOFT_LOCKED_and_not_expired() {
-        Seat seat = seat();
-        ReflectionTestUtils.setField(seat, "id", 13L);
-        seat.softLock(99L, Duration.ofMinutes(5));
+  @Test
+  void should_fail_when_seat_is_SOFT_LOCKED_and_not_expired() {
+    Seat seat = seat();
+    ReflectionTestUtils.setField(seat, "id", 13L);
+    seat.softLock(99L, Duration.ofMinutes(5));
 
-        AvailabilityGuard guard = new AvailabilityGuard(seatLockRedisService);
+    AvailabilityGuard guard = new AvailabilityGuard(seatLockRedisService);
 
-        boolean allowed = guard.canSelect(seat, 1L, Duration.ofMinutes(5));
+    boolean allowed = guard.canSelect(seat, 1L, Duration.ofMinutes(5));
 
-        assertThat(allowed).isFalse();
-        verify(seatLockRedisService, never()).acquire(any(), any(), any());
-    }
+    assertThat(allowed).isFalse();
+    verify(seatLockRedisService, never()).acquire(any(), any(), any());
+  }
 
-    @Test
-    void should_pass_when_cart_pending_and_redis_owned_and_eb_tier_available() {
-        Cart cart = cart();
-        CartItem item = new CartItem(15L, null, 10L, "tc_10", new Money(new BigDecimal("100.00"), "INR"), 1);
-        ReflectionTestUtils.setField(item, "id", 101L);
-        when(seatLockRedisService.isOwnedBy(15L, 1L)).thenReturn(true);
+  @Test
+  void should_pass_when_cart_pending_and_redis_owned_and_eb_tier_available() {
+    Cart cart = cart();
+    CartItem item =
+        new CartItem(15L, null, 10L, "tc_10", new Money(new BigDecimal("100.00"), "INR"), 1);
+    ReflectionTestUtils.setField(item, "id", 101L);
+    when(seatLockRedisService.isOwnedBy(15L, 1L)).thenReturn(true);
 
-        CartTtlGuard guard = new CartTtlGuard(seatLockRedisService);
+    CartTtlGuard guard = new CartTtlGuard(seatLockRedisService);
 
-        guard.assertCartConfirmable(cart, List.of(item), 1L);
+    guard.assertCartConfirmable(cart, List.of(item), 1L);
 
-        verify(seatLockRedisService).isOwnedBy(15L, 1L);
-    }
+    verify(seatLockRedisService).isOwnedBy(15L, 1L);
+  }
 
-    @Test
-    void should_fail_when_cart_expired() {
-        Cart cart = cart();
-        ReflectionTestUtils.setField(cart, "expiresAt", Instant.now().minusSeconds(1));
+  @Test
+  void should_fail_when_cart_expired() {
+    Cart cart = cart();
+    ReflectionTestUtils.setField(cart, "expiresAt", Instant.now().minusSeconds(1));
 
-        CartTtlGuard guard = new CartTtlGuard(seatLockRedisService);
+    CartTtlGuard guard = new CartTtlGuard(seatLockRedisService);
 
-        assertThatThrownBy(() -> guard.assertCartConfirmable(cart, List.of(), 1L))
-            .isInstanceOf(CartExpiredException.class);
-    }
+    assertThatThrownBy(() -> guard.assertCartConfirmable(cart, List.of(), 1L))
+        .isInstanceOf(CartExpiredException.class);
+  }
 
-    @Test
-    void should_fail_when_redis_returns_NOT_OWNER() {
-        Cart cart = cart();
-        CartItem item = new CartItem(16L, null, 10L, "tc_10", new Money(new BigDecimal("100.00"), "INR"), 1);
-        when(seatLockRedisService.isOwnedBy(16L, 1L)).thenReturn(false);
+  @Test
+  void should_fail_when_redis_returns_NOT_OWNER() {
+    Cart cart = cart();
+    CartItem item =
+        new CartItem(16L, null, 10L, "tc_10", new Money(new BigDecimal("100.00"), "INR"), 1);
+    when(seatLockRedisService.isOwnedBy(16L, 1L)).thenReturn(false);
 
-        CartTtlGuard guard = new CartTtlGuard(seatLockRedisService);
+    CartTtlGuard guard = new CartTtlGuard(seatLockRedisService);
 
-        assertThatThrownBy(() -> guard.assertCartConfirmable(cart, List.of(item), 1L))
-            .isInstanceOf(SoftLockExpiredException.class);
-    }
+    assertThatThrownBy(() -> guard.assertCartConfirmable(cart, List.of(item), 1L))
+        .isInstanceOf(SoftLockExpiredException.class);
+  }
 
-    @Test
-    void should_fail_when_redis_returns_EXPIRED() {
-        Cart cart = cart();
-        CartItem item = new CartItem(17L, null, 10L, "tc_10", new Money(new BigDecimal("100.00"), "INR"), 1);
-        when(seatLockRedisService.isOwnedBy(17L, 1L)).thenReturn(false);
+  @Test
+  void should_fail_when_redis_returns_EXPIRED() {
+    Cart cart = cart();
+    CartItem item =
+        new CartItem(17L, null, 10L, "tc_10", new Money(new BigDecimal("100.00"), "INR"), 1);
+    when(seatLockRedisService.isOwnedBy(17L, 1L)).thenReturn(false);
 
-        CartTtlGuard guard = new CartTtlGuard(seatLockRedisService);
+    CartTtlGuard guard = new CartTtlGuard(seatLockRedisService);
 
-        assertThatThrownBy(() -> guard.assertCartConfirmable(cart, List.of(item), 1L))
-            .isInstanceOf(SoftLockExpiredException.class);
-    }
+    assertThatThrownBy(() -> guard.assertCartConfirmable(cart, List.of(item), 1L))
+        .isInstanceOf(SoftLockExpiredException.class);
+  }
 
-    @Test
-    void should_fail_and_throw_TierSoldOutException_when_eb_tier_SOLD_OUT() {
-        Cart cart = cart();
-        CartItem item = new CartItem(18L, null, 10L, "tc_10", new Money(new BigDecimal("100.00"), "INR"), 1);
-        when(seatLockRedisService.isOwnedBy(18L, 1L)).thenReturn(false);
+  @Test
+  void should_fail_and_throw_TierSoldOutException_when_eb_tier_SOLD_OUT() {
+    Cart cart = cart();
+    CartItem item =
+        new CartItem(18L, null, 10L, "tc_10", new Money(new BigDecimal("100.00"), "INR"), 1);
+    when(seatLockRedisService.isOwnedBy(18L, 1L)).thenReturn(false);
 
-        CartTtlGuard guard = new CartTtlGuard(seatLockRedisService);
+    CartTtlGuard guard = new CartTtlGuard(seatLockRedisService);
 
-        assertThatThrownBy(() -> guard.assertCartConfirmable(cart, List.of(item), 1L))
-            .isInstanceOf(SoftLockExpiredException.class);
-    }
+    assertThatThrownBy(() -> guard.assertCartConfirmable(cart, List.of(item), 1L))
+        .isInstanceOf(SoftLockExpiredException.class);
+  }
 
-    @Test
-    void should_fail_gracefully_and_preserve_soft_locks_when_eb_unreachable() {
-        Cart cart = cart();
-        CartItem item = new CartItem(19L, null, 10L, "tc_10", new Money(new BigDecimal("100.00"), "INR"), 1);
-        when(seatLockRedisService.isOwnedBy(19L, 1L)).thenReturn(true);
+  @Test
+  void should_fail_gracefully_and_preserve_soft_locks_when_eb_unreachable() {
+    Cart cart = cart();
+    CartItem item =
+        new CartItem(19L, null, 10L, "tc_10", new Money(new BigDecimal("100.00"), "INR"), 1);
+    when(seatLockRedisService.isOwnedBy(19L, 1L)).thenReturn(true);
 
-        CartTtlGuard guard = new CartTtlGuard(seatLockRedisService);
+    CartTtlGuard guard = new CartTtlGuard(seatLockRedisService);
 
-        guard.assertCartConfirmable(cart, List.of(item), 1L);
+    guard.assertCartConfirmable(cart, List.of(item), 1L);
 
-        verify(seatLockRedisService).isOwnedBy(19L, 1L);
-    }
+    verify(seatLockRedisService).isOwnedBy(19L, 1L);
+  }
 
-    @Test
-    void should_rollback_redis_lock_when_db_write_fails_in_SoftLockAction() {
-        Seat seat = seat();
-        ReflectionTestUtils.setField(seat, "id", 20L);
-        SoftLockAction action = new SoftLockAction(seatLockRedisService);
+  @Test
+  void should_rollback_redis_lock_when_db_write_fails_in_SoftLockAction() {
+    Seat seat = seat();
+    ReflectionTestUtils.setField(seat, "id", 20L);
+    SoftLockAction action = new SoftLockAction(seatLockRedisService);
 
-        action.apply(seat, new SeatActionContext(1L, null, null));
+    action.apply(seat, new SeatActionContext(1L, null, null));
 
-        verify(seatLockRedisService).acquire(eq(20L), eq(1L), any(Duration.class));
-    }
+    verify(seatLockRedisService).acquire(eq(20L), eq(1L), any(Duration.class));
+  }
 
-    @Test
-    void should_compensate_redis_and_db_when_HardLockAction_db_write_fails() {
-        Seat seat = seat();
-        ReflectionTestUtils.setField(seat, "id", 21L);
-        seat.softLock(1L, Duration.ofMinutes(5));
-        when(seatLockRedisService.extend(eq(21L), eq(1L), any(Duration.class))).thenReturn(false);
-        HardLockAction action = new HardLockAction(seatLockRedisService);
+  @Test
+  void should_compensate_redis_and_db_when_HardLockAction_db_write_fails() {
+    Seat seat = seat();
+    ReflectionTestUtils.setField(seat, "id", 21L);
+    seat.softLock(1L, Duration.ofMinutes(5));
+    when(seatLockRedisService.extend(eq(21L), eq(1L), any(Duration.class))).thenReturn(false);
+    HardLockAction action = new HardLockAction(seatLockRedisService);
 
-        assertThatThrownBy(() -> action.apply(seat, new SeatActionContext(1L, null, null)))
-            .isInstanceOf(HardLockException.class);
-    }
+    assertThatThrownBy(() -> action.apply(seat, new SeatActionContext(1L, null, null)))
+        .isInstanceOf(HardLockException.class);
+  }
 
-    @Test
-    void should_be_idempotent_when_ConfirmAction_called_twice_for_same_seat() {
-        Seat seat = seat();
-        ReflectionTestUtils.setField(seat, "id", 22L);
-        seat.softLock(1L, Duration.ofMinutes(5));
-        seat.hardLock(Duration.ofMinutes(30));
-        ConfirmAction action = new ConfirmAction(seatLockRedisService);
+  @Test
+  void should_be_idempotent_when_ConfirmAction_called_twice_for_same_seat() {
+    Seat seat = seat();
+    ReflectionTestUtils.setField(seat, "id", 22L);
+    seat.softLock(1L, Duration.ofMinutes(5));
+    seat.hardLock(Duration.ofMinutes(30));
+    ConfirmAction action = new ConfirmAction(seatLockRedisService);
 
-        action.apply(seat, new SeatActionContext(1L, "ord-1", null));
-        assertThat(seat.getLockState()).isEqualTo(SeatLockState.CONFIRMED);
+    action.apply(seat, new SeatActionContext(1L, "ord-1", null));
+    assertThat(seat.getLockState()).isEqualTo(SeatLockState.CONFIRMED);
 
-        assertThatThrownBy(() -> action.apply(seat, new SeatActionContext(1L, "ord-1", null)))
-            .isInstanceOf(BusinessRuleException.class);
-    }
+    assertThatThrownBy(() -> action.apply(seat, new SeatActionContext(1L, "ord-1", null)))
+        .isInstanceOf(BusinessRuleException.class);
+  }
 
-    @Test
-    void should_release_redis_key_in_ConfirmAction() {
-        Seat seat = seat();
-        ReflectionTestUtils.setField(seat, "id", 23L);
-        seat.softLock(1L, Duration.ofMinutes(5));
-        seat.hardLock(Duration.ofMinutes(30));
-        ConfirmAction action = new ConfirmAction(seatLockRedisService);
+  @Test
+  void should_release_redis_key_in_ConfirmAction() {
+    Seat seat = seat();
+    ReflectionTestUtils.setField(seat, "id", 23L);
+    seat.softLock(1L, Duration.ofMinutes(5));
+    seat.hardLock(Duration.ofMinutes(30));
+    ConfirmAction action = new ConfirmAction(seatLockRedisService);
 
-        action.apply(seat, new SeatActionContext(1L, "ord-2", null));
+    action.apply(seat, new SeatActionContext(1L, "ord-2", null));
 
-        verify(seatLockRedisService).release(23L, 1L);
-    }
+    verify(seatLockRedisService).release(23L, 1L);
+  }
 
-    @Test
-    void should_update_db_first_then_release_redis_in_ReleaseAction() {
-        Seat seat = seat();
-        ReflectionTestUtils.setField(seat, "id", 24L);
-        seat.softLock(1L, Duration.ofMinutes(5));
-        ReleaseAction action = new ReleaseAction(seatLockRedisService);
+  @Test
+  void should_update_db_first_then_release_redis_in_ReleaseAction() {
+    Seat seat = seat();
+    ReflectionTestUtils.setField(seat, "id", 24L);
+    seat.softLock(1L, Duration.ofMinutes(5));
+    ReleaseAction action = new ReleaseAction(seatLockRedisService);
 
-        action.apply(seat, new SeatActionContext(1L, null, LockReleaseReason.USER_REMOVED.name()));
+    action.apply(seat, new SeatActionContext(1L, null, LockReleaseReason.USER_REMOVED.name()));
 
-        assertThat(seat.getLockState()).isEqualTo(SeatLockState.AVAILABLE);
-        verify(seatLockRedisService).release(24L, 1L);
-    }
+    assertThat(seat.getLockState()).isEqualTo(SeatLockState.AVAILABLE);
+    verify(seatLockRedisService).release(24L, 1L);
+  }
 
-    @Test
-    void should_write_audit_log_on_every_transition() {
-        Seat seat = seat();
-        ReflectionTestUtils.setField(seat, "id", 25L);
-        SoftLockAction softLockAction = new SoftLockAction(seatLockRedisService);
+  @Test
+  void should_write_audit_log_on_every_transition() {
+    Seat seat = seat();
+    ReflectionTestUtils.setField(seat, "id", 25L);
+    SoftLockAction softLockAction = new SoftLockAction(seatLockRedisService);
 
-        softLockAction.apply(seat, new SeatActionContext(1L, null, null));
+    softLockAction.apply(seat, new SeatActionContext(1L, null, null));
 
-        assertThat(seat.getLockState()).isEqualTo(SeatLockState.SOFT_LOCKED);
-    }
+    assertThat(seat.getLockState()).isEqualTo(SeatLockState.SOFT_LOCKED);
+  }
 
-    @Test
-    void should_throw_InvalidSeatTransitionException_on_illegal_transition() {
-        Seat seat = seat();
-        SeatLockStateMachineService service = new SeatLockStateMachineService(
+  @Test
+  void should_throw_InvalidSeatTransitionException_on_illegal_transition() {
+    Seat seat = seat();
+    SeatLockStateMachineService service =
+        new SeatLockStateMachineService(
             new SeatLockStateMachineConfig(),
             new SoftLockAction(seatLockRedisService),
             new HardLockAction(seatLockRedisService),
             new PaymentPendingAction(),
             new ConfirmAction(seatLockRedisService),
-            new ReleaseAction(seatLockRedisService)
-        );
+            new ReleaseAction(seatLockRedisService));
 
-        assertThatThrownBy(() -> service.sendEvent(seat, SeatLockEvent.CONFIRM, new SeatActionContext(1L, null, null)))
-            .isInstanceOf(BusinessRuleException.class)
-            .hasMessageContaining("Invalid seat transition");
-    }
+    assertThatThrownBy(
+            () ->
+                service.sendEvent(
+                    seat, SeatLockEvent.CONFIRM, new SeatActionContext(1L, null, null)))
+        .isInstanceOf(BusinessRuleException.class)
+        .hasMessageContaining("Invalid seat transition");
+  }
 
-    @Test
-    void should_throw_when_RELEASE_attempted_on_CONFIRMED_seat() {
-        Seat seat = seat();
-        seat.softLock(1L, Duration.ofMinutes(5));
-        seat.hardLock(Duration.ofMinutes(30));
-        seat.confirm("ord-3");
+  @Test
+  void should_throw_when_RELEASE_attempted_on_CONFIRMED_seat() {
+    Seat seat = seat();
+    seat.softLock(1L, Duration.ofMinutes(5));
+    seat.hardLock(Duration.ofMinutes(30));
+    seat.confirm("ord-3");
 
-        assertThatThrownBy(() -> seat.release(LockReleaseReason.USER_REMOVED))
-            .isInstanceOf(BusinessRuleException.class)
-            .hasMessageContaining("cannot be released");
-    }
+    assertThatThrownBy(() -> seat.release(LockReleaseReason.USER_REMOVED))
+        .isInstanceOf(BusinessRuleException.class)
+        .hasMessageContaining("cannot be released");
+  }
 
-    private Seat seat() {
-        return new Seat(100L, 10L, "tc_10", "A1", "A", "Section-1");
-    }
+  private Seat seat() {
+    return new Seat(100L, 10L, "tc_10", "A1", "A", "Section-1");
+  }
 
-    private Cart cart() {
-        Cart cart = new Cart(1L, 100L, 88L, SeatingMode.RESERVED, Duration.ofMinutes(5), "INR");
-        ReflectionTestUtils.setField(cart, "id", 700L);
-        return cart;
-    }
+  private Cart cart() {
+    Cart cart = new Cart(1L, 100L, 88L, SeatingMode.RESERVED, Duration.ofMinutes(5), "INR");
+    ReflectionTestUtils.setField(cart, "id", 700L);
+    return cart;
+  }
 }

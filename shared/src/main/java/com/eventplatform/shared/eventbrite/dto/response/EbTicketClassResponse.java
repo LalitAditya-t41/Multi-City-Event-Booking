@@ -5,8 +5,4 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record EbTicketClassResponse(
-    String id,
-    String name,
-    @JsonProperty("on_sale_status") String onSaleStatus
-) {
-}
+    String id, String name, @JsonProperty("on_sale_status") String onSaleStatus) {}

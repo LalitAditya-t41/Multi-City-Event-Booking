@@ -8,6 +8,6 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface ETicketMapper {
 
-    @Mapping(target = "ticketCode", ignore = true)
-    ETicketResponse toResponse(ETicket ticket);
+  @Mapping(target = "ticketCode", ignore = true)
+  ETicketResponse toResponse(ETicket ticket);
 }

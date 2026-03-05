@@ -16,6 +16,4 @@ public record EventCatalogItemResponse(
     Instant endTime,
     EventState state,
     EventSource source,
-    String currency
-) {
-}
+    String currency) {}

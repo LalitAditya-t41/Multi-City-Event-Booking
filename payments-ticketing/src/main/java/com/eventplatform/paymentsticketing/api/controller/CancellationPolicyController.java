@@ -21,40 +21,36 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/cancellation-policies")
 public class CancellationPolicyController {
 
-    private final CancellationPolicyService cancellationPolicyService;
+  private final CancellationPolicyService cancellationPolicyService;
 
-    public CancellationPolicyController(CancellationPolicyService cancellationPolicyService) {
-        this.cancellationPolicyService = cancellationPolicyService;
-    }
+  public CancellationPolicyController(CancellationPolicyService cancellationPolicyService) {
+    this.cancellationPolicyService = cancellationPolicyService;
+  }
 
-    @PostMapping
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public CancellationPolicyResponse create(
-        Authentication authentication,
-        @Valid @RequestBody CancellationPolicyRequest request
-    ) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return cancellationPolicyService.createPolicy(user.userId(), request);
-    }
+  @PostMapping
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public CancellationPolicyResponse create(
+      Authentication authentication, @Valid @RequestBody CancellationPolicyRequest request) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return cancellationPolicyService.createPolicy(user.userId(), request);
+  }
 
-    @PutMapping("/{policyId}")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public CancellationPolicyResponse update(
-        @PathVariable Long policyId,
-        @Valid @RequestBody CancellationPolicyRequest request
-    ) {
-        return cancellationPolicyService.updatePolicy(policyId, request);
-    }
+  @PutMapping("/{policyId}")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public CancellationPolicyResponse update(
+      @PathVariable Long policyId, @Valid @RequestBody CancellationPolicyRequest request) {
+    return cancellationPolicyService.updatePolicy(policyId, request);
+  }
 
-    @GetMapping("/{policyId}")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public CancellationPolicyResponse getById(@PathVariable Long policyId) {
-        return cancellationPolicyService.getPolicy(policyId);
-    }
+  @GetMapping("/{policyId}")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public CancellationPolicyResponse getById(@PathVariable Long policyId) {
+    return cancellationPolicyService.getPolicy(policyId);
+  }
 
-    @GetMapping
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public CancellationPolicyResponse getEffective(@RequestParam("orgId") Long orgId) {
-        return cancellationPolicyService.getEffectivePolicy(orgId);
-    }
+  @GetMapping
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public CancellationPolicyResponse getEffective(@RequestParam("orgId") Long orgId) {
+    return cancellationPolicyService.getEffectivePolicy(orgId);
+  }
 }

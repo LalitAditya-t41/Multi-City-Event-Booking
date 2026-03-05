@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PromotionRepository extends JpaRepository<Promotion, Long> {
-    List<Promotion> findByOrgId(Long orgId);
-    List<Promotion> findByOrgIdAndStatus(Long orgId, PromotionStatus status);
+  List<Promotion> findByOrgId(Long orgId);
+
+  List<Promotion> findByOrgIdAndStatus(Long orgId, PromotionStatus status);
 }

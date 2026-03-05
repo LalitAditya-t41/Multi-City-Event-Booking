@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BookingItemRepository extends JpaRepository<BookingItem, Long> {
 
-    List<BookingItem> findByBookingId(Long bookingId);
+  List<BookingItem> findByBookingId(Long bookingId);
 }

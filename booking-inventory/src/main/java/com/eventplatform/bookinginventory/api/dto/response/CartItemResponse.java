@@ -10,6 +10,4 @@ public record CartItemResponse(
     String tierName,
     Integer quantity,
     Money unitPrice,
-    Money discountApplied
-) {
-}
+    Money discountApplied) {}

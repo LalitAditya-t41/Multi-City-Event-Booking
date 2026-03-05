@@ -9,10 +9,10 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
 
-    @Mapping(target = "userId", source = "id")
-    RegisterResponse toRegisterResponse(User user);
+  @Mapping(target = "userId", source = "id")
+  RegisterResponse toRegisterResponse(User user);
 
-    @Mapping(target = "userId", source = "id")
-    @Mapping(target = "status", expression = "java(user.getStatus().name())")
-    UserProfileResponse toProfileResponse(User user);
+  @Mapping(target = "userId", source = "id")
+  @Mapping(target = "status", expression = "java(user.getStatus().name())")
+  UserProfileResponse toProfileResponse(User user);
 }

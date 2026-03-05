@@ -8,6 +8,4 @@ public record GaTierAvailabilityResponse(
     Integer quota,
     Long available,
     Money basePrice,
-    boolean blocked
-) {
-}
+    boolean blocked) {}

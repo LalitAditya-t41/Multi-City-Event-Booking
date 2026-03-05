@@ -29,35 +29,35 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/engagement/reviews")
 public class AdminModerationController {
 
-    private final ModerationService moderationService;
+  private final ModerationService moderationService;
 
-    public AdminModerationController(ModerationService moderationService) {
-        this.moderationService = moderationService;
-    }
+  public AdminModerationController(ModerationService moderationService) {
+    this.moderationService = moderationService;
+  }
 
-    @GetMapping
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public Page<AdminReviewResponse> listPending(
-        @RequestParam(name = "status", defaultValue = "PENDING_MODERATION") ReviewStatus status,
-        @RequestParam(name = "eventId", required = false) Long eventId,
-        @RequestParam(name = "submittedAfter", required = false) Instant submittedAfter,
-        @PageableDefault(size = 20, sort = "submittedAt", direction = Sort.Direction.DESC) Pageable pageable
-    ) {
-        return moderationService.listAdminQueue(status, eventId, submittedAfter, pageable);
-    }
+  @GetMapping
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public Page<AdminReviewResponse> listPending(
+      @RequestParam(name = "status", defaultValue = "PENDING_MODERATION") ReviewStatus status,
+      @RequestParam(name = "eventId", required = false) Long eventId,
+      @RequestParam(name = "submittedAfter", required = false) Instant submittedAfter,
+      @PageableDefault(size = 20, sort = "submittedAt", direction = Sort.Direction.DESC)
+          Pageable pageable) {
+    return moderationService.listAdminQueue(status, eventId, submittedAfter, pageable);
+  }
 
-    @PutMapping("/{reviewId}/moderate")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public ModerationResponse moderate(
-        Authentication authentication,
-        @PathVariable Long reviewId,
-        @Valid @RequestBody ModerationDecisionRequest request
-    ) {
-        if (request.decision() == ManualModerationDecision.REJECT
-            && (request.reason() == null || request.reason().isBlank())) {
-            throw new ValidationException("reason is required for reject decision", "VALIDATION_ERROR");
-        }
-        AuthenticatedUser admin = (AuthenticatedUser) authentication.getPrincipal();
-        return moderationService.applyManualDecision(admin.userId(), reviewId, request.decision(), request.reason());
+  @PutMapping("/{reviewId}/moderate")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public ModerationResponse moderate(
+      Authentication authentication,
+      @PathVariable Long reviewId,
+      @Valid @RequestBody ModerationDecisionRequest request) {
+    if (request.decision() == ManualModerationDecision.REJECT
+        && (request.reason() == null || request.reason().isBlank())) {
+      throw new ValidationException("reason is required for reject decision", "VALIDATION_ERROR");
     }
+    AuthenticatedUser admin = (AuthenticatedUser) authentication.getPrincipal();
+    return moderationService.applyManualDecision(
+        admin.userId(), reviewId, request.decision(), request.reason());
+  }
 }

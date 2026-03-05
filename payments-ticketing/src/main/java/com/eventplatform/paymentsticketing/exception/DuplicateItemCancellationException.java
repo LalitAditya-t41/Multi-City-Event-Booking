@@ -6,12 +6,11 @@ import org.springframework.http.HttpStatus;
 
 public class DuplicateItemCancellationException extends BaseException {
 
-    public DuplicateItemCancellationException(Long bookingItemId) {
-        super(
-            "Cancellation already requested for booking item: " + bookingItemId,
-            "DUPLICATE_ITEM_CANCELLATION",
-            HttpStatus.CONFLICT,
-            Map.of("bookingItemId", bookingItemId)
-        );
-    }
+  public DuplicateItemCancellationException(Long bookingItemId) {
+    super(
+        "Cancellation already requested for booking item: " + bookingItemId,
+        "DUPLICATE_ITEM_CANCELLATION",
+        HttpStatus.CONFLICT,
+        Map.of("bookingItemId", bookingItemId));
+  }
 }

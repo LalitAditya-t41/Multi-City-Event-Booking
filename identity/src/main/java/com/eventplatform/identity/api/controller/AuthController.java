@@ -30,60 +30,59 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
-    private final AuthService authService;
+  private final AuthService authService;
 
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
+  public AuthController(AuthService authService) {
+    this.authService = authService;
+  }
 
-    @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    public RegisterResponse register(@Valid @RequestBody RegisterRequest request) {
-        return authService.register(request);
-    }
+  @PostMapping("/register")
+  @ResponseStatus(HttpStatus.CREATED)
+  public RegisterResponse register(@Valid @RequestBody RegisterRequest request) {
+    return authService.register(request);
+  }
 
-    @PostMapping("/login")
-    public AuthTokensResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
-    }
+  @PostMapping("/login")
+  public AuthTokensResponse login(@Valid @RequestBody LoginRequest request) {
+    return authService.login(request);
+  }
 
-    @PostMapping("/token/refresh")
-    public AccessTokenResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
-        return authService.refreshToken(request.refreshToken());
-    }
+  @PostMapping("/token/refresh")
+  public AccessTokenResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
+    return authService.refreshToken(request.refreshToken());
+  }
 
-    @PostMapping("/logout")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public MessageResponse logout(@Valid @RequestBody LogoutRequest request) {
-        return authService.logout(request.refreshToken());
-    }
+  @PostMapping("/logout")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public MessageResponse logout(@Valid @RequestBody LogoutRequest request) {
+    return authService.logout(request.refreshToken());
+  }
 
-    @GetMapping("/me")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public UserProfileResponse me(Authentication authentication) {
-        return authService.me(currentUserId(authentication));
-    }
+  @GetMapping("/me")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public UserProfileResponse me(Authentication authentication) {
+    return authService.me(currentUserId(authentication));
+  }
 
-    @PostMapping("/password/change")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public MessageResponse changePassword(
-        Authentication authentication,
-        @Valid @RequestBody PasswordChangeRequest request
-    ) {
-        return authService.changePassword(currentUserId(authentication), request);
-    }
+  @PostMapping("/password/change")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public MessageResponse changePassword(
+      Authentication authentication, @Valid @RequestBody PasswordChangeRequest request) {
+    return authService.changePassword(currentUserId(authentication), request);
+  }
 
-    @PostMapping("/password/reset")
-    public MessageResponse requestPasswordReset(@Valid @RequestBody PasswordResetRequest request) {
-        return authService.requestPasswordReset(request.email());
-    }
+  @PostMapping("/password/reset")
+  public MessageResponse requestPasswordReset(@Valid @RequestBody PasswordResetRequest request) {
+    return authService.requestPasswordReset(request.email());
+  }
 
-    @PostMapping("/password/reset/confirm")
-    public MessageResponse confirmPasswordReset(@Valid @RequestBody PasswordResetConfirmRequest request) {
-        return authService.confirmPasswordReset(request);
-    }
+  @PostMapping("/password/reset/confirm")
+  public MessageResponse confirmPasswordReset(
+      @Valid @RequestBody PasswordResetConfirmRequest request) {
+    return authService.confirmPasswordReset(request);
+  }
 
-    private Long currentUserId(Authentication authentication) {
-        return ((AuthenticatedUser) authentication.getPrincipal()).userId();
-    }
+  private Long currentUserId(Authentication authentication) {
+    return ((AuthenticatedUser) authentication.getPrincipal()).userId();
+  }
 }

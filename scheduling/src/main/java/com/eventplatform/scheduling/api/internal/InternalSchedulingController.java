@@ -12,18 +12,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/internal/scheduling/slots")
 public class InternalSchedulingController {
 
-    private final ShowSlotService showSlotService;
+  private final ShowSlotService showSlotService;
 
-    public InternalSchedulingController(ShowSlotService showSlotService) {
-        this.showSlotService = showSlotService;
-    }
+  public InternalSchedulingController(ShowSlotService showSlotService) {
+    this.showSlotService = showSlotService;
+  }
 
-    @GetMapping("/{slotId}/timing")
-    public SlotTimingResponse getSlotTiming(@PathVariable Long slotId) {
-        ShowSlot slot = showSlotService.getSlot(slotId);
-        return new SlotTimingResponse(slotId, slot.getStartTime().toInstant());
-    }
+  @GetMapping("/{slotId}/timing")
+  public SlotTimingResponse getSlotTiming(@PathVariable Long slotId) {
+    ShowSlot slot = showSlotService.getSlot(slotId);
+    return new SlotTimingResponse(slotId, slot.getStartTime().toInstant());
+  }
 
-    public record SlotTimingResponse(Long slotId, Instant startTime) {
-    }
+  public record SlotTimingResponse(Long slotId, Instant startTime) {}
 }

@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 
 public class InvalidPolicyTierConfigException extends BaseException {
 
-    public InvalidPolicyTierConfigException(String message) {
-        super(message, "INVALID_POLICY_TIER_CONFIG", HttpStatus.BAD_REQUEST);
-    }
+  public InvalidPolicyTierConfigException(String message) {
+    super(message, "INVALID_POLICY_TIER_CONFIG", HttpStatus.BAD_REQUEST);
+  }
 }

@@ -9,14 +9,14 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class BookingCancelledListener {
 
-    private final ReviewEligibilityService reviewEligibilityService;
+  private final ReviewEligibilityService reviewEligibilityService;
 
-    public BookingCancelledListener(ReviewEligibilityService reviewEligibilityService) {
-        this.reviewEligibilityService = reviewEligibilityService;
-    }
+  public BookingCancelledListener(ReviewEligibilityService reviewEligibilityService) {
+    this.reviewEligibilityService = reviewEligibilityService;
+  }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onBookingCancelled(BookingCancelledEvent event) {
-        reviewEligibilityService.revokeForBooking(event.bookingId());
-    }
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onBookingCancelled(BookingCancelledEvent event) {
+    reviewEligibilityService.revokeForBooking(event.bookingId());
+  }
 }

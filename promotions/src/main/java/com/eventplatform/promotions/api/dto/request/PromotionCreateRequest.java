@@ -17,6 +17,4 @@ public record PromotionCreateRequest(
     @NotNull Instant validFrom,
     @NotNull Instant validUntil,
     Integer maxUsageLimit,
-    Integer perUserCap
-) {
-}
+    Integer perUserCap) {}

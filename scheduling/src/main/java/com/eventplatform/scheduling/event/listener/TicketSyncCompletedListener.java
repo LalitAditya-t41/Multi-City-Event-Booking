@@ -9,14 +9,14 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class TicketSyncCompletedListener {
 
-    private final ShowSlotService showSlotService;
+  private final ShowSlotService showSlotService;
 
-    public TicketSyncCompletedListener(ShowSlotService showSlotService) {
-        this.showSlotService = showSlotService;
-    }
+  public TicketSyncCompletedListener(ShowSlotService showSlotService) {
+    this.showSlotService = showSlotService;
+  }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onTicketSyncCompleted(TicketSyncCompletedEvent event) {
-        showSlotService.onTicketSyncComplete(event);
-    }
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onTicketSyncCompleted(TicketSyncCompletedEvent event) {
+    showSlotService.onTicketSyncComplete(event);
+  }
 }

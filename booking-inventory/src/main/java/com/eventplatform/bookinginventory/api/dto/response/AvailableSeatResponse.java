@@ -11,6 +11,4 @@ public record AvailableSeatResponse(
     Long tierId,
     String tierName,
     Money basePrice,
-    SeatLockState lockState
-) {
-}
+    SeatLockState lockState) {}

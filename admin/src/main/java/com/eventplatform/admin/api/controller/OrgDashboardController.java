@@ -15,21 +15,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin")
 public class OrgDashboardController {
 
-    private final OrgDashboardService dashboardService;
+  private final OrgDashboardService dashboardService;
 
-    public OrgDashboardController(OrgDashboardService dashboardService) {
-        this.dashboardService = dashboardService;
-    }
+  public OrgDashboardController(OrgDashboardService dashboardService) {
+    this.dashboardService = dashboardService;
+  }
 
-    @GetMapping("/scheduling/slots/flagged")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public SlotFlaggedResponse flaggedSlots(@RequestParam("orgId") Long orgId) {
-        return dashboardService.getFlaggedSlots(orgId);
-    }
+  @GetMapping("/scheduling/slots/flagged")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public SlotFlaggedResponse flaggedSlots(@RequestParam("orgId") Long orgId) {
+    return dashboardService.getFlaggedSlots(orgId);
+  }
 
-    @GetMapping("/dashboard/venues/flagged")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public List<AdminVenueResponse> flaggedVenues(@RequestParam("orgId") Long orgId) {
-        return dashboardService.getFlaggedVenues(orgId);
-    }
+  @GetMapping("/dashboard/venues/flagged")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public List<AdminVenueResponse> flaggedVenues(@RequestParam("orgId") Long orgId) {
+    return dashboardService.getFlaggedVenues(orgId);
+  }
 }

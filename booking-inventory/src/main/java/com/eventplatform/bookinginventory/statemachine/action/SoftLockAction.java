@@ -9,14 +9,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class SoftLockAction {
 
-    private final SeatLockRedisService seatLockRedisService;
+  private final SeatLockRedisService seatLockRedisService;
 
-    public SoftLockAction(SeatLockRedisService seatLockRedisService) {
-        this.seatLockRedisService = seatLockRedisService;
-    }
+  public SoftLockAction(SeatLockRedisService seatLockRedisService) {
+    this.seatLockRedisService = seatLockRedisService;
+  }
 
-    public void apply(Seat seat, SeatActionContext context) {
-        seat.softLock(context.userId(), Duration.ofMinutes(5));
-        seatLockRedisService.acquire(seat.getId(), context.userId(), Duration.ofMinutes(5));
-    }
+  public void apply(Seat seat, SeatActionContext context) {
+    seat.softLock(context.userId(), Duration.ofMinutes(5));
+    seatLockRedisService.acquire(seat.getId(), context.userId(), Duration.ofMinutes(5));
+  }
 }

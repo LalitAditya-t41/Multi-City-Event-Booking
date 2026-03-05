@@ -8,22 +8,23 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Component
 public class AfterCommitEventPublisher {
 
-    private final ApplicationEventPublisher applicationEventPublisher;
+  private final ApplicationEventPublisher applicationEventPublisher;
 
-    public AfterCommitEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
-        this.applicationEventPublisher = applicationEventPublisher;
-    }
+  public AfterCommitEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
+    this.applicationEventPublisher = applicationEventPublisher;
+  }
 
-    public void publish(Object event) {
-        if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    applicationEventPublisher.publishEvent(event);
-                }
-            });
-            return;
-        }
-        applicationEventPublisher.publishEvent(event);
+  public void publish(Object event) {
+    if (TransactionSynchronizationManager.isActualTransactionActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+              applicationEventPublisher.publishEvent(event);
+            }
+          });
+      return;
     }
+    applicationEventPublisher.publishEvent(event);
+  }
 }

@@ -13,46 +13,45 @@ import jakarta.persistence.Table;
 @Table(name = "users")
 public class User extends BaseEntity {
 
-    @Column(name = "email", nullable = false)
-    private String email;
+  @Column(name = "email", nullable = false)
+  private String email;
 
-    @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
+  @Column(name = "password_hash", nullable = false)
+  private String passwordHash;
 
-    @Column(name = "role", nullable = false)
-    private String role;
+  @Column(name = "role", nullable = false)
+  private String role;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private UserStatus status;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "status", nullable = false)
+  private UserStatus status;
 
-    protected User() {
-    }
+  protected User() {}
 
-    public User(String email, String passwordHash) {
-        this.email = email;
-        this.passwordHash = passwordHash;
-        this.role = Roles.USER;
-        this.status = UserStatus.ACTIVE;
-    }
+  public User(String email, String passwordHash) {
+    this.email = email;
+    this.passwordHash = passwordHash;
+    this.role = Roles.USER;
+    this.status = UserStatus.ACTIVE;
+  }
 
-    public String getEmail() {
-        return email;
-    }
+  public String getEmail() {
+    return email;
+  }
 
-    public String getPasswordHash() {
-        return passwordHash;
-    }
+  public String getPasswordHash() {
+    return passwordHash;
+  }
 
-    public String getRole() {
-        return role;
-    }
+  public String getRole() {
+    return role;
+  }
 
-    public UserStatus getStatus() {
-        return status;
-    }
+  public UserStatus getStatus() {
+    return status;
+  }
 
-    public void changePassword(String newPasswordHash) {
-        this.passwordHash = newPasswordHash;
-    }
+  public void changePassword(String newPasswordHash) {
+    this.passwordHash = newPasswordHash;
+  }
 }

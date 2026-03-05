@@ -27,67 +27,69 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/promotions")
 public class CouponAdminController {
 
-    private final CouponAdminService couponAdminService;
-    private final DiscountReconciliationService reconciliationService;
+  private final CouponAdminService couponAdminService;
+  private final DiscountReconciliationService reconciliationService;
 
-    public CouponAdminController(CouponAdminService couponAdminService,
-                                 DiscountReconciliationService reconciliationService) {
-        this.couponAdminService = couponAdminService;
-        this.reconciliationService = reconciliationService;
-    }
+  public CouponAdminController(
+      CouponAdminService couponAdminService, DiscountReconciliationService reconciliationService) {
+    this.couponAdminService = couponAdminService;
+    this.reconciliationService = reconciliationService;
+  }
 
-    @PostMapping("/{promotionId}/coupons")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public CouponResponse create(Authentication authentication,
-                                 @PathVariable Long promotionId,
-                                 @Valid @RequestBody CouponCreateRequest request) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return couponAdminService.createCoupon(user.orgId(), promotionId, request);
-    }
+  @PostMapping("/{promotionId}/coupons")
+  @ResponseStatus(HttpStatus.CREATED)
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public CouponResponse create(
+      Authentication authentication,
+      @PathVariable Long promotionId,
+      @Valid @RequestBody CouponCreateRequest request) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return couponAdminService.createCoupon(user.orgId(), promotionId, request);
+  }
 
-    @GetMapping("/{promotionId}/coupons")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public List<CouponResponse> list(Authentication authentication, @PathVariable Long promotionId) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return couponAdminService.listCoupons(user.orgId(), promotionId);
-    }
+  @GetMapping("/{promotionId}/coupons")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public List<CouponResponse> list(Authentication authentication, @PathVariable Long promotionId) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return couponAdminService.listCoupons(user.orgId(), promotionId);
+  }
 
-    @GetMapping("/coupons/{couponCode}/usage")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public CouponUsageStatsResponse usage(Authentication authentication, @PathVariable String couponCode) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return couponAdminService.usage(user.orgId(), couponCode);
-    }
+  @GetMapping("/coupons/{couponCode}/usage")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public CouponUsageStatsResponse usage(
+      Authentication authentication, @PathVariable String couponCode) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return couponAdminService.usage(user.orgId(), couponCode);
+  }
 
-    @DeleteMapping("/coupons/{couponCode}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public void deactivate(Authentication authentication, @PathVariable String couponCode) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        couponAdminService.deactivateCoupon(user.orgId(), couponCode);
-    }
+  @DeleteMapping("/coupons/{couponCode}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public void deactivate(Authentication authentication, @PathVariable String couponCode) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    couponAdminService.deactivateCoupon(user.orgId(), couponCode);
+  }
 
-    @PostMapping("/coupons/{couponCode}/sync")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public CouponResponse manualSync(Authentication authentication, @PathVariable String couponCode) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return couponAdminService.manualSync(user.orgId(), couponCode);
-    }
+  @PostMapping("/coupons/{couponCode}/sync")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public CouponResponse manualSync(Authentication authentication, @PathVariable String couponCode) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return couponAdminService.manualSync(user.orgId(), couponCode);
+  }
 
-    @GetMapping("/reconciliation/latest")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public DiscountReconciliationLogResponse latest(Authentication authentication) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return reconciliationService.latestLog(user.orgId());
-    }
+  @GetMapping("/reconciliation/latest")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public DiscountReconciliationLogResponse latest(Authentication authentication) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return reconciliationService.latestLog(user.orgId());
+  }
 
-    @PostMapping("/reconciliation/trigger")
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public Map<String, String> trigger(Authentication authentication) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        reconciliationService.reconcileOrg(user.orgId());
-        return Map.of("message", "Reconciliation triggered");
-    }
+  @PostMapping("/reconciliation/trigger")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public Map<String, String> trigger(Authentication authentication) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    reconciliationService.reconcileOrg(user.orgId());
+    return Map.of("message", "Reconciliation triggered");
+  }
 }

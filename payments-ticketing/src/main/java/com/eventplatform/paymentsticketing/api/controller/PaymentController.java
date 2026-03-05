@@ -22,30 +22,32 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/payments")
 public class PaymentController {
 
-    private final PaymentService paymentService;
+  private final PaymentService paymentService;
 
-    public PaymentController(PaymentService paymentService) {
-        this.paymentService = paymentService;
-    }
+  public PaymentController(PaymentService paymentService) {
+    this.paymentService = paymentService;
+  }
 
-    @GetMapping("/checkout/{cartId}")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public CheckoutInitResponse getCheckout(Authentication authentication, @PathVariable Long cartId) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return paymentService.getCheckout(cartId, user.userId());
-    }
+  @GetMapping("/checkout/{cartId}")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public CheckoutInitResponse getCheckout(
+      Authentication authentication, @PathVariable Long cartId) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return paymentService.getCheckout(cartId, user.userId());
+  }
 
-    @PostMapping("/confirm")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public BookingResponse confirm(Authentication authentication, @Valid @RequestBody PaymentConfirmRequest request) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return paymentService.confirmPayment(user.userId(), request.paymentIntentId());
-    }
+  @PostMapping("/confirm")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public BookingResponse confirm(
+      Authentication authentication, @Valid @RequestBody PaymentConfirmRequest request) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return paymentService.confirmPayment(user.userId(), request.paymentIntentId());
+  }
 
-    @PostMapping("/failed")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public Map<String, String> failed(@Valid @RequestBody PaymentFailedRequest request) {
-        paymentService.handleFailure(request.paymentIntentId(), null, "frontend_reported_failure");
-        return Map.of("message", "Seat locks released. Cart cleared.");
-    }
+  @PostMapping("/failed")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public Map<String, String> failed(@Valid @RequestBody PaymentFailedRequest request) {
+    paymentService.handleFailure(request.paymentIntentId(), null, "frontend_reported_failure");
+    return Map.of("message", "Seat locks released. Cart cleared.");
+  }
 }

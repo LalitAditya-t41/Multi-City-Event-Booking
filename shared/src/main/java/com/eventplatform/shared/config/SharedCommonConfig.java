@@ -10,5 +10,4 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 @EnableScheduling
 @EnableConfigurationProperties(EbProperties.class)
-public class SharedCommonConfig {
-}
+public class SharedCommonConfig {}

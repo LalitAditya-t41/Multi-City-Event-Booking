@@ -5,5 +5,5 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface OrganizationAuthRepository extends JpaRepository<OrganizationAuth, Long> {
-    Optional<OrganizationAuth> findByOrganizationId(Long organizationId);
+  Optional<OrganizationAuth> findByOrganizationId(Long organizationId);
 }

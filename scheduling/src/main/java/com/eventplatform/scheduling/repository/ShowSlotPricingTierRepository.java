@@ -5,5 +5,5 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ShowSlotPricingTierRepository extends JpaRepository<ShowSlotPricingTier, Long> {
-    List<ShowSlotPricingTier> findBySlotId(Long slotId);
+  List<ShowSlotPricingTier> findBySlotId(Long slotId);
 }

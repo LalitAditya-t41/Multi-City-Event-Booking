@@ -9,6 +9,4 @@ public record SchedulingSlotResponse(
     int syncAttemptCount,
     String lastSyncError,
     Instant lastAttemptedAt,
-    String ebEventId
-) {
-}
+    String ebEventId) {}

@@ -25,126 +25,140 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = CancellationPolicyController.class)
 @Import({SecurityConfig.class, GlobalExceptionHandler.class})
 class CancellationPolicyControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+  @Autowired private MockMvc mockMvc;
 
-    @MockBean
-    private CancellationPolicyService cancellationPolicyService;
+  @MockitoBean private CancellationPolicyService cancellationPolicyService;
 
-    @MockBean
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+  @MockitoBean private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @BeforeEach
-    void setUpFilterPassThrough() throws Exception {
-        doAnswer(invocation -> {
-            jakarta.servlet.FilterChain chain = invocation.getArgument(2);
-            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
-            return null;
-        }).when(jwtAuthenticationFilter).doFilter(any(), any(), any());
-    }
+  @BeforeEach
+  void setUpFilterPassThrough() throws Exception {
+    doAnswer(
+            invocation -> {
+              jakarta.servlet.FilterChain chain = invocation.getArgument(2);
+              chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
+              return null;
+            })
+        .when(jwtAuthenticationFilter)
+        .doFilter(any(), any(), any());
+  }
 
-    @Test
-    void should_create_policy_when_admin_is_authenticated() throws Exception {
-        when(cancellationPolicyService.createPolicy(any(), any())).thenReturn(sampleResponse());
+  @Test
+  void should_create_policy_when_admin_is_authenticated() throws Exception {
+    when(cancellationPolicyService.createPolicy(any(), any())).thenReturn(sampleResponse());
 
-        mockMvc.perform(post("/api/v1/admin/cancellation-policies")
+    mockMvc
+        .perform(
+            post("/api/v1/admin/cancellation-policies")
                 .with(authentication(adminAuthentication()))
                 .contentType("application/json")
-                .content("{\"orgId\":88,\"tiers\":[{\"hoursBeforeEvent\":72,\"refundPercent\":100,\"sortOrder\":1},{\"hoursBeforeEvent\":null,\"refundPercent\":0,\"sortOrder\":2}]}"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.orgId").value(88))
-            .andExpect(jsonPath("$.scope").value("ORG"));
-    }
+                .content(
+                    "{\"orgId\":88,\"tiers\":[{\"hoursBeforeEvent\":72,\"refundPercent\":100,\"sortOrder\":1},{\"hoursBeforeEvent\":null,\"refundPercent\":0,\"sortOrder\":2}]}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.orgId").value(88))
+        .andExpect(jsonPath("$.scope").value("ORG"));
+  }
 
-    @Test
-    void should_return_400_when_policy_payload_is_invalid() throws Exception {
-        mockMvc.perform(post("/api/v1/admin/cancellation-policies")
+  @Test
+  void should_return_400_when_policy_payload_is_invalid() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/admin/cancellation-policies")
                 .with(authentication(adminAuthentication()))
                 .contentType("application/json")
                 .content("{\"orgId\":88,\"tiers\":[]}"))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
-    }
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
+  }
 
-    @Test
-    void should_return_403_when_non_admin_attempts_policy_create() throws Exception {
-        mockMvc.perform(post("/api/v1/admin/cancellation-policies")
+  @Test
+  void should_return_403_when_non_admin_attempts_policy_create() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/admin/cancellation-policies")
                 .with(authentication(userAuthentication()))
                 .contentType("application/json")
-                .content("{\"orgId\":88,\"tiers\":[{\"hoursBeforeEvent\":72,\"refundPercent\":100,\"sortOrder\":1}]}"))
-            .andExpect(status().isForbidden());
-    }
+                .content(
+                    "{\"orgId\":88,\"tiers\":[{\"hoursBeforeEvent\":72,\"refundPercent\":100,\"sortOrder\":1}]}"))
+        .andExpect(status().isForbidden());
+  }
 
-    @Test
-    void should_return_404_when_policy_id_not_found() throws Exception {
-        when(cancellationPolicyService.getPolicy(999L)).thenThrow(new CancellationPolicyNotFoundException("not found"));
+  @Test
+  void should_return_404_when_policy_id_not_found() throws Exception {
+    when(cancellationPolicyService.getPolicy(999L))
+        .thenThrow(new CancellationPolicyNotFoundException("not found"));
 
-        mockMvc.perform(get("/api/v1/admin/cancellation-policies/999")
+    mockMvc
+        .perform(
+            get("/api/v1/admin/cancellation-policies/999")
                 .with(authentication(adminAuthentication())))
-            .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.errorCode").value("CANCELLATION_POLICY_NOT_FOUND"));
-    }
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.errorCode").value("CANCELLATION_POLICY_NOT_FOUND"));
+  }
 
-    @Test
-    void should_return_400_when_policy_update_has_invalid_tier_configuration() throws Exception {
-        when(cancellationPolicyService.updatePolicy(any(), any()))
-            .thenThrow(new InvalidPolicyTierConfigException("Tier with null hoursBeforeEvent must be the last tier"));
+  @Test
+  void should_return_400_when_policy_update_has_invalid_tier_configuration() throws Exception {
+    when(cancellationPolicyService.updatePolicy(any(), any()))
+        .thenThrow(
+            new InvalidPolicyTierConfigException(
+                "Tier with null hoursBeforeEvent must be the last tier"));
 
-        mockMvc.perform(put("/api/v1/admin/cancellation-policies/1")
+    mockMvc
+        .perform(
+            put("/api/v1/admin/cancellation-policies/1")
                 .with(authentication(adminAuthentication()))
                 .contentType("application/json")
-                .content("{\"orgId\":88,\"tiers\":[{\"hoursBeforeEvent\":null,\"refundPercent\":0,\"sortOrder\":1},{\"hoursBeforeEvent\":72,\"refundPercent\":100,\"sortOrder\":2}]}"))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.errorCode").value("INVALID_POLICY_TIER_CONFIG"));
-    }
+                .content(
+                    "{\"orgId\":88,\"tiers\":[{\"hoursBeforeEvent\":null,\"refundPercent\":0,\"sortOrder\":1},{\"hoursBeforeEvent\":72,\"refundPercent\":100,\"sortOrder\":2}]}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errorCode").value("INVALID_POLICY_TIER_CONFIG"));
+  }
 
-    @Test
-    void should_return_effective_policy_for_org_when_requested() throws Exception {
-        when(cancellationPolicyService.getEffectivePolicy(88L)).thenReturn(sampleResponse());
+  @Test
+  void should_return_effective_policy_for_org_when_requested() throws Exception {
+    when(cancellationPolicyService.getEffectivePolicy(88L)).thenReturn(sampleResponse());
 
-        mockMvc.perform(get("/api/v1/admin/cancellation-policies")
+    mockMvc
+        .perform(
+            get("/api/v1/admin/cancellation-policies")
                 .with(authentication(adminAuthentication()))
                 .queryParam("orgId", "88"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.orgId").value(88));
-    }
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.orgId").value(88));
+  }
 
-    private CancellationPolicyResponse sampleResponse() {
-        return new CancellationPolicyResponse(
-            1L,
-            88L,
-            CancellationPolicyScope.ORG,
-            1L,
-            List.of(
-                new CancellationPolicyResponse.TierResponse(11L, 72, 100, 1),
-                new CancellationPolicyResponse.TierResponse(12L, null, 0, 2)
-            )
-        );
-    }
+  private CancellationPolicyResponse sampleResponse() {
+    return new CancellationPolicyResponse(
+        1L,
+        88L,
+        CancellationPolicyScope.ORG,
+        1L,
+        List.of(
+            new CancellationPolicyResponse.TierResponse(11L, 72, 100, 1),
+            new CancellationPolicyResponse.TierResponse(12L, null, 0, 2)));
+  }
 
-    private UsernamePasswordAuthenticationToken adminAuthentication() {
-        return new UsernamePasswordAuthenticationToken(
-            new AuthenticatedUser(1L, "ADMIN", null, null),
-            null,
-            List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-        );
-    }
+  private UsernamePasswordAuthenticationToken adminAuthentication() {
+    return new UsernamePasswordAuthenticationToken(
+        new AuthenticatedUser(1L, "ADMIN", null, null),
+        null,
+        List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+  }
 
-    private UsernamePasswordAuthenticationToken userAuthentication() {
-        return new UsernamePasswordAuthenticationToken(
-            new AuthenticatedUser(2L, "USER", null, null),
-            null,
-            List.of(new SimpleGrantedAuthority("ROLE_USER"))
-        );
-    }
+  private UsernamePasswordAuthenticationToken userAuthentication() {
+    return new UsernamePasswordAuthenticationToken(
+        new AuthenticatedUser(2L, "USER", null, null),
+        null,
+        List.of(new SimpleGrantedAuthority("ROLE_USER")));
+  }
 }

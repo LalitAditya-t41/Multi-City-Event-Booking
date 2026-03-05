@@ -6,5 +6,5 @@ import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface EventCatalogMapper {
-    EventCatalogItemResponse toResponse(EventCatalogItem item);
+  EventCatalogItemResponse toResponse(EventCatalogItem item);
 }

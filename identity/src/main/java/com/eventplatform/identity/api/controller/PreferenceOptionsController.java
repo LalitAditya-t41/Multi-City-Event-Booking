@@ -12,15 +12,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/preferences")
 public class PreferenceOptionsController {
 
-    private final PreferenceOptionsService preferenceOptionsService;
+  private final PreferenceOptionsService preferenceOptionsService;
 
-    public PreferenceOptionsController(PreferenceOptionsService preferenceOptionsService) {
-        this.preferenceOptionsService = preferenceOptionsService;
-    }
+  public PreferenceOptionsController(PreferenceOptionsService preferenceOptionsService) {
+    this.preferenceOptionsService = preferenceOptionsService;
+  }
 
-    @GetMapping("/options")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public PreferenceOptionsResponse listOptions() {
-        return preferenceOptionsService.listActiveOptions();
-    }
+  @GetMapping("/options")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public PreferenceOptionsResponse listOptions() {
+    return preferenceOptionsService.listActiveOptions();
+  }
 }

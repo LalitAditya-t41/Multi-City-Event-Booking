@@ -9,14 +9,14 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class SlotDraftCreatedListener {
 
-    private final SlotTicketSyncService slotTicketSyncService;
+  private final SlotTicketSyncService slotTicketSyncService;
 
-    public SlotDraftCreatedListener(SlotTicketSyncService slotTicketSyncService) {
-        this.slotTicketSyncService = slotTicketSyncService;
-    }
+  public SlotDraftCreatedListener(SlotTicketSyncService slotTicketSyncService) {
+    this.slotTicketSyncService = slotTicketSyncService;
+  }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onSlotDraftCreated(SlotDraftCreatedEvent event) {
-        slotTicketSyncService.syncTickets(event);
-    }
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onSlotDraftCreated(SlotDraftCreatedEvent event) {
+    slotTicketSyncService.syncTickets(event);
+  }
 }

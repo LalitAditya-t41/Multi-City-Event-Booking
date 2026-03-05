@@ -8,14 +8,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class ShowSlotCancelledListener {
 
-    private final EventCancellationRefundService eventCancellationRefundService;
+  private final EventCancellationRefundService eventCancellationRefundService;
 
-    public ShowSlotCancelledListener(EventCancellationRefundService eventCancellationRefundService) {
-        this.eventCancellationRefundService = eventCancellationRefundService;
-    }
+  public ShowSlotCancelledListener(EventCancellationRefundService eventCancellationRefundService) {
+    this.eventCancellationRefundService = eventCancellationRefundService;
+  }
 
-    @EventListener
-    public void onShowSlotCancelled(ShowSlotCancelledEvent event) {
-        eventCancellationRefundService.processEventRefunds(event.slotId(), event.orgId());
-    }
+  @EventListener
+  public void onShowSlotCancelled(ShowSlotCancelledEvent event) {
+    eventCancellationRefundService.processEventRefunds(event.slotId(), event.orgId());
+  }
 }

@@ -28,42 +28,44 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/engagement/reviews")
 public class ReviewController {
 
-    private final ReviewService reviewService;
-    private final ReviewRatingSummaryService reviewRatingSummaryService;
+  private final ReviewService reviewService;
+  private final ReviewRatingSummaryService reviewRatingSummaryService;
 
-    public ReviewController(ReviewService reviewService, ReviewRatingSummaryService reviewRatingSummaryService) {
-        this.reviewService = reviewService;
-        this.reviewRatingSummaryService = reviewRatingSummaryService;
-    }
+  public ReviewController(
+      ReviewService reviewService, ReviewRatingSummaryService reviewRatingSummaryService) {
+    this.reviewService = reviewService;
+    this.reviewRatingSummaryService = reviewRatingSummaryService;
+  }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public ReviewSubmitResponse submit(Authentication authentication, @Valid @RequestBody ReviewSubmitRequest request) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return reviewService.submitReview(user.userId(), request);
-    }
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public ReviewSubmitResponse submit(
+      Authentication authentication, @Valid @RequestBody ReviewSubmitRequest request) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return reviewService.submitReview(user.userId(), request);
+  }
 
-    @GetMapping("/events/{eventId}")
-    public Page<ReviewResponse> listPublished(
-        @PathVariable Long eventId,
-        @PageableDefault(size = 20, sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable
-    ) {
-        return reviewService.listPublishedReviews(eventId, pageable);
-    }
+  @GetMapping("/events/{eventId}")
+  public Page<ReviewResponse> listPublished(
+      @PathVariable Long eventId,
+      @PageableDefault(size = 20, sort = "publishedAt", direction = Sort.Direction.DESC)
+          Pageable pageable) {
+    return reviewService.listPublishedReviews(eventId, pageable);
+  }
 
-    @GetMapping("/events/{eventId}/summary")
-    public ReviewSummaryResponse summary(@PathVariable Long eventId) {
-        return reviewRatingSummaryService.getSummary(eventId);
-    }
+  @GetMapping("/events/{eventId}/summary")
+  public ReviewSummaryResponse summary(@PathVariable Long eventId) {
+    return reviewRatingSummaryService.getSummary(eventId);
+  }
 
-    @GetMapping("/me")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public Page<ReviewResponse> myReviews(
-        Authentication authentication,
-        @PageableDefault(size = 20, sort = "submittedAt", direction = Sort.Direction.DESC) Pageable pageable
-    ) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return reviewService.listMyReviews(user.userId(), pageable);
-    }
+  @GetMapping("/me")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public Page<ReviewResponse> myReviews(
+      Authentication authentication,
+      @PageableDefault(size = 20, sort = "submittedAt", direction = Sort.Direction.DESC)
+          Pageable pageable) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return reviewService.listMyReviews(user.userId(), pageable);
+  }
 }

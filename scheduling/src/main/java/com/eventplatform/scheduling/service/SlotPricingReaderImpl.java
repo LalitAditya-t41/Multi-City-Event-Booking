@@ -13,41 +13,41 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SlotPricingReaderImpl implements SlotPricingReader {
 
-    private final ShowSlotRepository showSlotRepository;
-    private final ShowSlotPricingTierRepository showSlotPricingTierRepository;
+  private final ShowSlotRepository showSlotRepository;
+  private final ShowSlotPricingTierRepository showSlotPricingTierRepository;
 
-    public SlotPricingReaderImpl(
-        ShowSlotRepository showSlotRepository,
-        ShowSlotPricingTierRepository showSlotPricingTierRepository
-    ) {
-        this.showSlotRepository = showSlotRepository;
-        this.showSlotPricingTierRepository = showSlotPricingTierRepository;
+  public SlotPricingReaderImpl(
+      ShowSlotRepository showSlotRepository,
+      ShowSlotPricingTierRepository showSlotPricingTierRepository) {
+    this.showSlotRepository = showSlotRepository;
+    this.showSlotPricingTierRepository = showSlotPricingTierRepository;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<PricingTierDto> getSlotPricing(Long slotId) {
+    if (!showSlotRepository.existsById(slotId)) {
+      throw new ResourceNotFoundException("Slot not found: " + slotId, "SLOT_NOT_FOUND");
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<PricingTierDto> getSlotPricing(Long slotId) {
-        if (!showSlotRepository.existsById(slotId)) {
-            throw new ResourceNotFoundException("Slot not found: " + slotId, "SLOT_NOT_FOUND");
-        }
-
-        List<ShowSlotPricingTier> tiers = showSlotPricingTierRepository.findBySlotId(slotId);
-        if (tiers.isEmpty()) {
-            return List.of();
-        }
-
-        return tiers.stream()
-            .map(tier -> new PricingTierDto(
-                tier.getId(),
-                tier.getName(),
-                tier.getPrice(),
-                tier.getQuota(),
-                tier.getTierType().name(),
-                tier.getEbTicketClassId(),
-                tier.getEbInventoryTierId(),
-                tier.getGroupDiscountThreshold(),
-                tier.getGroupDiscountPercent()
-            ))
-            .toList();
+    List<ShowSlotPricingTier> tiers = showSlotPricingTierRepository.findBySlotId(slotId);
+    if (tiers.isEmpty()) {
+      return List.of();
     }
+
+    return tiers.stream()
+        .map(
+            tier ->
+                new PricingTierDto(
+                    tier.getId(),
+                    tier.getName(),
+                    tier.getPrice(),
+                    tier.getQuota(),
+                    tier.getTierType().name(),
+                    tier.getEbTicketClassId(),
+                    tier.getEbInventoryTierId(),
+                    tier.getGroupDiscountThreshold(),
+                    tier.getGroupDiscountPercent()))
+        .toList();
+  }
 }

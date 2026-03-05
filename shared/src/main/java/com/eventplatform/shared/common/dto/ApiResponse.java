@@ -1,4 +1,3 @@
 package com.eventplatform.shared.common.dto;
 
-public record ApiResponse<T>(T data) {
-}
+public record ApiResponse<T>(T data) {}

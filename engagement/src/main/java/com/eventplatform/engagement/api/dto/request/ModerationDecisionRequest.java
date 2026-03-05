@@ -5,7 +5,4 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record ModerationDecisionRequest(
-    @NotNull ManualModerationDecision decision,
-    @Size(max = 500) String reason
-) {
-}
+    @NotNull ManualModerationDecision decision, @Size(max = 500) String reason) {}

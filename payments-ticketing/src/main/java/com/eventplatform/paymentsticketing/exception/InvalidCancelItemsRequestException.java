@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 
 public class InvalidCancelItemsRequestException extends BaseException {
 
-    public InvalidCancelItemsRequestException(String message) {
-        super(message, "INVALID_CANCEL_ITEMS_REQUEST", HttpStatus.BAD_REQUEST);
-    }
+  public InvalidCancelItemsRequestException(String message) {
+    super(message, "INVALID_CANCEL_ITEMS_REQUEST", HttpStatus.BAD_REQUEST);
+  }
 }

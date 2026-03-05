@@ -12,11 +12,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface CartRepository extends JpaRepository<Cart, Long> {
 
-    @EntityGraph(attributePaths = "items")
-    @Query("select c from Cart c where c.id = :id")
-    Optional<Cart> findWithItemsById(@Param("id") Long id);
+  @EntityGraph(attributePaths = "items")
+  @Query("select c from Cart c where c.id = :id")
+  Optional<Cart> findWithItemsById(@Param("id") Long id);
 
-    Optional<Cart> findByUserIdAndShowSlotIdAndStatus(Long userId, Long showSlotId, CartStatus status);
+  Optional<Cart> findByUserIdAndShowSlotIdAndStatus(
+      Long userId, Long showSlotId, CartStatus status);
 
-    List<Cart> findByStatusAndExpiresAtBefore(CartStatus status, Instant now);
+  List<Cart> findByStatusAndExpiresAtBefore(CartStatus status, Instant now);
 }

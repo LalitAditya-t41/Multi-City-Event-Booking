@@ -9,6 +9,4 @@ public record ReviewSummaryResponse(
     BigDecimal averageRating,
     long totalReviews,
     Map<Integer, Long> distribution,
-    Instant cachedAt
-) {
-}
+    Instant cachedAt) {}

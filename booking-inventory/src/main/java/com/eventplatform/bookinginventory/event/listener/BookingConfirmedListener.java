@@ -9,14 +9,15 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class BookingConfirmedListener {
 
-    private final CartService cartService;
+  private final CartService cartService;
 
-    public BookingConfirmedListener(CartService cartService) {
-        this.cartService = cartService;
-    }
+  public BookingConfirmedListener(CartService cartService) {
+    this.cartService = cartService;
+  }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onBookingConfirmed(BookingConfirmedEvent event) {
-        cartService.onBookingConfirmed(event.cartId(), event.seatIds(), event.stripePaymentIntentId(), event.userId());
-    }
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onBookingConfirmed(BookingConfirmedEvent event) {
+    cartService.onBookingConfirmed(
+        event.cartId(), event.seatIds(), event.stripePaymentIntentId(), event.userId());
+  }
 }

@@ -6,6 +6,4 @@ public record CancellationQuoteResponse(
     Integer refundPercent,
     Long requestedItemsAmount,
     Long refundAmount,
-    String currency
-) {
-}
+    String currency) {}

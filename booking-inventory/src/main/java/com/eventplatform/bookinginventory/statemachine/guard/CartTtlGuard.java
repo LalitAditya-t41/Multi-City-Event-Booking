@@ -15,23 +15,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class CartTtlGuard {
 
-    private final SeatLockRedisService seatLockRedisService;
+  private final SeatLockRedisService seatLockRedisService;
 
-    public CartTtlGuard(SeatLockRedisService seatLockRedisService) {
-        this.seatLockRedisService = seatLockRedisService;
+  public CartTtlGuard(SeatLockRedisService seatLockRedisService) {
+    this.seatLockRedisService = seatLockRedisService;
+  }
+
+  public void assertCartConfirmable(Cart cart, List<CartItem> items, Long userId) {
+    if (cart.isExpired(Instant.now())) {
+      throw new CartExpiredException(cart.getId(), cart.getExpiresAt());
     }
-
-    public void assertCartConfirmable(Cart cart, List<CartItem> items, Long userId) {
-        if (cart.isExpired(Instant.now())) {
-            throw new CartExpiredException(cart.getId(), cart.getExpiresAt());
-        }
-        Set<Long> expired = items.stream()
+    Set<Long> expired =
+        items.stream()
             .map(CartItem::getSeatId)
             .filter(Objects::nonNull)
             .filter(seatId -> !seatLockRedisService.isOwnedBy(seatId, userId))
             .collect(Collectors.toSet());
-        if (!expired.isEmpty()) {
-            throw new SoftLockExpiredException(expired);
-        }
+    if (!expired.isEmpty()) {
+      throw new SoftLockExpiredException(expired);
     }
+  }
 }

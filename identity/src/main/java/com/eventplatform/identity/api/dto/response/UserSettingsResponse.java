@@ -10,6 +10,4 @@ public record UserSettingsResponse(
     String address,
     PreferenceSelectionResponse preferredCity,
     List<PreferenceSelectionResponse> preferredGenres,
-    boolean notificationOptIn
-) {
-}
+    boolean notificationOptIn) {}

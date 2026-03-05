@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 
 public class ReviewNotEligibleException extends BaseException {
 
-    public ReviewNotEligibleException(String message, String errorCode) {
-        super(message, errorCode, HttpStatus.FORBIDDEN);
-    }
+  public ReviewNotEligibleException(String message, String errorCode) {
+    super(message, errorCode, HttpStatus.FORBIDDEN);
+  }
 }

@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ETicketRepository extends JpaRepository<ETicket, Long> {
 
-    List<ETicket> findByBookingId(Long bookingId);
+  List<ETicket> findByBookingId(Long bookingId);
 
-    Optional<ETicket> findByBookingItemId(Long bookingItemId);
+  Optional<ETicket> findByBookingItemId(Long bookingItemId);
 }

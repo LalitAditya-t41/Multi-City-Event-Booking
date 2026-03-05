@@ -9,19 +9,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class InternalCatalogQueryService {
 
-    private final EventCatalogRepository eventCatalogRepository;
+  private final EventCatalogRepository eventCatalogRepository;
 
-    public InternalCatalogQueryService(EventCatalogRepository eventCatalogRepository) {
-        this.eventCatalogRepository = eventCatalogRepository;
-    }
+  public InternalCatalogQueryService(EventCatalogRepository eventCatalogRepository) {
+    this.eventCatalogRepository = eventCatalogRepository;
+  }
 
-    @Transactional(readOnly = true)
-    public EventEbMetadataResponse getEventEbMetadata(Long eventId) {
-        EventCatalogItem item = eventCatalogRepository.findById(eventId)
-            .orElseThrow(() -> new ResourceNotFoundException("Event not found: " + eventId, "EVENT_NOT_FOUND"));
-        return new EventEbMetadataResponse(item.getId(), item.getOrganizationId(), item.getEventbriteEventId());
-    }
+  @Transactional(readOnly = true)
+  public EventEbMetadataResponse getEventEbMetadata(Long eventId) {
+    EventCatalogItem item =
+        eventCatalogRepository
+            .findById(eventId)
+            .orElseThrow(
+                () ->
+                    new ResourceNotFoundException(
+                        "Event not found: " + eventId, "EVENT_NOT_FOUND"));
+    return new EventEbMetadataResponse(
+        item.getId(), item.getOrganizationId(), item.getEventbriteEventId());
+  }
 
-    public record EventEbMetadataResponse(Long eventId, Long orgId, String ebEventId) {
-    }
+  public record EventEbMetadataResponse(Long eventId, Long orgId, String ebEventId) {}
 }

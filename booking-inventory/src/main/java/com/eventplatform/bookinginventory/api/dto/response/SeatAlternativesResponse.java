@@ -5,6 +5,4 @@ import java.util.List;
 public record SeatAlternativesResponse(
     Long unavailableSeatId,
     List<SeatSuggestionResponse> sameSection,
-    List<SeatSuggestionResponse> adjacentSection
-) {
-}
+    List<SeatSuggestionResponse> adjacentSection) {}

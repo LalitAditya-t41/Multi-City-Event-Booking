@@ -16,6 +16,4 @@ public record AdminReviewResponse(
     AttendanceVerificationStatus attendanceVerificationStatus,
     Instant submittedAt,
     int autoModerationAttempts,
-    ModerationDecision lastAutoDecision
-) {
-}
+    ModerationDecision lastAutoDecision) {}

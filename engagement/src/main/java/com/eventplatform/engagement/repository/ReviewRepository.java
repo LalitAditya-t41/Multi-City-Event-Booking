@@ -11,15 +11,17 @@ import org.springframework.data.repository.query.Param;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
 
-    boolean existsByUserIdAndEventId(Long userId, Long eventId);
+  boolean existsByUserIdAndEventId(Long userId, Long eventId);
 
-    Optional<Review> findByUserIdAndEventId(Long userId, Long eventId);
+  Optional<Review> findByUserIdAndEventId(Long userId, Long eventId);
 
-    Page<Review> findByEventIdAndStatusOrderByPublishedAtDesc(Long eventId, ReviewStatus status, Pageable pageable);
+  Page<Review> findByEventIdAndStatusOrderByPublishedAtDesc(
+      Long eventId, ReviewStatus status, Pageable pageable);
 
-    Page<Review> findByUserIdOrderBySubmittedAtDesc(Long userId, Pageable pageable);
+  Page<Review> findByUserIdOrderBySubmittedAtDesc(Long userId, Pageable pageable);
 
-    @Query("""
+  @Query(
+      """
         select
           coalesce(avg(r.rating), 0),
           count(r),
@@ -31,22 +33,16 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
         from Review r
         where r.eventId = :eventId and r.status = 'PUBLISHED'
         """)
-    Object[] summarizeByEventId(@Param("eventId") Long eventId);
+  Object[] summarizeByEventId(@Param("eventId") Long eventId);
 
-    Page<Review> findByStatusAndEventIdAndSubmittedAtGreaterThanEqualOrderBySubmittedAtDesc(
-        ReviewStatus status,
-        Long eventId,
-        java.time.Instant submittedAfter,
-        Pageable pageable
-    );
+  Page<Review> findByStatusAndEventIdAndSubmittedAtGreaterThanEqualOrderBySubmittedAtDesc(
+      ReviewStatus status, Long eventId, java.time.Instant submittedAfter, Pageable pageable);
 
-    Page<Review> findByStatusAndEventIdOrderBySubmittedAtDesc(ReviewStatus status, Long eventId, Pageable pageable);
+  Page<Review> findByStatusAndEventIdOrderBySubmittedAtDesc(
+      ReviewStatus status, Long eventId, Pageable pageable);
 
-    Page<Review> findByStatusAndSubmittedAtGreaterThanEqualOrderBySubmittedAtDesc(
-        ReviewStatus status,
-        java.time.Instant submittedAfter,
-        Pageable pageable
-    );
+  Page<Review> findByStatusAndSubmittedAtGreaterThanEqualOrderBySubmittedAtDesc(
+      ReviewStatus status, java.time.Instant submittedAfter, Pageable pageable);
 
-    Page<Review> findByStatusOrderBySubmittedAtDesc(ReviewStatus status, Pageable pageable);
+  Page<Review> findByStatusOrderBySubmittedAtDesc(ReviewStatus status, Pageable pageable);
 }

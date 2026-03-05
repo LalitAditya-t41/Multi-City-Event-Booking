@@ -12,6 +12,4 @@ public record PricingTierRequest(
     @NotNull @PositiveOrZero BigDecimal priceAmount,
     @NotBlank String currency,
     @NotNull @Positive Integer quota,
-    @NotNull TierType tierType
-) {
-}
+    @NotNull TierType tierType) {}

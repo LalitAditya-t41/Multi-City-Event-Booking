@@ -17,44 +17,44 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class CouponExpiryJob {
 
-    private static final Logger log = LoggerFactory.getLogger(CouponExpiryJob.class);
+  private static final Logger log = LoggerFactory.getLogger(CouponExpiryJob.class);
 
-    private final CouponRepository couponRepository;
-    private final CouponUsageReservationRepository reservationRepository;
-    private final DiscountSyncOrchestrator discountSyncOrchestrator;
+  private final CouponRepository couponRepository;
+  private final CouponUsageReservationRepository reservationRepository;
+  private final DiscountSyncOrchestrator discountSyncOrchestrator;
 
-    public CouponExpiryJob(
-        CouponRepository couponRepository,
-        CouponUsageReservationRepository reservationRepository,
-        DiscountSyncOrchestrator discountSyncOrchestrator
-    ) {
-        this.couponRepository = couponRepository;
-        this.reservationRepository = reservationRepository;
-        this.discountSyncOrchestrator = discountSyncOrchestrator;
+  public CouponExpiryJob(
+      CouponRepository couponRepository,
+      CouponUsageReservationRepository reservationRepository,
+      DiscountSyncOrchestrator discountSyncOrchestrator) {
+    this.couponRepository = couponRepository;
+    this.reservationRepository = reservationRepository;
+    this.discountSyncOrchestrator = discountSyncOrchestrator;
+  }
+
+  @Scheduled(cron = "${promotions.jobs.coupon-expiry-cron:0 0 * * * *}")
+  @Transactional
+  public void run() {
+    List<Coupon> expired = couponRepository.findExpiredActiveCoupons(Instant.now());
+    for (Coupon coupon : expired) {
+      try {
+        coupon.deactivate();
+        couponRepository.save(coupon);
+        reservationRepository.releaseAllByCouponId(coupon.getId());
+        discountSyncOrchestrator.guardedDelete(coupon.getId());
+      } catch (Exception ex) {
+        log.error("CouponExpiryJob failed for couponId={}", coupon.getId(), ex);
+      }
     }
 
-    @Scheduled(cron = "${promotions.jobs.coupon-expiry-cron:0 0 * * * *}")
-    @Transactional
-    public void run() {
-        List<Coupon> expired = couponRepository.findExpiredActiveCoupons(Instant.now());
-        for (Coupon coupon : expired) {
-            try {
-                coupon.deactivate();
-                couponRepository.save(coupon);
-                reservationRepository.releaseAllByCouponId(coupon.getId());
-                discountSyncOrchestrator.guardedDelete(coupon.getId());
-            } catch (Exception ex) {
-                log.error("CouponExpiryJob failed for couponId={}", coupon.getId(), ex);
-            }
-        }
-
-        List<Coupon> syncFailed = couponRepository.findByStatusAndEbSyncStatus(CouponStatus.ACTIVE, EbSyncStatus.SYNC_FAILED);
-        for (Coupon coupon : syncFailed) {
-            try {
-                discountSyncOrchestrator.createSync(coupon.getId());
-            } catch (Exception ex) {
-                log.warn("Coupon sync retry failed for couponId={}", coupon.getId(), ex);
-            }
-        }
+    List<Coupon> syncFailed =
+        couponRepository.findByStatusAndEbSyncStatus(CouponStatus.ACTIVE, EbSyncStatus.SYNC_FAILED);
+    for (Coupon coupon : syncFailed) {
+      try {
+        discountSyncOrchestrator.createSync(coupon.getId());
+      } catch (Exception ex) {
+        log.warn("Coupon sync retry failed for couponId={}", coupon.getId(), ex);
+      }
     }
+  }
 }

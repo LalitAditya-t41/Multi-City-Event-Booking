@@ -15,6 +15,4 @@ public record ReviewResponse(
     String rejectionReason,
     Instant submittedAt,
     Instant publishedAt,
-    String reviewerDisplayName
-) {
-}
+    String reviewerDisplayName) {}

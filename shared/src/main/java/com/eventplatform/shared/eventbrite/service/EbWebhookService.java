@@ -4,5 +4,6 @@ import com.eventplatform.shared.eventbrite.dto.response.EbWebhookRegistrationRes
 import java.util.List;
 
 public interface EbWebhookService {
-    EbWebhookRegistrationResult registerWebhook(String organizationId, String endpointUrl, List<String> actions, String eventId);
+  EbWebhookRegistrationResult registerWebhook(
+      String organizationId, String endpointUrl, List<String> actions, String eventId);
 }

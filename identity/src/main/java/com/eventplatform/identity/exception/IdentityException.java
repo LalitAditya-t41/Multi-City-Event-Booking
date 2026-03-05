@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 
 public class IdentityException extends BaseException {
 
-    public IdentityException(String message, String errorCode, HttpStatus status) {
-        super(message, errorCode, status);
-    }
+  public IdentityException(String message, String errorCode, HttpStatus status) {
+    super(message, errorCode, status);
+  }
 }

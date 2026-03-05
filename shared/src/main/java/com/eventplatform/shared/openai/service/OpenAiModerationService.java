@@ -14,46 +14,53 @@ import org.springframework.web.client.RestClient;
 @Service
 public class OpenAiModerationService {
 
-    private final RestClient restClient;
-    private final OpenAiProperties properties;
+  private final RestClient restClient;
+  private final OpenAiProperties properties;
 
-    public OpenAiModerationService(@Qualifier("openAiRestClient") RestClient restClient, OpenAiProperties properties) {
-        this.restClient = restClient;
-        this.properties = properties;
-    }
+  public OpenAiModerationService(
+      @Qualifier("openAiRestClient") RestClient restClient, OpenAiProperties properties) {
+    this.restClient = restClient;
+    this.properties = properties;
+  }
 
-    public ModerationResult moderate(String inputText) {
-        OpenAiModerationResponse response = restClient.post()
+  public ModerationResult moderate(String inputText) {
+    OpenAiModerationResponse response =
+        restClient
+            .post()
             .uri("/v1/moderations")
-            .body(Map.of(
-                "model", properties.getModerationModel(),
-                "input", inputText
-            ))
+            .body(Map.of("model", properties.getModerationModel(), "input", inputText))
             .retrieve()
-            .onStatus(HttpStatusCode::isError, (req, res) -> {
-                throw new IllegalStateException("OpenAI moderation failed with status " + res.getStatusCode());
-            })
+            .onStatus(
+                HttpStatusCode::isError,
+                (req, res) -> {
+                  throw new IllegalStateException(
+                      "OpenAI moderation failed with status " + res.getStatusCode());
+                })
             .body(OpenAiModerationResponse.class);
 
-        if (response == null || response.results() == null || response.results().isEmpty()) {
-            throw new IllegalStateException("OpenAI moderation returned no results");
-        }
+    if (response == null || response.results() == null || response.results().isEmpty()) {
+      throw new IllegalStateException("OpenAI moderation returned no results");
+    }
 
-        OpenAiModerationResponse.Result result = response.results().get(0);
-        Map<String, Double> scores = result.categoryScores() == null ? Map.of() : result.categoryScores();
-        List<String> flagged = new ArrayList<>();
+    OpenAiModerationResponse.Result result = response.results().get(0);
+    Map<String, Double> scores =
+        result.categoryScores() == null ? Map.of() : result.categoryScores();
+    List<String> flagged = new ArrayList<>();
 
-        if (result.categories() != null) {
-            result.categories().forEach((category, isFlagged) -> {
+    if (result.categories() != null) {
+      result
+          .categories()
+          .forEach(
+              (category, isFlagged) -> {
                 if (Boolean.TRUE.equals(isFlagged)) {
-                    flagged.add(category);
+                  flagged.add(category);
                 }
-            });
-        }
-
-        return new ModerationResult(result.flagged(), flagged, new LinkedHashMap<>(scores));
+              });
     }
 
-    public record ModerationResult(boolean flagged, List<String> flaggedCategories, Map<String, Double> categoryScores) {
-    }
+    return new ModerationResult(result.flagged(), flagged, new LinkedHashMap<>(scores));
+  }
+
+  public record ModerationResult(
+      boolean flagged, List<String> flaggedCategories, Map<String, Double> categoryScores) {}
 }

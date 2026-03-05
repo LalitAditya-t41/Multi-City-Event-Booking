@@ -11,6 +11,4 @@ public record EventCatalogSearchRequest(
     Instant startAfter,
     Instant startBefore,
     int page,
-    int size
-) {
-}
+    int size) {}

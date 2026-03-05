@@ -12,6 +12,4 @@ public record EbDiscountResponse(
     @JsonProperty("amount_off") Double amountOff,
     @JsonProperty("quantity_sold") Integer quantitySold,
     @JsonProperty("quantity_available") Integer quantityAvailable,
-    @JsonProperty("event_id") String eventId
-) {
-}
+    @JsonProperty("event_id") String eventId) {}

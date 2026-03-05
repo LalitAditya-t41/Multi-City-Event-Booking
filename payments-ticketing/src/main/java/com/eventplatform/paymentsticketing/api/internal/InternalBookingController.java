@@ -12,19 +12,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/internal/payments/bookings")
 public class InternalBookingController {
 
-    private final InternalBookingQueryService internalBookingQueryService;
+  private final InternalBookingQueryService internalBookingQueryService;
 
-    public InternalBookingController(InternalBookingQueryService internalBookingQueryService) {
-        this.internalBookingQueryService = internalBookingQueryService;
-    }
+  public InternalBookingController(InternalBookingQueryService internalBookingQueryService) {
+    this.internalBookingQueryService = internalBookingQueryService;
+  }
 
-    @GetMapping("/by-user-event")
-    public InternalBookingResponse byUserEvent(@RequestParam Long userId, @RequestParam Long eventId) {
-        return internalBookingQueryService.getByUserEvent(userId, eventId);
-    }
+  @GetMapping("/by-user-event")
+  public InternalBookingResponse byUserEvent(
+      @RequestParam Long userId, @RequestParam Long eventId) {
+    return internalBookingQueryService.getByUserEvent(userId, eventId);
+  }
 
-    @GetMapping("/{bookingId}")
-    public InternalBookingResponse byId(@PathVariable Long bookingId) {
-        return internalBookingQueryService.getByBookingId(bookingId);
-    }
+  @GetMapping("/{bookingId}")
+  public InternalBookingResponse byId(@PathVariable Long bookingId) {
+    return internalBookingQueryService.getByBookingId(bookingId);
+  }
 }

@@ -5,5 +5,5 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ShowSlotOccurrenceRepository extends JpaRepository<ShowSlotOccurrence, Long> {
-    List<ShowSlotOccurrence> findByParentSlotIdOrderByOccurrenceIndexAsc(Long parentSlotId);
+  List<ShowSlotOccurrence> findByParentSlotIdOrderByOccurrenceIndexAsc(Long parentSlotId);
 }

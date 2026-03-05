@@ -11,23 +11,22 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PreferenceOptionsService {
 
-    private final PreferenceOptionRepository preferenceOptionRepository;
-    private final PreferenceOptionMapper preferenceOptionMapper;
+  private final PreferenceOptionRepository preferenceOptionRepository;
+  private final PreferenceOptionMapper preferenceOptionMapper;
 
-    public PreferenceOptionsService(
-        PreferenceOptionRepository preferenceOptionRepository,
-        PreferenceOptionMapper preferenceOptionMapper
-    ) {
-        this.preferenceOptionRepository = preferenceOptionRepository;
-        this.preferenceOptionMapper = preferenceOptionMapper;
-    }
+  public PreferenceOptionsService(
+      PreferenceOptionRepository preferenceOptionRepository,
+      PreferenceOptionMapper preferenceOptionMapper) {
+    this.preferenceOptionRepository = preferenceOptionRepository;
+    this.preferenceOptionMapper = preferenceOptionMapper;
+  }
 
-    @Transactional(readOnly = true)
-    public PreferenceOptionsResponse listActiveOptions() {
-        List<PreferenceOptionItemResponse> options = preferenceOptionRepository.findByActiveTrueOrderByTypeAscSortOrderAscValueAsc()
-            .stream()
+  @Transactional(readOnly = true)
+  public PreferenceOptionsResponse listActiveOptions() {
+    List<PreferenceOptionItemResponse> options =
+        preferenceOptionRepository.findByActiveTrueOrderByTypeAscSortOrderAscValueAsc().stream()
             .map(preferenceOptionMapper::toItemResponse)
             .toList();
-        return new PreferenceOptionsResponse(options);
-    }
+    return new PreferenceOptionsResponse(options);
+  }
 }

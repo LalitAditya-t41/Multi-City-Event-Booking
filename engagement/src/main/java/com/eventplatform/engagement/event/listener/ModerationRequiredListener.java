@@ -10,15 +10,15 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class ModerationRequiredListener {
 
-    private final ModerationService moderationService;
+  private final ModerationService moderationService;
 
-    public ModerationRequiredListener(ModerationService moderationService) {
-        this.moderationService = moderationService;
-    }
+  public ModerationRequiredListener(ModerationService moderationService) {
+    this.moderationService = moderationService;
+  }
 
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onModerationRequired(ModerationRequiredEvent event) {
-        moderationService.triggerAutoModeration(event.reviewId());
-    }
+  @Async
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onModerationRequired(ModerationRequiredEvent event) {
+    moderationService.triggerAutoModeration(event.reviewId());
+  }
 }

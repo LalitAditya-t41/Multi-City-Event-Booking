@@ -6,6 +6,4 @@ public record CatalogSeatResponse(
     String rowLabel,
     String seatNumber,
     String tierName,
-    boolean accessible
-) {
-}
+    boolean accessible) {}

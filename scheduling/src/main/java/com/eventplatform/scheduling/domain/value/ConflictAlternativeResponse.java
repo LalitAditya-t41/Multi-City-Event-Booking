@@ -5,6 +5,4 @@ import java.util.List;
 public record ConflictAlternativeResponse(
     List<TimeWindowOption> sameVenueAlternatives,
     List<VenueOption> nearbyVenueAlternatives,
-    List<TimeWindowOption> adjustedTimeOptions
-) {
-}
+    List<TimeWindowOption> adjustedTimeOptions) {}

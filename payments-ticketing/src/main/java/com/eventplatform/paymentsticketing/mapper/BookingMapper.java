@@ -9,10 +9,10 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface BookingMapper {
 
-    @Mapping(target = "items", ignore = true)
-    @Mapping(source = "createdAt", target = "createdAt")
-    BookingResponse toResponse(Booking booking);
+  @Mapping(target = "items", ignore = true)
+  @Mapping(source = "createdAt", target = "createdAt")
+  BookingResponse toResponse(Booking booking);
 
-    @Mapping(source = "createdAt", target = "createdAt")
-    BookingSummaryResponse toSummaryResponse(Booking booking);
+  @Mapping(source = "createdAt", target = "createdAt")
+  BookingSummaryResponse toSummaryResponse(Booking booking);
 }

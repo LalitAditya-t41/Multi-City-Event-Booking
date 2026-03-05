@@ -7,6 +7,4 @@ public record DiscountBreakdownResponse(
     DiscountType discountType,
     long discountAmountInSmallestUnit,
     long adjustedCartTotalInSmallestUnit,
-    String currency
-) {
-}
+    String currency) {}

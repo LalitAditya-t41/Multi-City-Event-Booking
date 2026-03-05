@@ -6,6 +6,4 @@ public record CheckoutInitResponse(
     String paymentIntentId,
     String clientSecret,
     Long amountInSmallestUnit,
-    String currency
-) {
-}
+    String currency) {}

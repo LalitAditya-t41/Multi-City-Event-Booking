@@ -11,13 +11,13 @@ import org.springframework.web.client.RestClient;
 @EnableConfigurationProperties(OpenAiProperties.class)
 public class OpenAiConfig {
 
-    @Bean(name = "openAiRestClient")
-    public RestClient openAiRestClient(OpenAiProperties properties, RestClient.Builder builder) {
-        return builder
-            .baseUrl(properties.getBaseUrl())
-            .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getApiKey())
-            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-            .build();
-    }
+  @Bean(name = "openAiRestClient")
+  public RestClient openAiRestClient(OpenAiProperties properties, RestClient.Builder builder) {
+    return builder
+        .baseUrl(properties.getBaseUrl())
+        .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getApiKey())
+        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+        .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+        .build();
+  }
 }

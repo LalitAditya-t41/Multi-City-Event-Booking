@@ -10,6 +10,4 @@ public record DiscountReconciliationLogResponse(
     int orphansFound,
     int externallyDeletedFound,
     String actionsTakenSummary,
-    String errorSummary
-) {
-}
+    String errorSummary) {}

@@ -9,14 +9,14 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class PaymentFailedListener {
 
-    private final CartService cartService;
+  private final CartService cartService;
 
-    public PaymentFailedListener(CartService cartService) {
-        this.cartService = cartService;
-    }
+  public PaymentFailedListener(CartService cartService) {
+    this.cartService = cartService;
+  }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onPaymentFailed(PaymentFailedEvent event) {
-        cartService.onPaymentFailed(event.cartId(), event.seatIds(), event.userId());
-    }
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onPaymentFailed(PaymentFailedEvent event) {
+    cartService.onPaymentFailed(event.cartId(), event.seatIds(), event.userId());
+  }
 }

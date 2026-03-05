@@ -10,15 +10,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
-    Optional<Booking> findByBookingRef(String bookingRef);
+  Optional<Booking> findByBookingRef(String bookingRef);
 
-    Optional<Booking> findByCartId(Long cartId);
+  Optional<Booking> findByCartId(Long cartId);
 
-    boolean existsByCartIdAndStatus(Long cartId, BookingStatus status);
+  boolean existsByCartIdAndStatus(Long cartId, BookingStatus status);
 
-    Page<Booking> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+  Page<Booking> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
-    List<Booking> findBySlotIdAndStatus(Long slotId, BookingStatus status);
+  List<Booking> findBySlotIdAndStatus(Long slotId, BookingStatus status);
 
-    Optional<Booking> findTopByUserIdAndEventIdOrderByCreatedAtDesc(Long userId, Long eventId);
+  Optional<Booking> findTopByUserIdAndEventIdOrderByCreatedAtDesc(Long userId, Long eventId);
 }

@@ -7,15 +7,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CouponRedemptionRepository extends JpaRepository<CouponRedemption, Long> {
 
-    long countByCouponIdAndUserIdAndVoidedFalse(Long couponId, Long userId);
+  long countByCouponIdAndUserIdAndVoidedFalse(Long couponId, Long userId);
 
-    long countByCouponIdAndVoidedTrue(Long couponId);
+  long countByCouponIdAndVoidedTrue(Long couponId);
 
-    boolean existsByCouponIdAndVoidedFalse(Long couponId);
+  boolean existsByCouponIdAndVoidedFalse(Long couponId);
 
-    boolean existsByCouponIdAndBookingIdAndVoidedFalse(Long couponId, Long bookingId);
+  boolean existsByCouponIdAndBookingIdAndVoidedFalse(Long couponId, Long bookingId);
 
-    Optional<CouponRedemption> findByBookingIdAndVoidedFalse(Long bookingId);
+  Optional<CouponRedemption> findByBookingIdAndVoidedFalse(Long bookingId);
 
-    boolean existsByCouponIdInAndVoidedFalse(Collection<Long> couponIds);
+  boolean existsByCouponIdInAndVoidedFalse(Collection<Long> couponIds);
 }

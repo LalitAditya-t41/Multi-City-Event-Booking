@@ -12,6 +12,4 @@ public record PricingTierDto(
     String ebTicketClassId,
     String ebInventoryTierId,
     Integer groupDiscountThreshold,
-    BigDecimal groupDiscountPercent
-) {
-}
+    BigDecimal groupDiscountPercent) {}

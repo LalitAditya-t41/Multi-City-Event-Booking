@@ -21,81 +21,89 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SeatProvisioningService {
 
-    private final SeatRepository seatRepository;
-    private final GroupDiscountRuleRepository groupDiscountRuleRepository;
-    private final SlotPricingReader slotPricingReader;
-    private final CatalogSeatLayoutClient catalogSeatLayoutClient;
-    private final GaInventoryService gaInventoryService;
+  private final SeatRepository seatRepository;
+  private final GroupDiscountRuleRepository groupDiscountRuleRepository;
+  private final SlotPricingReader slotPricingReader;
+  private final CatalogSeatLayoutClient catalogSeatLayoutClient;
+  private final GaInventoryService gaInventoryService;
 
-    public SeatProvisioningService(
-        SeatRepository seatRepository,
-        GroupDiscountRuleRepository groupDiscountRuleRepository,
-        SlotPricingReader slotPricingReader,
-        CatalogSeatLayoutClient catalogSeatLayoutClient,
-        GaInventoryService gaInventoryService
-    ) {
-        this.seatRepository = seatRepository;
-        this.groupDiscountRuleRepository = groupDiscountRuleRepository;
-        this.slotPricingReader = slotPricingReader;
-        this.catalogSeatLayoutClient = catalogSeatLayoutClient;
-        this.gaInventoryService = gaInventoryService;
+  public SeatProvisioningService(
+      SeatRepository seatRepository,
+      GroupDiscountRuleRepository groupDiscountRuleRepository,
+      SlotPricingReader slotPricingReader,
+      CatalogSeatLayoutClient catalogSeatLayoutClient,
+      GaInventoryService gaInventoryService) {
+    this.seatRepository = seatRepository;
+    this.groupDiscountRuleRepository = groupDiscountRuleRepository;
+    this.slotPricingReader = slotPricingReader;
+    this.catalogSeatLayoutClient = catalogSeatLayoutClient;
+    this.gaInventoryService = gaInventoryService;
+  }
+
+  @Transactional
+  public void provision(Long slotId, Long venueId, SeatingMode seatingMode) {
+    List<PricingTierDto> tiers = slotPricingReader.getSlotPricing(slotId);
+    provisionGroupDiscountRules(slotId, tiers);
+
+    if (seatingMode == SeatingMode.GA) {
+      gaInventoryService.initCounters(slotId, tiers);
+      return;
     }
 
-    @Transactional
-    public void provision(Long slotId, Long venueId, SeatingMode seatingMode) {
-        List<PricingTierDto> tiers = slotPricingReader.getSlotPricing(slotId);
-        provisionGroupDiscountRules(slotId, tiers);
+    if (seatRepository.existsByShowSlotId(slotId)) {
+      return;
+    }
 
-        if (seatingMode == SeatingMode.GA) {
-            gaInventoryService.initCounters(slotId, tiers);
-            return;
-        }
+    Map<String, PricingTierDto> tierByName =
+        tiers.stream()
+            .collect(
+                Collectors.toMap(t -> normalize(t.tierName()), Function.identity(), (a, b) -> a));
 
-        if (seatRepository.existsByShowSlotId(slotId)) {
-            return;
-        }
-
-        Map<String, PricingTierDto> tierByName = tiers.stream()
-            .collect(Collectors.toMap(t -> normalize(t.tierName()), Function.identity(), (a, b) -> a));
-
-        List<CatalogSeatResponse> venueSeats = catalogSeatLayoutClient.getSeatLayout(venueId).seats();
-        List<Seat> seats = venueSeats.stream()
-            .map(venueSeat -> {
-                PricingTierDto tier = tierByName.get(normalize(venueSeat.tierName()));
-                if (tier == null) {
+    List<CatalogSeatResponse> venueSeats = catalogSeatLayoutClient.getSeatLayout(venueId).seats();
+    List<Seat> seats =
+        venueSeats.stream()
+            .map(
+                venueSeat -> {
+                  PricingTierDto tier = tierByName.get(normalize(venueSeat.tierName()));
+                  if (tier == null) {
                     return null;
-                }
-                return new Seat(
-                    slotId,
-                    tier.tierId(),
-                    tier.ebTicketClassId(),
-                    venueSeat.seatNumber(),
-                    venueSeat.rowLabel(),
-                    venueSeat.section()
-                );
-            })
+                  }
+                  return new Seat(
+                      slotId,
+                      tier.tierId(),
+                      tier.ebTicketClassId(),
+                      venueSeat.seatNumber(),
+                      venueSeat.rowLabel(),
+                      venueSeat.section());
+                })
             .filter(java.util.Objects::nonNull)
             .toList();
 
-        seatRepository.saveAll(seats);
-    }
+    seatRepository.saveAll(seats);
+  }
 
-    private void provisionGroupDiscountRules(Long slotId, List<PricingTierDto> tiers) {
-        if (!groupDiscountRuleRepository.findByShowSlotId(slotId).isEmpty()) {
-            return;
-        }
-        List<GroupDiscountRule> rules = tiers.stream()
-            .map(tier -> new GroupDiscountRule(
-                slotId,
-                tier.tierId(),
-                tier.groupDiscountThreshold() == null ? Integer.MAX_VALUE : tier.groupDiscountThreshold(),
-                tier.groupDiscountPercent() == null ? BigDecimal.ZERO : tier.groupDiscountPercent()
-            ))
+  private void provisionGroupDiscountRules(Long slotId, List<PricingTierDto> tiers) {
+    if (!groupDiscountRuleRepository.findByShowSlotId(slotId).isEmpty()) {
+      return;
+    }
+    List<GroupDiscountRule> rules =
+        tiers.stream()
+            .map(
+                tier ->
+                    new GroupDiscountRule(
+                        slotId,
+                        tier.tierId(),
+                        tier.groupDiscountThreshold() == null
+                            ? Integer.MAX_VALUE
+                            : tier.groupDiscountThreshold(),
+                        tier.groupDiscountPercent() == null
+                            ? BigDecimal.ZERO
+                            : tier.groupDiscountPercent()))
             .toList();
-        groupDiscountRuleRepository.saveAll(rules);
-    }
+    groupDiscountRuleRepository.saveAll(rules);
+  }
 
-    private String normalize(String value) {
-        return value == null ? "" : value.toLowerCase(Locale.ROOT).trim();
-    }
+  private String normalize(String value) {
+    return value == null ? "" : value.toLowerCase(Locale.ROOT).trim();
+  }
 }

@@ -18,6 +18,4 @@ public record VenueResponse(
     VenueSyncStatus syncStatus,
     String lastSyncError,
     Instant lastAttemptedAt,
-    Instant createdAt
-) {
-}
+    Instant createdAt) {}

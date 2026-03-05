@@ -12,6 +12,4 @@ public record BookingResponse(
     String currency,
     String stripePaymentIntentId,
     List<BookingItemResponse> items,
-    Instant createdAt
-) {
-}
+    Instant createdAt) {}

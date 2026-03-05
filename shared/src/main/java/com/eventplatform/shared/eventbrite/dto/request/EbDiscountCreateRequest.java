@@ -12,6 +12,4 @@ public record EbDiscountCreateRequest(
     @JsonProperty("start_date") String startDate,
     @JsonProperty("end_date") String endDate,
     @JsonProperty("quantity_available") Integer quantityAvailable,
-    @JsonProperty("event_id") String eventId
-) {
-}
+    @JsonProperty("event_id") String eventId) {}

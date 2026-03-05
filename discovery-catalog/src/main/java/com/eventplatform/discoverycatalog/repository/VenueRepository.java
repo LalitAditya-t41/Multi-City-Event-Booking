@@ -9,13 +9,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface VenueRepository extends JpaRepository<Venue, Long> {
-    Page<Venue> findByOrganizationIdAndCityId(Long organizationId, Long cityId, Pageable pageable);
+  Page<Venue> findByOrganizationIdAndCityId(Long organizationId, Long cityId, Pageable pageable);
 
-    Optional<Venue> findByEventbriteVenueId(String eventbriteVenueId);
+  Optional<Venue> findByEventbriteVenueId(String eventbriteVenueId);
 
-    List<Venue> findByOrganizationId(Long organizationId);
+  List<Venue> findByOrganizationId(Long organizationId);
 
-    List<Venue> findByCityId(Long cityId);
+  List<Venue> findByCityId(Long cityId);
 
-    Page<Venue> findBySyncStatus(VenueSyncStatus syncStatus, Pageable pageable);
+  Page<Venue> findBySyncStatus(VenueSyncStatus syncStatus, Pageable pageable);
 }

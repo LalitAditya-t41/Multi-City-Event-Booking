@@ -10,20 +10,18 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class SlotActivatedListener {
 
-    private final EventCatalogSyncService eventCatalogSyncService;
-    private final EventCatalogSnapshotCache snapshotCache;
+  private final EventCatalogSyncService eventCatalogSyncService;
+  private final EventCatalogSnapshotCache snapshotCache;
 
-    public SlotActivatedListener(
-        EventCatalogSyncService eventCatalogSyncService,
-        EventCatalogSnapshotCache snapshotCache
-    ) {
-        this.eventCatalogSyncService = eventCatalogSyncService;
-        this.snapshotCache = snapshotCache;
-    }
+  public SlotActivatedListener(
+      EventCatalogSyncService eventCatalogSyncService, EventCatalogSnapshotCache snapshotCache) {
+    this.eventCatalogSyncService = eventCatalogSyncService;
+    this.snapshotCache = snapshotCache;
+  }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onSlotActivated(ShowSlotActivatedEvent event) {
-        eventCatalogSyncService.sync(event.orgId(), event.cityId(), event.venueId());
-        snapshotCache.invalidate(event.orgId(), event.cityId());
-    }
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onSlotActivated(ShowSlotActivatedEvent event) {
+    eventCatalogSyncService.sync(event.orgId(), event.cityId(), event.venueId());
+    snapshotCache.invalidate(event.orgId(), event.cityId());
+  }
 }

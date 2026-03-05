@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class RefundFailedException extends IntegrationException {
 
-    public RefundFailedException(String message, String stripeError) {
-        super(message, "REFUND_FAILED", Map.of("stripeError", stripeError));
-    }
+  public RefundFailedException(String message, String stripeError) {
+    super(message, "REFUND_FAILED", Map.of("stripeError", stripeError));
+  }
 }

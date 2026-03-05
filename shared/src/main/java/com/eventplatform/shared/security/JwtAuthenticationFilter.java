@@ -15,42 +15,38 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    private final JwtTokenProvider jwtTokenProvider;
+  private final JwtTokenProvider jwtTokenProvider;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
-        this.jwtTokenProvider = jwtTokenProvider;
+  public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    this.jwtTokenProvider = jwtTokenProvider;
+  }
+
+  @Override
+  protected void doFilterInternal(
+      HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      throws ServletException, IOException {
+    String header = request.getHeader(SecurityConstants.AUTH_HEADER);
+    if (header == null || !header.startsWith(SecurityConstants.BEARER_PREFIX)) {
+      filterChain.doFilter(request, response);
+      return;
     }
 
-    @Override
-    protected void doFilterInternal(
-        HttpServletRequest request,
-        HttpServletResponse response,
-        FilterChain filterChain
-    ) throws ServletException, IOException {
-        String header = request.getHeader(SecurityConstants.AUTH_HEADER);
-        if (header == null || !header.startsWith(SecurityConstants.BEARER_PREFIX)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String token = header.substring(SecurityConstants.BEARER_PREFIX.length());
-        if (jwtTokenProvider.validateToken(token)) {
-            Long userId = jwtTokenProvider.extractUserId(token);
-            String role = jwtTokenProvider.extractRole(token);
-            Long orgId  = jwtTokenProvider.extractOrgId(token);
-            String email = jwtTokenProvider.extractEmail(token);
-            AuthenticatedUser principal = new AuthenticatedUser(userId, role, orgId, email);
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                principal,
-                null,
-                List.of(new SimpleGrantedAuthority("ROLE_" + role))
-            );
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-        } else {
-            SecurityContextHolder.clearContext();
-        }
-
-        filterChain.doFilter(request, response);
+    String token = header.substring(SecurityConstants.BEARER_PREFIX.length());
+    if (jwtTokenProvider.validateToken(token)) {
+      Long userId = jwtTokenProvider.extractUserId(token);
+      String role = jwtTokenProvider.extractRole(token);
+      Long orgId = jwtTokenProvider.extractOrgId(token);
+      String email = jwtTokenProvider.extractEmail(token);
+      AuthenticatedUser principal = new AuthenticatedUser(userId, role, orgId, email);
+      UsernamePasswordAuthenticationToken authentication =
+          new UsernamePasswordAuthenticationToken(
+              principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
+      authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+      SecurityContextHolder.getContext().setAuthentication(authentication);
+    } else {
+      SecurityContextHolder.clearContext();
     }
+
+    filterChain.doFilter(request, response);
+  }
 }

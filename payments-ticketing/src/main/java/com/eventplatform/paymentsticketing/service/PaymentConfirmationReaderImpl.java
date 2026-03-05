@@ -9,15 +9,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PaymentConfirmationReaderImpl implements PaymentConfirmationReader {
 
-    private final BookingRepository bookingRepository;
+  private final BookingRepository bookingRepository;
 
-    public PaymentConfirmationReaderImpl(BookingRepository bookingRepository) {
-        this.bookingRepository = bookingRepository;
-    }
+  public PaymentConfirmationReaderImpl(BookingRepository bookingRepository) {
+    this.bookingRepository = bookingRepository;
+  }
 
-    @Override
-    @Transactional(readOnly = true)
-    public boolean isPaymentConfirmed(Long cartId) {
-        return cartId != null && bookingRepository.existsByCartIdAndStatus(cartId, BookingStatus.CONFIRMED);
-    }
+  @Override
+  @Transactional(readOnly = true)
+  public boolean isPaymentConfirmed(Long cartId) {
+    return cartId != null
+        && bookingRepository.existsByCartIdAndStatus(cartId, BookingStatus.CONFIRMED);
+  }
 }

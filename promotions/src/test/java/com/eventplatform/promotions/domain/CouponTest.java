@@ -11,45 +11,46 @@ import org.junit.jupiter.api.Test;
 
 class CouponTest {
 
-    @Test
-    void recordRedemption_should_transition_to_EXHAUSTED_when_count_reaches_max_usage_limit() {
-        Coupon coupon = coupon();
-        for (int i = 0; i < 4; i++) {
-            coupon.recordRedemption(5);
-        }
-
-        coupon.recordRedemption(5);
-
-        assertThat(coupon.getRedemptionCount()).isEqualTo(5);
-        assertThat(coupon.getStatus()).isEqualTo(CouponStatus.EXHAUSTED);
+  @Test
+  void recordRedemption_should_transition_to_EXHAUSTED_when_count_reaches_max_usage_limit() {
+    Coupon coupon = coupon();
+    for (int i = 0; i < 4; i++) {
+      coupon.recordRedemption(5);
     }
 
-    @Test
-    void voidRedemption_should_revert_EXHAUSTED_to_ACTIVE() {
-        Coupon coupon = coupon();
-        for (int i = 0; i < 5; i++) {
-            coupon.recordRedemption(5);
-        }
-        assertThat(coupon.getStatus()).isEqualTo(CouponStatus.EXHAUSTED);
+    coupon.recordRedemption(5);
 
-        coupon.voidRedemption();
+    assertThat(coupon.getRedemptionCount()).isEqualTo(5);
+    assertThat(coupon.getStatus()).isEqualTo(CouponStatus.EXHAUSTED);
+  }
 
-        assertThat(coupon.getRedemptionCount()).isEqualTo(4);
-        assertThat(coupon.getStatus()).isEqualTo(CouponStatus.ACTIVE);
+  @Test
+  void voidRedemption_should_revert_EXHAUSTED_to_ACTIVE() {
+    Coupon coupon = coupon();
+    for (int i = 0; i < 5; i++) {
+      coupon.recordRedemption(5);
     }
+    assertThat(coupon.getStatus()).isEqualTo(CouponStatus.EXHAUSTED);
 
-    @Test
-    void canEbDelete_should_return_false_when_ebQuantitySoldAtLastSync_is_greater_than_zero() {
-        Coupon coupon = coupon();
-        coupon.markSynced("eb_123", 1);
+    coupon.voidRedemption();
 
-        boolean canDelete = coupon.canEbDelete();
+    assertThat(coupon.getRedemptionCount()).isEqualTo(4);
+    assertThat(coupon.getStatus()).isEqualTo(CouponStatus.ACTIVE);
+  }
 
-        assertThat(canDelete).isFalse();
-    }
+  @Test
+  void canEbDelete_should_return_false_when_ebQuantitySoldAtLastSync_is_greater_than_zero() {
+    Coupon coupon = coupon();
+    coupon.markSynced("eb_123", 1);
 
-    private Coupon coupon() {
-        Promotion promotion = new Promotion(
+    boolean canDelete = coupon.canEbDelete();
+
+    assertThat(canDelete).isFalse();
+  }
+
+  private Coupon coupon() {
+    Promotion promotion =
+        new Promotion(
             1L,
             "Promo",
             DiscountType.PERCENT_OFF,
@@ -59,8 +60,7 @@ class CouponTest {
             5,
             2,
             Instant.now().minusSeconds(3600),
-            Instant.now().plusSeconds(3600)
-        );
-        return new Coupon(promotion, 1L, "SAVE10");
-    }
+            Instant.now().plusSeconds(3600));
+    return new Coupon(promotion, 1L, "SAVE10");
+  }
 }

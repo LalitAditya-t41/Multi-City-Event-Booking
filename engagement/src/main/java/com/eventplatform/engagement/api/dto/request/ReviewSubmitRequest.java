@@ -10,6 +10,4 @@ public record ReviewSubmitRequest(
     @NotNull Long eventId,
     @NotNull @Min(1) @Max(5) Integer rating,
     @NotBlank @Size(max = 100) String title,
-    @NotBlank @Size(max = 2000) String body
-) {
-}
+    @NotBlank @Size(max = 2000) String body) {}

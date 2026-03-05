@@ -11,12 +11,12 @@ import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootConfiguration
 @EnableAutoConfiguration
-@ComponentScan(basePackageClasses = {
-    AuthController.class,
-    UserSettingsController.class,
-    PreferenceOptionsController.class,
-    UserWalletController.class,
-    GlobalExceptionHandler.class
-})
-public class IdentityTestApplication {
-}
+@ComponentScan(
+    basePackageClasses = {
+      AuthController.class,
+      UserSettingsController.class,
+      PreferenceOptionsController.class,
+      UserWalletController.class,
+      GlobalExceptionHandler.class
+    })
+public class IdentityTestApplication {}

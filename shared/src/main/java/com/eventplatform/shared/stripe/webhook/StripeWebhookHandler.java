@@ -15,47 +15,45 @@ import org.springframework.stereotype.Component;
 @Component
 public class StripeWebhookHandler {
 
-    private final StripeConfig stripeConfig;
+  private final StripeConfig stripeConfig;
 
-    public StripeWebhookHandler(StripeConfig stripeConfig) {
-        this.stripeConfig = stripeConfig;
-    }
+  public StripeWebhookHandler(StripeConfig stripeConfig) {
+    this.stripeConfig = stripeConfig;
+  }
 
-    /**
-     * Verifies the Stripe-Signature header and constructs a {@link StripeWebhookEvent}.
-     *
-     * @param payload       Raw HTTP request body as a string (must not be deserialized first).
-     * @param signatureHeader Value of the {@code Stripe-Signature} HTTP header.
-     * @return parsed and verified webhook event.
-     * @throws com.eventplatform.shared.stripe.exception.StripeWebhookSignatureException
-     *         if the signature is invalid or the payload is tampered.
-     */
-    public StripeWebhookEvent parse(String payload, String signatureHeader) {
-        try {
-            Event event = Webhook.constructEvent(
-                payload, signatureHeader, stripeConfig.getWebhookSecret());
+  /**
+   * Verifies the Stripe-Signature header and constructs a {@link StripeWebhookEvent}.
+   *
+   * @param payload Raw HTTP request body as a string (must not be deserialized first).
+   * @param signatureHeader Value of the {@code Stripe-Signature} HTTP header.
+   * @return parsed and verified webhook event.
+   * @throws com.eventplatform.shared.stripe.exception.StripeWebhookSignatureException if the
+   *     signature is invalid or the payload is tampered.
+   */
+  public StripeWebhookEvent parse(String payload, String signatureHeader) {
+    try {
+      Event event =
+          Webhook.constructEvent(payload, signatureHeader, stripeConfig.getWebhookSecret());
 
-            String objectId = event.getDataObjectDeserializer()
-                .getObject()
-                .map(obj -> {
+      String objectId =
+          event
+              .getDataObjectDeserializer()
+              .getObject()
+              .map(
+                  obj -> {
                     try {
-                        java.lang.reflect.Method getId = obj.getClass().getMethod("getId");
-                        return (String) getId.invoke(obj);
+                      java.lang.reflect.Method getId = obj.getClass().getMethod("getId");
+                      return (String) getId.invoke(obj);
                     } catch (Exception e) {
-                        return null;
+                      return null;
                     }
-                })
-                .orElse(null);
+                  })
+              .orElse(null);
 
-            return new StripeWebhookEvent(
-                event.getId(),
-                event.getType(),
-                objectId,
-                payload
-            );
-        } catch (SignatureVerificationException ex) {
-            throw new com.eventplatform.shared.stripe.exception.StripeWebhookSignatureException(
-                "Invalid Stripe webhook signature", ex);
-        }
+      return new StripeWebhookEvent(event.getId(), event.getType(), objectId, payload);
+    } catch (SignatureVerificationException ex) {
+      throw new com.eventplatform.shared.stripe.exception.StripeWebhookSignatureException(
+          "Invalid Stripe webhook signature", ex);
     }
+  }
 }

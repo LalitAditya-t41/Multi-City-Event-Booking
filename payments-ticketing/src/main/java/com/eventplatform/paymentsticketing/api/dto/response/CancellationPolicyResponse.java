@@ -8,14 +8,8 @@ public record CancellationPolicyResponse(
     Long orgId,
     CancellationPolicyScope scope,
     Long createdByAdminId,
-    List<TierResponse> tiers
-) {
+    List<TierResponse> tiers) {
 
-    public record TierResponse(
-        Long id,
-        Integer hoursBeforeEvent,
-        Integer refundPercent,
-        Integer sortOrder
-    ) {
-    }
+  public record TierResponse(
+      Long id, Integer hoursBeforeEvent, Integer refundPercent, Integer sortOrder) {}
 }

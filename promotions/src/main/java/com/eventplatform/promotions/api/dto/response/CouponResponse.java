@@ -15,6 +15,4 @@ public record CouponResponse(
     String ebDiscountId,
     Integer ebQuantitySoldAtLastSync,
     Instant lastEbSyncAt,
-    Instant createdAt
-) {
-}
+    Instant createdAt) {}

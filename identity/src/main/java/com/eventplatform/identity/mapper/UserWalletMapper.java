@@ -8,7 +8,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface UserWalletMapper {
 
-    @Mapping(target = "balance", source = "balance.amount")
-    @Mapping(target = "currency", source = "balance.currency")
-    UserWalletResponse toResponse(UserWallet wallet);
+  @Mapping(target = "balance", source = "balance.amount")
+  @Mapping(target = "currency", source = "balance.currency")
+  UserWalletResponse toResponse(UserWallet wallet);
 }
