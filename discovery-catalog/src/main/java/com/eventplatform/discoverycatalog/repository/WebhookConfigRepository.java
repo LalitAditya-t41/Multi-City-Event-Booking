@@ -7,7 +7,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WebhookConfigRepository extends JpaRepository<WebhookConfig, Long> {
-    Optional<WebhookConfig> findByOrganizationId(Long organizationId);
+  Optional<WebhookConfig> findByOrganizationId(Long organizationId);
 
-    List<WebhookConfig> findByLastWebhookAtBeforeOrLastWebhookAtIsNull(Instant cutoff);
+  List<WebhookConfig> findByLastWebhookAtBeforeOrLastWebhookAtIsNull(Instant cutoff);
 }

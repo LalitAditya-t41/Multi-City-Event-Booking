@@ -5,5 +5,5 @@ import java.util.List;
 
 public interface EbAttendeeService {
 
-    List<EbAttendeeResponse> getAttendeesByEvent(String orgToken, String eventId);
+  List<EbAttendeeResponse> getAttendeesByEvent(String orgToken, String eventId);
 }

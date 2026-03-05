@@ -12,6 +12,4 @@ public record UserSettingsUpsertRequest(
     String address,
     @NotNull Long preferredCityOptionId,
     @NotNull @Size(max = 3) List<Long> preferredGenreOptionIds,
-    @NotNull Boolean notificationOptIn
-) {
-}
+    @NotNull Boolean notificationOptIn) {}

@@ -5,7 +5,8 @@ import org.springframework.http.HttpStatus;
 
 public class ReviewAlreadySubmittedException extends BaseException {
 
-    public ReviewAlreadySubmittedException() {
-        super("Review already submitted for this event", "REVIEW_ALREADY_SUBMITTED", HttpStatus.CONFLICT);
-    }
+  public ReviewAlreadySubmittedException() {
+    super(
+        "Review already submitted for this event", "REVIEW_ALREADY_SUBMITTED", HttpStatus.CONFLICT);
+  }
 }

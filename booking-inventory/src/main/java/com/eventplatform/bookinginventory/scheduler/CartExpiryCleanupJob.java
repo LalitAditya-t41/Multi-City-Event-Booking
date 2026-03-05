@@ -23,59 +23,59 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class CartExpiryCleanupJob {
 
-    private final CartRepository cartRepository;
-    private final CartItemRepository cartItemRepository;
-    private final SeatRepository seatRepository;
-    private final SeatLockAuditLogRepository auditRepository;
-    private final SeatLockRedisService seatLockRedisService;
+  private final CartRepository cartRepository;
+  private final CartItemRepository cartItemRepository;
+  private final SeatRepository seatRepository;
+  private final SeatLockAuditLogRepository auditRepository;
+  private final SeatLockRedisService seatLockRedisService;
 
-    public CartExpiryCleanupJob(
-        CartRepository cartRepository,
-        CartItemRepository cartItemRepository,
-        SeatRepository seatRepository,
-        SeatLockAuditLogRepository auditRepository,
-        SeatLockRedisService seatLockRedisService
-    ) {
-        this.cartRepository = cartRepository;
-        this.cartItemRepository = cartItemRepository;
-        this.seatRepository = seatRepository;
-        this.auditRepository = auditRepository;
-        this.seatLockRedisService = seatLockRedisService;
-    }
+  public CartExpiryCleanupJob(
+      CartRepository cartRepository,
+      CartItemRepository cartItemRepository,
+      SeatRepository seatRepository,
+      SeatLockAuditLogRepository auditRepository,
+      SeatLockRedisService seatLockRedisService) {
+    this.cartRepository = cartRepository;
+    this.cartItemRepository = cartItemRepository;
+    this.seatRepository = seatRepository;
+    this.auditRepository = auditRepository;
+    this.seatLockRedisService = seatLockRedisService;
+  }
 
-    @Scheduled(fixedDelay = 300000)
-    @Transactional
-    public void expirePendingCarts() {
-        for (Cart cart : cartRepository.findByStatusAndExpiresAtBefore(CartStatus.PENDING, Instant.now())) {
-            cart.expire();
-            cartRepository.save(cart);
-            for (CartItem item : cartItemRepository.findByCartId(cart.getId())) {
-                if (item.getSeatId() == null) {
-                    continue;
-                }
-                Seat seat = seatRepository.findByIdWithLock(item.getSeatId()).orElse(null);
-                if (seat == null) {
-                    continue;
-                }
-                if (seat.getLockState() != SeatLockState.SOFT_LOCKED) {
-                    continue;
-                }
-                SeatLockState from = seat.getLockState();
-                seat.release(LockReleaseReason.CART_ABANDONED);
-                seatRepository.save(seat);
-                seatLockRedisService.release(seat.getId(), cart.getUserId());
-                auditRepository.save(new SeatLockAuditLog(
-                    seat.getId(),
-                    null,
-                    seat.getShowSlotId(),
-                    cart.getUserId(),
-                    from,
-                    SeatLockState.AVAILABLE,
-                    SeatLockEvent.RELEASE,
-                    LockReleaseReason.CART_ABANDONED.name(),
-                    null
-                ));
-            }
+  @Scheduled(fixedDelay = 300000)
+  @Transactional
+  public void expirePendingCarts() {
+    for (Cart cart :
+        cartRepository.findByStatusAndExpiresAtBefore(CartStatus.PENDING, Instant.now())) {
+      cart.expire();
+      cartRepository.save(cart);
+      for (CartItem item : cartItemRepository.findByCartId(cart.getId())) {
+        if (item.getSeatId() == null) {
+          continue;
         }
+        Seat seat = seatRepository.findByIdWithLock(item.getSeatId()).orElse(null);
+        if (seat == null) {
+          continue;
+        }
+        if (seat.getLockState() != SeatLockState.SOFT_LOCKED) {
+          continue;
+        }
+        SeatLockState from = seat.getLockState();
+        seat.release(LockReleaseReason.CART_ABANDONED);
+        seatRepository.save(seat);
+        seatLockRedisService.release(seat.getId(), cart.getUserId());
+        auditRepository.save(
+            new SeatLockAuditLog(
+                seat.getId(),
+                null,
+                seat.getShowSlotId(),
+                cart.getUserId(),
+                from,
+                SeatLockState.AVAILABLE,
+                SeatLockEvent.RELEASE,
+                LockReleaseReason.CART_ABANDONED.name(),
+                null));
+      }
     }
+  }
 }

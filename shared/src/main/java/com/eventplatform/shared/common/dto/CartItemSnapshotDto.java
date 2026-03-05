@@ -7,6 +7,4 @@ public record CartItemSnapshotDto(
     String ticketClassId,
     Long unitPrice,
     String currency,
-    Integer quantity
-) {
-}
+    Integer quantity) {}

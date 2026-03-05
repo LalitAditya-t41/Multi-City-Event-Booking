@@ -8,6 +8,4 @@ public record EbVenueCreateRequest(
     String country,
     String zipCode,
     String latitude,
-    String longitude
-) {
-}
+    String longitude) {}

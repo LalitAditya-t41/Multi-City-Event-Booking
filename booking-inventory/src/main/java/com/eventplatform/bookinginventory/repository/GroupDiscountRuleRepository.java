@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GroupDiscountRuleRepository extends JpaRepository<GroupDiscountRule, Long> {
 
-    Optional<GroupDiscountRule> findByShowSlotIdAndPricingTierId(Long showSlotId, Long pricingTierId);
+  Optional<GroupDiscountRule> findByShowSlotIdAndPricingTierId(Long showSlotId, Long pricingTierId);
 
-    List<GroupDiscountRule> findByShowSlotId(Long showSlotId);
+  List<GroupDiscountRule> findByShowSlotId(Long showSlotId);
 }

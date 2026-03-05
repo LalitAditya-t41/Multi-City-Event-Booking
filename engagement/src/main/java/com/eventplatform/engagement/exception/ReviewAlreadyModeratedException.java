@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 
 public class ReviewAlreadyModeratedException extends BaseException {
 
-    public ReviewAlreadyModeratedException() {
-        super("Review already moderated", "REVIEW_ALREADY_MODERATED", HttpStatus.CONFLICT);
-    }
+  public ReviewAlreadyModeratedException() {
+    super("Review already moderated", "REVIEW_ALREADY_MODERATED", HttpStatus.CONFLICT);
+  }
 }

@@ -9,5 +9,4 @@ import org.springframework.context.annotation.ComponentScan;
 @SpringBootConfiguration
 @EnableAutoConfiguration
 @ComponentScan(basePackageClasses = {EbWebhookController.class, GlobalExceptionHandler.class})
-public class SharedTestApplication {
-}
+public class SharedTestApplication {}

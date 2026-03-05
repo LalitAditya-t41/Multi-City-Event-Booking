@@ -41,3 +41,12 @@ def test_should_reset_mock_state(client):
     body = response.json()
     assert body["message"] == "Mock state cleared."
     assert "defaultConfig" in body
+
+
+def test_should_seed_heavy_profile(client):
+    response = client.post("/mock/seed", json={"profile": "heavy", "mode": "append"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["message"] == "Mock seed completed."
+    assert payload["profile"] == "heavy"

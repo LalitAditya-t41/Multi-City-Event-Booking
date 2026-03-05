@@ -9,6 +9,4 @@ public record BookingSummaryResponse(
     BookingStatus status,
     Long totalAmount,
     String currency,
-    Instant createdAt
-) {
-}
+    Instant createdAt) {}

@@ -12,54 +12,68 @@ import org.springframework.web.client.RestClientResponseException;
 @Service
 public class SchedulingAdminClient {
 
-    private final RestClient restClient;
+  private final RestClient restClient;
 
-    public SchedulingAdminClient(@Value("${app.internal-base-url:http://localhost:8080}") String baseUrl) {
-        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
-    }
+  public SchedulingAdminClient(
+      @Value("${app.internal-base-url:http://localhost:8080}") String baseUrl) {
+    this.restClient = RestClient.builder().baseUrl(baseUrl).build();
+  }
 
-    public List<SchedulingSlotResponse> getPendingSyncSlots(Long orgId) {
-        try {
-            PageResponse<SchedulingSlotResponse> response = restClient.get()
-                .uri(uriBuilder -> uriBuilder
-                    .path("/api/v1/scheduling/slots")
-                    .queryParam("orgId", orgId)
-                    .queryParam("status", "PENDING_SYNC")
-                    .build())
-                .retrieve()
-                .body(new ParameterizedTypeReference<>() {});
-            return response == null ? List.of() : response.items();
-        } catch (RestClientResponseException ex) {
-            throw new IntegrationException("Failed to fetch pending sync slots", "SCHEDULING_INTEGRATION_ERROR");
-        }
+  public List<SchedulingSlotResponse> getPendingSyncSlots(Long orgId) {
+    try {
+      PageResponse<SchedulingSlotResponse> response =
+          restClient
+              .get()
+              .uri(
+                  uriBuilder ->
+                      uriBuilder
+                          .path("/api/v1/scheduling/slots")
+                          .queryParam("orgId", orgId)
+                          .queryParam("status", "PENDING_SYNC")
+                          .build())
+              .retrieve()
+              .body(new ParameterizedTypeReference<>() {});
+      return response == null ? List.of() : response.items();
+    } catch (RestClientResponseException ex) {
+      throw new IntegrationException(
+          "Failed to fetch pending sync slots", "SCHEDULING_INTEGRATION_ERROR");
     }
+  }
 
-    public List<SchedulingSlotResponse> getMismatchSlots(Long orgId) {
-        try {
-            PageResponse<SchedulingSlotResponse> response = restClient.get()
-                .uri(uriBuilder -> uriBuilder
-                    .path("/api/v1/scheduling/slots/mismatches")
-                    .queryParam("orgId", orgId)
-                    .build())
-                .retrieve()
-                .body(new ParameterizedTypeReference<>() {});
-            return response == null ? List.of() : response.items();
-        } catch (RestClientResponseException ex) {
-            throw new IntegrationException("Failed to fetch mismatch slots", "SCHEDULING_INTEGRATION_ERROR");
-        }
+  public List<SchedulingSlotResponse> getMismatchSlots(Long orgId) {
+    try {
+      PageResponse<SchedulingSlotResponse> response =
+          restClient
+              .get()
+              .uri(
+                  uriBuilder ->
+                      uriBuilder
+                          .path("/api/v1/scheduling/slots/mismatches")
+                          .queryParam("orgId", orgId)
+                          .build())
+              .retrieve()
+              .body(new ParameterizedTypeReference<>() {});
+      return response == null ? List.of() : response.items();
+    } catch (RestClientResponseException ex) {
+      throw new IntegrationException(
+          "Failed to fetch mismatch slots", "SCHEDULING_INTEGRATION_ERROR");
     }
+  }
 
-    public SchedulingSlotCancelResponse cancelSlot(Long orgId, Long slotId) {
-        try {
-            return restClient.post()
-                .uri(uriBuilder -> uriBuilder
-                    .path("/api/v1/scheduling/slots/{slotId}/cancel")
-                    .queryParam("orgId", orgId)
-                    .build(slotId))
-                .retrieve()
-                .body(SchedulingSlotCancelResponse.class);
-        } catch (RestClientResponseException ex) {
-            throw new IntegrationException("Failed to cancel slot", "SCHEDULING_INTEGRATION_ERROR");
-        }
+  public SchedulingSlotCancelResponse cancelSlot(Long orgId, Long slotId) {
+    try {
+      return restClient
+          .post()
+          .uri(
+              uriBuilder ->
+                  uriBuilder
+                      .path("/api/v1/scheduling/slots/{slotId}/cancel")
+                      .queryParam("orgId", orgId)
+                      .build(slotId))
+          .retrieve()
+          .body(SchedulingSlotCancelResponse.class);
+    } catch (RestClientResponseException ex) {
+      throw new IntegrationException("Failed to cancel slot", "SCHEDULING_INTEGRATION_ERROR");
     }
+  }
 }

@@ -11,16 +11,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/catalog")
 public class CityCatalogController {
 
-    private final CityCatalogService cityCatalogService;
-    private final Long defaultOrgId;
+  private final CityCatalogService cityCatalogService;
+  private final Long defaultOrgId;
 
-    public CityCatalogController(CityCatalogService cityCatalogService, @Value("${app.default-org-id}") Long defaultOrgId) {
-        this.cityCatalogService = cityCatalogService;
-        this.defaultOrgId = defaultOrgId;
-    }
+  public CityCatalogController(
+      CityCatalogService cityCatalogService, @Value("${app.default-org-id}") Long defaultOrgId) {
+    this.cityCatalogService = cityCatalogService;
+    this.defaultOrgId = defaultOrgId;
+  }
 
-    @GetMapping("/cities")
-    public CityListResponse listCities() {
-        return cityCatalogService.listCities(defaultOrgId);
-    }
+  @GetMapping("/cities")
+  public CityListResponse listCities() {
+    return cityCatalogService.listCities(defaultOrgId);
+  }
 }

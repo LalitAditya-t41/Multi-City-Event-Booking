@@ -23,118 +23,118 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @EntityListeners(AuditingEntityListener.class)
 public class ShowSlotOccurrence {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_slot_id", nullable = false)
-    private ShowSlot parentSlot;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "parent_slot_id", nullable = false)
+  private ShowSlot parentSlot;
 
-    @Column(name = "occurrence_index", nullable = false)
-    private Integer occurrenceIndex;
+  @Column(name = "occurrence_index", nullable = false)
+  private Integer occurrenceIndex;
 
-    @Column(name = "start_time", nullable = false)
-    private ZonedDateTime startTime;
+  @Column(name = "start_time", nullable = false)
+  private ZonedDateTime startTime;
 
-    @Column(name = "end_time", nullable = false)
-    private ZonedDateTime endTime;
+  @Column(name = "end_time", nullable = false)
+  private ZonedDateTime endTime;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private ShowSlotStatus status = ShowSlotStatus.ACTIVE;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "status", nullable = false)
+  private ShowSlotStatus status = ShowSlotStatus.ACTIVE;
 
-    @Column(name = "eb_event_id")
-    private String ebEventId;
+  @Column(name = "eb_event_id")
+  private String ebEventId;
 
-    @Column(name = "sync_attempt_count", nullable = false)
-    private int syncAttemptCount;
+  @Column(name = "sync_attempt_count", nullable = false)
+  private int syncAttemptCount;
 
-    @Column(name = "last_sync_error")
-    private String lastSyncError;
+  @Column(name = "last_sync_error")
+  private String lastSyncError;
 
-    @Column(name = "last_attempted_at")
-    private Instant lastAttemptedAt;
+  @Column(name = "last_attempted_at")
+  private Instant lastAttemptedAt;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
+  @CreatedDate
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private Instant createdAt;
 
-    protected ShowSlotOccurrence() {
-    }
+  protected ShowSlotOccurrence() {}
 
-    public ShowSlotOccurrence(Integer occurrenceIndex, ZonedDateTime startTime, ZonedDateTime endTime) {
-        this.occurrenceIndex = occurrenceIndex;
-        this.startTime = startTime;
-        this.endTime = endTime;
-    }
+  public ShowSlotOccurrence(
+      Integer occurrenceIndex, ZonedDateTime startTime, ZonedDateTime endTime) {
+    this.occurrenceIndex = occurrenceIndex;
+    this.startTime = startTime;
+    this.endTime = endTime;
+  }
 
-    public Long getId() {
-        return id;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public ShowSlot getParentSlot() {
-        return parentSlot;
-    }
+  public ShowSlot getParentSlot() {
+    return parentSlot;
+  }
 
-    public Integer getOccurrenceIndex() {
-        return occurrenceIndex;
-    }
+  public Integer getOccurrenceIndex() {
+    return occurrenceIndex;
+  }
 
-    public ZonedDateTime getStartTime() {
-        return startTime;
-    }
+  public ZonedDateTime getStartTime() {
+    return startTime;
+  }
 
-    public ZonedDateTime getEndTime() {
-        return endTime;
-    }
+  public ZonedDateTime getEndTime() {
+    return endTime;
+  }
 
-    public ShowSlotStatus getStatus() {
-        return status;
-    }
+  public ShowSlotStatus getStatus() {
+    return status;
+  }
 
-    public String getEbEventId() {
-        return ebEventId;
-    }
+  public String getEbEventId() {
+    return ebEventId;
+  }
 
-    public int getSyncAttemptCount() {
-        return syncAttemptCount;
-    }
+  public int getSyncAttemptCount() {
+    return syncAttemptCount;
+  }
 
-    public String getLastSyncError() {
-        return lastSyncError;
-    }
+  public String getLastSyncError() {
+    return lastSyncError;
+  }
 
-    public Instant getLastAttemptedAt() {
-        return lastAttemptedAt;
-    }
+  public Instant getLastAttemptedAt() {
+    return lastAttemptedAt;
+  }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
+  public Instant getCreatedAt() {
+    return createdAt;
+  }
 
-    public void attachTo(ShowSlot parentSlot) {
-        this.parentSlot = parentSlot;
-    }
+  public void attachTo(ShowSlot parentSlot) {
+    this.parentSlot = parentSlot;
+  }
 
-    public void markPendingSync() {
-        this.status = ShowSlotStatus.PENDING_SYNC;
-    }
+  public void markPendingSync() {
+    this.status = ShowSlotStatus.PENDING_SYNC;
+  }
 
-    public void markActive() {
-        this.status = ShowSlotStatus.ACTIVE;
-        this.syncAttemptCount = 0;
-        this.lastSyncError = null;
-        this.lastAttemptedAt = null;
-    }
+  public void markActive() {
+    this.status = ShowSlotStatus.ACTIVE;
+    this.syncAttemptCount = 0;
+    this.lastSyncError = null;
+    this.lastAttemptedAt = null;
+  }
 
-    public void recordSyncFailure(String error) {
-        this.syncAttemptCount++;
-        this.lastSyncError = error;
-        this.lastAttemptedAt = Instant.now();
-    }
+  public void recordSyncFailure(String error) {
+    this.syncAttemptCount++;
+    this.lastSyncError = error;
+    this.lastAttemptedAt = Instant.now();
+  }
 
-    public void setEbEventId(String ebEventId) {
-        this.ebEventId = ebEventId;
-    }
+  public void setEbEventId(String ebEventId) {
+    this.ebEventId = ebEventId;
+  }
 }

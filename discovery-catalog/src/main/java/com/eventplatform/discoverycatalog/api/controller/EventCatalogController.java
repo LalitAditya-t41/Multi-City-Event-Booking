@@ -16,35 +16,32 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/catalog")
 public class EventCatalogController {
 
-    private final EventCatalogService eventCatalogService;
-    private final Long defaultOrgId;
+  private final EventCatalogService eventCatalogService;
+  private final Long defaultOrgId;
 
-    public EventCatalogController(EventCatalogService eventCatalogService, @Value("${app.default-org-id}") Long defaultOrgId) {
-        this.eventCatalogService = eventCatalogService;
-        this.defaultOrgId = defaultOrgId;
-    }
+  public EventCatalogController(
+      EventCatalogService eventCatalogService, @Value("${app.default-org-id}") Long defaultOrgId) {
+    this.eventCatalogService = eventCatalogService;
+    this.defaultOrgId = defaultOrgId;
+  }
 
-    @GetMapping("/events")
-    public EventCatalogSearchResponse searchEvents(
-        @RequestParam(name = "cityId") Long cityId,
-        @RequestParam(name = "venueId", required = false) Long venueId,
-        @RequestParam(name = "q", required = false) String q,
-        @RequestParam(name = "state", required = false) EventState state,
-        @RequestParam(name = "startAfter", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startAfter,
-        @RequestParam(name = "startBefore", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startBefore,
-        @RequestParam(name = "page", defaultValue = "0") int page,
-        @RequestParam(name = "size", defaultValue = "20") int size
-    ) {
-        EventCatalogSearchRequest request = new EventCatalogSearchRequest(
-            cityId,
-            venueId,
-            q,
-            state,
-            startAfter,
-            startBefore,
-            page,
-            size
-        );
-        return eventCatalogService.search(defaultOrgId, request);
-    }
+  @GetMapping("/events")
+  public EventCatalogSearchResponse searchEvents(
+      @RequestParam(name = "cityId") Long cityId,
+      @RequestParam(name = "venueId", required = false) Long venueId,
+      @RequestParam(name = "q", required = false) String q,
+      @RequestParam(name = "state", required = false) EventState state,
+      @RequestParam(name = "startAfter", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          Instant startAfter,
+      @RequestParam(name = "startBefore", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          Instant startBefore,
+      @RequestParam(name = "page", defaultValue = "0") int page,
+      @RequestParam(name = "size", defaultValue = "20") int size) {
+    EventCatalogSearchRequest request =
+        new EventCatalogSearchRequest(
+            cityId, venueId, q, state, startAfter, startBefore, page, size);
+    return eventCatalogService.search(defaultOrgId, request);
+  }
 }

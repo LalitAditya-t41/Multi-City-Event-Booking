@@ -16,85 +16,91 @@ import java.time.Instant;
 @Table(name = "booking_items")
 public class BookingItem {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(name = "booking_id", nullable = false)
-    private Long bookingId;
+  @Column(name = "booking_id", nullable = false)
+  private Long bookingId;
 
-    @Column(name = "seat_id")
-    private Long seatId;
+  @Column(name = "seat_id")
+  private Long seatId;
 
-    @Column(name = "ga_claim_id")
-    private Long gaClaimId;
+  @Column(name = "ga_claim_id")
+  private Long gaClaimId;
 
-    @Column(name = "ticket_class_id", nullable = false)
-    private String ticketClassId;
+  @Column(name = "ticket_class_id", nullable = false)
+  private String ticketClassId;
 
-    @Column(name = "unit_price", nullable = false)
-    private Long unitPrice;
+  @Column(name = "unit_price", nullable = false)
+  private Long unitPrice;
 
-    @Column(name = "currency", nullable = false)
-    private String currency;
+  @Column(name = "currency", nullable = false)
+  private String currency;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private BookingItemStatus status;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "status", nullable = false)
+  private BookingItemStatus status;
 
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
+  @Column(name = "created_at", nullable = false)
+  private Instant createdAt;
 
-    protected BookingItem() {
+  protected BookingItem() {}
+
+  public BookingItem(
+      Long bookingId,
+      Long seatId,
+      Long gaClaimId,
+      String ticketClassId,
+      Long unitPrice,
+      String currency) {
+    this.bookingId = bookingId;
+    this.seatId = seatId;
+    this.gaClaimId = gaClaimId;
+    this.ticketClassId = ticketClassId;
+    this.unitPrice = unitPrice;
+    this.currency = currency;
+    this.status = BookingItemStatus.ACTIVE;
+    this.createdAt = Instant.now();
+  }
+
+  public void cancel() {
+    if (this.status == BookingItemStatus.CANCELLED) {
+      throw new BusinessRuleException(
+          "Booking item already cancelled", "DUPLICATE_ITEM_CANCELLATION");
     }
+    this.status = BookingItemStatus.CANCELLED;
+  }
 
-    public BookingItem(Long bookingId, Long seatId, Long gaClaimId, String ticketClassId, Long unitPrice, String currency) {
-        this.bookingId = bookingId;
-        this.seatId = seatId;
-        this.gaClaimId = gaClaimId;
-        this.ticketClassId = ticketClassId;
-        this.unitPrice = unitPrice;
-        this.currency = currency;
-        this.status = BookingItemStatus.ACTIVE;
-        this.createdAt = Instant.now();
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public void cancel() {
-        if (this.status == BookingItemStatus.CANCELLED) {
-            throw new BusinessRuleException("Booking item already cancelled", "DUPLICATE_ITEM_CANCELLATION");
-        }
-        this.status = BookingItemStatus.CANCELLED;
-    }
+  public Long getBookingId() {
+    return bookingId;
+  }
 
-    public Long getId() {
-        return id;
-    }
+  public Long getSeatId() {
+    return seatId;
+  }
 
-    public Long getBookingId() {
-        return bookingId;
-    }
+  public Long getGaClaimId() {
+    return gaClaimId;
+  }
 
-    public Long getSeatId() {
-        return seatId;
-    }
+  public String getTicketClassId() {
+    return ticketClassId;
+  }
 
-    public Long getGaClaimId() {
-        return gaClaimId;
-    }
+  public Long getUnitPrice() {
+    return unitPrice;
+  }
 
-    public String getTicketClassId() {
-        return ticketClassId;
-    }
+  public String getCurrency() {
+    return currency;
+  }
 
-    public Long getUnitPrice() {
-        return unitPrice;
-    }
-
-    public String getCurrency() {
-        return currency;
-    }
-
-    public BookingItemStatus getStatus() {
-        return status;
-    }
+  public BookingItemStatus getStatus() {
+    return status;
+  }
 }

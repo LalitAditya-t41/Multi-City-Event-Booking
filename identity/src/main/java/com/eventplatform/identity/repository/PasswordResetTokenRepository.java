@@ -10,16 +10,18 @@ import org.springframework.data.repository.query.Param;
 
 public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, Long> {
 
-    Optional<PasswordResetToken> findByTokenHash(String tokenHash);
+  Optional<PasswordResetToken> findByTokenHash(String tokenHash);
 
-    Optional<PasswordResetToken> findTopByUserIdOrderByCreatedAtDesc(Long userId);
+  Optional<PasswordResetToken> findTopByUserIdOrderByCreatedAtDesc(Long userId);
 
-    @Modifying
-    @Query("""
+  @Modifying
+  @Query(
+      """
         update PasswordResetToken prt
         set prt.consumedAt = :consumedAt
         where prt.user.id = :userId
           and prt.consumedAt is null
         """)
-    int invalidateActiveByUserId(@Param("userId") Long userId, @Param("consumedAt") Instant consumedAt);
+  int invalidateActiveByUserId(
+      @Param("userId") Long userId, @Param("consumedAt") Instant consumedAt);
 }

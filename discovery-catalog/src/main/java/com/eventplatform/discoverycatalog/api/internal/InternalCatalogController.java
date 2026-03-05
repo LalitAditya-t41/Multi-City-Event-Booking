@@ -11,14 +11,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/internal/catalog/events")
 public class InternalCatalogController {
 
-    private final InternalCatalogQueryService internalCatalogQueryService;
+  private final InternalCatalogQueryService internalCatalogQueryService;
 
-    public InternalCatalogController(InternalCatalogQueryService internalCatalogQueryService) {
-        this.internalCatalogQueryService = internalCatalogQueryService;
-    }
+  public InternalCatalogController(InternalCatalogQueryService internalCatalogQueryService) {
+    this.internalCatalogQueryService = internalCatalogQueryService;
+  }
 
-    @GetMapping("/{eventId}/eb-metadata")
-    public EventEbMetadataResponse eventMetadata(@PathVariable Long eventId) {
-        return internalCatalogQueryService.getEventEbMetadata(eventId);
-    }
+  @GetMapping("/{eventId}/eb-metadata")
+  public EventEbMetadataResponse eventMetadata(@PathVariable Long eventId) {
+    return internalCatalogQueryService.getEventEbMetadata(eventId);
+  }
 }

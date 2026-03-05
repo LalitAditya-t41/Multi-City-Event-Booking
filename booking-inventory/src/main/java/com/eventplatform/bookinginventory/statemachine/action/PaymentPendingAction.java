@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class PaymentPendingAction {
 
-    public void apply(Seat seat, SeatActionContext context) {
-        seat.markPaymentPending();
-    }
+  public void apply(Seat seat, SeatActionContext context) {
+    seat.markPaymentPending();
+  }
 }

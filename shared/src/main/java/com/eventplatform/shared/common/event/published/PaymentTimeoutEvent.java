@@ -2,9 +2,4 @@ package com.eventplatform.shared.common.event.published;
 
 import java.util.List;
 
-public record PaymentTimeoutEvent(
-    Long cartId,
-    List<Long> seatIds,
-    Long userId
-) {
-}
+public record PaymentTimeoutEvent(Long cartId, List<Long> seatIds, Long userId) {}

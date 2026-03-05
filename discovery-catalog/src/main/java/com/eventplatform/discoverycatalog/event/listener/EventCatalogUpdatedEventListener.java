@@ -9,10 +9,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class EventCatalogUpdatedEventListener {
 
-    private static final Logger log = LoggerFactory.getLogger(EventCatalogUpdatedEventListener.class);
+  private static final Logger log = LoggerFactory.getLogger(EventCatalogUpdatedEventListener.class);
 
-    @EventListener
-    public void onCatalogUpdated(EventCatalogUpdatedEvent event) {
-        log.info("Catalog updated. orgId={} cityId={} venueId={}", event.organizationId(), event.cityId(), event.venueId());
-    }
+  @EventListener
+  public void onCatalogUpdated(EventCatalogUpdatedEvent event) {
+    log.info(
+        "Catalog updated. orgId={} cityId={} venueId={}",
+        event.organizationId(),
+        event.cityId(),
+        event.venueId());
+  }
 }

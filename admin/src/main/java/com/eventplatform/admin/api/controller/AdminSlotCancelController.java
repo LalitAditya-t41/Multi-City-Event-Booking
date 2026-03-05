@@ -14,18 +14,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/slots")
 public class AdminSlotCancelController {
 
-    private final SchedulingAdminClient schedulingAdminClient;
+  private final SchedulingAdminClient schedulingAdminClient;
 
-    public AdminSlotCancelController(SchedulingAdminClient schedulingAdminClient) {
-        this.schedulingAdminClient = schedulingAdminClient;
-    }
+  public AdminSlotCancelController(SchedulingAdminClient schedulingAdminClient) {
+    this.schedulingAdminClient = schedulingAdminClient;
+  }
 
-    @PostMapping("/{slotId}/cancel")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public SchedulingSlotCancelResponse cancelSlot(
-        @PathVariable Long slotId,
-        @RequestParam("orgId") Long orgId
-    ) {
-        return schedulingAdminClient.cancelSlot(orgId, slotId);
-    }
+  @PostMapping("/{slotId}/cancel")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public SchedulingSlotCancelResponse cancelSlot(
+      @PathVariable Long slotId, @RequestParam("orgId") Long orgId) {
+    return schedulingAdminClient.cancelSlot(orgId, slotId);
+  }
 }

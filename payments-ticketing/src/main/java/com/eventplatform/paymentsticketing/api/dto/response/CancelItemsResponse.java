@@ -7,15 +7,8 @@ public record CancelItemsResponse(
     String bookingRef,
     BookingStatus bookingStatus,
     List<Long> cancelledItemIds,
-    ItemCancellationRefundResponse refund
-) {
+    ItemCancellationRefundResponse refund) {
 
-    public record ItemCancellationRefundResponse(
-        String type,
-        Integer percent,
-        Long amount,
-        String currency,
-        String status
-    ) {
-    }
+  public record ItemCancellationRefundResponse(
+      String type, Integer percent, Long amount, String currency, String status) {}
 }

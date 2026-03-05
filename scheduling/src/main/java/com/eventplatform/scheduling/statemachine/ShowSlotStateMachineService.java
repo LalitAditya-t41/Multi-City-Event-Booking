@@ -10,22 +10,21 @@ import org.springframework.stereotype.Service;
 @Service
 public class ShowSlotStateMachineService {
 
-    private final SlotTransitionGuard guard;
-    private final SlotStatusUpdateAction action;
+  private final SlotTransitionGuard guard;
+  private final SlotStatusUpdateAction action;
 
-    public ShowSlotStateMachineService(SlotTransitionGuard guard, SlotStatusUpdateAction action) {
-        this.guard = guard;
-        this.action = action;
-    }
+  public ShowSlotStateMachineService(SlotTransitionGuard guard, SlotStatusUpdateAction action) {
+    this.guard = guard;
+    this.action = action;
+  }
 
-    public void sendEvent(ShowSlot slot, ShowSlotEvent event) {
-        ShowSlotStatus nextStatus = guard.resolveNextStatus(slot.getStatus(), event);
-        if (nextStatus == null) {
-            throw new BusinessRuleException(
-                "Invalid slot transition: " + slot.getStatus() + " -> " + event,
-                "INVALID_SLOT_TRANSITION"
-            );
-        }
-        action.apply(slot, nextStatus);
+  public void sendEvent(ShowSlot slot, ShowSlotEvent event) {
+    ShowSlotStatus nextStatus = guard.resolveNextStatus(slot.getStatus(), event);
+    if (nextStatus == null) {
+      throw new BusinessRuleException(
+          "Invalid slot transition: " + slot.getStatus() + " -> " + event,
+          "INVALID_SLOT_TRANSITION");
     }
+    action.apply(slot, nextStatus);
+  }
 }

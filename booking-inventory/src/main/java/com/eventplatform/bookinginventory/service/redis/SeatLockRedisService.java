@@ -9,10 +9,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class SeatLockRedisService {
 
-    public enum AcquireResult { ACQUIRED, ALREADY_YOURS, CONFLICT }
+  public enum AcquireResult {
+    ACQUIRED,
+    ALREADY_YOURS,
+    CONFLICT
+  }
 
-    private static final DefaultRedisScript<String> ACQUIRE_SCRIPT = new DefaultRedisScript<>(
-        """
+  private static final DefaultRedisScript<String> ACQUIRE_SCRIPT =
+      new DefaultRedisScript<>(
+          """
             local key = KEYS[1]
             local owner = ARGV[1]
             local ttl = tonumber(ARGV[2])
@@ -26,11 +31,11 @@ public class SeatLockRedisService {
             end
             return 'CONFLICT'
             """,
-        String.class
-    );
+          String.class);
 
-    private static final DefaultRedisScript<String> RELEASE_SCRIPT = new DefaultRedisScript<>(
-        """
+  private static final DefaultRedisScript<String> RELEASE_SCRIPT =
+      new DefaultRedisScript<>(
+          """
             local key = KEYS[1]
             local owner = ARGV[1]
             local current = redis.call('GET', key)
@@ -43,11 +48,11 @@ public class SeatLockRedisService {
             redis.call('DEL', key)
             return 'RELEASED'
             """,
-        String.class
-    );
+          String.class);
 
-    private static final DefaultRedisScript<String> EXTEND_SCRIPT = new DefaultRedisScript<>(
-        """
+  private static final DefaultRedisScript<String> EXTEND_SCRIPT =
+      new DefaultRedisScript<>(
+          """
             local key = KEYS[1]
             local owner = ARGV[1]
             local ttl = tonumber(ARGV[2])
@@ -61,57 +66,51 @@ public class SeatLockRedisService {
             redis.call('PEXPIRE', key, ttl)
             return 'EXTENDED'
             """,
-        String.class
-    );
+          String.class);
 
-    private final StringRedisTemplate stringRedisTemplate;
+  private final StringRedisTemplate stringRedisTemplate;
 
-    public SeatLockRedisService(StringRedisTemplate stringRedisTemplate) {
-        this.stringRedisTemplate = stringRedisTemplate;
+  public SeatLockRedisService(StringRedisTemplate stringRedisTemplate) {
+    this.stringRedisTemplate = stringRedisTemplate;
+  }
+
+  public AcquireResult acquire(Long seatId, Long userId, Duration ttl) {
+    String key = seatKey(seatId);
+    String result =
+        stringRedisTemplate.execute(
+            ACQUIRE_SCRIPT, List.of(key), String.valueOf(userId), String.valueOf(ttl.toMillis()));
+    if ("ACQUIRED".equals(result)) {
+      return AcquireResult.ACQUIRED;
     }
-
-    public AcquireResult acquire(Long seatId, Long userId, Duration ttl) {
-        String key = seatKey(seatId);
-        String result = stringRedisTemplate.execute(
-            ACQUIRE_SCRIPT,
-            List.of(key),
-            String.valueOf(userId),
-            String.valueOf(ttl.toMillis())
-        );
-        if ("ACQUIRED".equals(result)) {
-            return AcquireResult.ACQUIRED;
-        }
-        if ("ALREADY_YOURS".equals(result)) {
-            return AcquireResult.ALREADY_YOURS;
-        }
-        return AcquireResult.CONFLICT;
+    if ("ALREADY_YOURS".equals(result)) {
+      return AcquireResult.ALREADY_YOURS;
     }
+    return AcquireResult.CONFLICT;
+  }
 
-    public boolean extend(Long seatId, Long userId, Duration ttl) {
-        String result = stringRedisTemplate.execute(
+  public boolean extend(Long seatId, Long userId, Duration ttl) {
+    String result =
+        stringRedisTemplate.execute(
             EXTEND_SCRIPT,
             List.of(seatKey(seatId)),
             String.valueOf(userId),
-            String.valueOf(ttl.toMillis())
-        );
-        return "EXTENDED".equals(result);
-    }
+            String.valueOf(ttl.toMillis()));
+    return "EXTENDED".equals(result);
+  }
 
-    public boolean release(Long seatId, Long userId) {
-        String result = stringRedisTemplate.execute(
-            RELEASE_SCRIPT,
-            List.of(seatKey(seatId)),
-            String.valueOf(userId)
-        );
-        return "RELEASED".equals(result) || "EXPIRED".equals(result);
-    }
+  public boolean release(Long seatId, Long userId) {
+    String result =
+        stringRedisTemplate.execute(
+            RELEASE_SCRIPT, List.of(seatKey(seatId)), String.valueOf(userId));
+    return "RELEASED".equals(result) || "EXPIRED".equals(result);
+  }
 
-    public boolean isOwnedBy(Long seatId, Long userId) {
-        String owner = stringRedisTemplate.opsForValue().get(seatKey(seatId));
-        return String.valueOf(userId).equals(owner);
-    }
+  public boolean isOwnedBy(Long seatId, Long userId) {
+    String owner = stringRedisTemplate.opsForValue().get(seatKey(seatId));
+    return String.valueOf(userId).equals(owner);
+  }
 
-    public String seatKey(Long seatId) {
-        return "seat:lock:" + seatId;
-    }
+  public String seatKey(Long seatId) {
+    return "seat:lock:" + seatId;
+  }
 }

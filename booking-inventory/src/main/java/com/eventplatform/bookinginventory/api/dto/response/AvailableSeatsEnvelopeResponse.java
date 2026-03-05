@@ -7,6 +7,4 @@ public record AvailableSeatsEnvelopeResponse(
     Long slotId,
     SeatingMode seatingMode,
     List<AvailableSeatResponse> seats,
-    List<GaTierAvailabilityResponse> tiers
-) {
-}
+    List<GaTierAvailabilityResponse> tiers) {}

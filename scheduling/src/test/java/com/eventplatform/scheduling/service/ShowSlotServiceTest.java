@@ -53,295 +53,326 @@ import org.springframework.context.ApplicationEventPublisher;
 @ExtendWith(MockitoExtension.class)
 class ShowSlotServiceTest {
 
-    @Mock
-    private ShowSlotRepository showSlotRepository;
-    @Mock
-    private ShowSlotOccurrenceRepository occurrenceRepository;
-    @Mock
-    private ShowSlotPricingTierRepository pricingTierRepository;
-    @Mock
-    private ShowSlotMapper showSlotMapper;
-    @Mock
-    private VenueCatalogClient venueCatalogClient;
-    @Mock
-    private ConflictDetectionService conflictDetectionService;
-    @Mock
-    private EbEventSyncService ebEventSyncService;
-    @Mock
-    private EbScheduleService ebScheduleService;
-    @Mock
-    private EbCapacityService ebCapacityService;
-    @Mock
-    private ShowSlotStateMachineService stateMachineService;
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
+  @Mock private ShowSlotRepository showSlotRepository;
+  @Mock private ShowSlotOccurrenceRepository occurrenceRepository;
+  @Mock private ShowSlotPricingTierRepository pricingTierRepository;
+  @Mock private ShowSlotMapper showSlotMapper;
+  @Mock private VenueCatalogClient venueCatalogClient;
+  @Mock private ConflictDetectionService conflictDetectionService;
+  @Mock private EbEventSyncService ebEventSyncService;
+  @Mock private EbScheduleService ebScheduleService;
+  @Mock private EbCapacityService ebCapacityService;
+  @Mock private ShowSlotStateMachineService stateMachineService;
+  @Mock private ApplicationEventPublisher eventPublisher;
 
-    @InjectMocks
-    private ShowSlotService showSlotService;
+  @InjectMocks private ShowSlotService showSlotService;
 
-    @Test
-    void should_create_slot_in_DRAFT_status_when_venue_is_synced_and_no_conflict() {
-        CreateShowSlotRequest request = baseCreateRequest(SeatingMode.GA, null);
-        CatalogVenueResponse venue = new CatalogVenueResponse(10L, 20L, "eb-1", "Venue", "Addr", 100, SeatingMode.GA);
-        ShowSlot slot = baseSlot();
-        List<ShowSlotPricingTier> tiers = List.of(
-            new ShowSlotPricingTier("General", new Money(BigDecimal.ZERO, "INR"), 10, TierType.FREE)
-        );
+  @Test
+  void should_create_slot_in_DRAFT_status_when_venue_is_synced_and_no_conflict() {
+    CreateShowSlotRequest request = baseCreateRequest(SeatingMode.GA, null);
+    CatalogVenueResponse venue =
+        new CatalogVenueResponse(10L, 20L, "eb-1", "Venue", "Addr", 100, SeatingMode.GA);
+    ShowSlot slot = baseSlot();
+    List<ShowSlotPricingTier> tiers =
+        List.of(
+            new ShowSlotPricingTier(
+                "General", new Money(BigDecimal.ZERO, "INR"), 10, TierType.FREE));
 
-        when(venueCatalogClient.getVenue(request.venueId())).thenReturn(venue);
-        when(showSlotMapper.toEntity(eq(1L), eq(request.venueId()), eq(venue.cityId()), eq(request))).thenReturn(slot);
-        when(showSlotMapper.toPricingTiers(request.pricingTiers())).thenReturn(tiers);
-        when(showSlotRepository.save(slot)).thenReturn(slot);
+    when(venueCatalogClient.getVenue(request.venueId())).thenReturn(venue);
+    when(showSlotMapper.toEntity(eq(1L), eq(request.venueId()), eq(venue.cityId()), eq(request)))
+        .thenReturn(slot);
+    when(showSlotMapper.toPricingTiers(request.pricingTiers())).thenReturn(tiers);
+    when(showSlotRepository.save(slot)).thenReturn(slot);
 
-        ShowSlot result = showSlotService.createSlot(1L, request);
+    ShowSlot result = showSlotService.createSlot(1L, request);
 
-        assertThat(result.getStatus()).isEqualTo(ShowSlotStatus.DRAFT);
-        verify(showSlotRepository).save(slot);
-    }
+    assertThat(result.getStatus()).isEqualTo(ShowSlotStatus.DRAFT);
+    verify(showSlotRepository).save(slot);
+  }
 
-    @Test
-    void should_throw_SchedulingNotFoundException_when_venue_not_found_via_rest_call() {
-        CreateShowSlotRequest request = baseCreateRequest(SeatingMode.GA, null);
-        when(venueCatalogClient.getVenue(request.venueId()))
-            .thenThrow(new SchedulingNotFoundException("Venue not found", "VENUE_NOT_FOUND"));
+  @Test
+  void should_throw_SchedulingNotFoundException_when_venue_not_found_via_rest_call() {
+    CreateShowSlotRequest request = baseCreateRequest(SeatingMode.GA, null);
+    when(venueCatalogClient.getVenue(request.venueId()))
+        .thenThrow(new SchedulingNotFoundException("Venue not found", "VENUE_NOT_FOUND"));
 
-        assertThatThrownBy(() -> showSlotService.createSlot(1L, request))
-            .isInstanceOf(SchedulingNotFoundException.class);
-    }
+    assertThatThrownBy(() -> showSlotService.createSlot(1L, request))
+        .isInstanceOf(SchedulingNotFoundException.class);
+  }
 
-    @Test
-    void should_throw_BusinessRuleException_when_venue_sync_status_is_PENDING_SYNC() {
-        CreateShowSlotRequest request = baseCreateRequest(SeatingMode.GA, null);
-        CatalogVenueResponse venue = new CatalogVenueResponse(10L, 20L, null, "Venue", "Addr", 100, SeatingMode.GA);
-        when(venueCatalogClient.getVenue(request.venueId())).thenReturn(venue);
+  @Test
+  void should_throw_BusinessRuleException_when_venue_sync_status_is_PENDING_SYNC() {
+    CreateShowSlotRequest request = baseCreateRequest(SeatingMode.GA, null);
+    CatalogVenueResponse venue =
+        new CatalogVenueResponse(10L, 20L, null, "Venue", "Addr", 100, SeatingMode.GA);
+    when(venueCatalogClient.getVenue(request.venueId())).thenReturn(venue);
 
-        assertThatThrownBy(() -> showSlotService.createSlot(1L, request))
-            .isInstanceOf(BusinessRuleException.class);
-    }
+    assertThatThrownBy(() -> showSlotService.createSlot(1L, request))
+        .isInstanceOf(BusinessRuleException.class);
+  }
 
-    @Test
-    void should_throw_SlotConflictException_with_alternatives_when_overlap_detected() {
-        CreateShowSlotRequest request = baseCreateRequest(SeatingMode.GA, null);
-        CatalogVenueResponse venue = new CatalogVenueResponse(10L, 20L, "eb-1", "Venue", "Addr", 100, SeatingMode.GA);
-        when(venueCatalogClient.getVenue(request.venueId())).thenReturn(venue);
-        doAnswer(invocation -> {
-            throw new SlotConflictException("Conflict", null);
-        }).when(conflictDetectionService).validateOrThrow(eq(1L), eq(venue), eq(request.startTime()), eq(request.endTime()));
+  @Test
+  void should_throw_SlotConflictException_with_alternatives_when_overlap_detected() {
+    CreateShowSlotRequest request = baseCreateRequest(SeatingMode.GA, null);
+    CatalogVenueResponse venue =
+        new CatalogVenueResponse(10L, 20L, "eb-1", "Venue", "Addr", 100, SeatingMode.GA);
+    when(venueCatalogClient.getVenue(request.venueId())).thenReturn(venue);
+    doAnswer(
+            invocation -> {
+              throw new SlotConflictException("Conflict", null);
+            })
+        .when(conflictDetectionService)
+        .validateOrThrow(eq(1L), eq(venue), eq(request.startTime()), eq(request.endTime()));
 
-        assertThatThrownBy(() -> showSlotService.createSlot(1L, request))
-            .isInstanceOf(SlotConflictException.class);
-    }
+    assertThatThrownBy(() -> showSlotService.createSlot(1L, request))
+        .isInstanceOf(SlotConflictException.class);
+  }
 
-    @Test
-    void should_throw_ValidationException_when_RESERVED_slot_has_no_sourceSeatMapId() {
-        CreateShowSlotRequest request = baseCreateRequest(SeatingMode.RESERVED, null);
-        CatalogVenueResponse venue = new CatalogVenueResponse(10L, 20L, "eb-1", "Venue", "Addr", 100, SeatingMode.RESERVED);
-        when(venueCatalogClient.getVenue(request.venueId())).thenReturn(venue);
+  @Test
+  void should_throw_ValidationException_when_RESERVED_slot_has_no_sourceSeatMapId() {
+    CreateShowSlotRequest request = baseCreateRequest(SeatingMode.RESERVED, null);
+    CatalogVenueResponse venue =
+        new CatalogVenueResponse(10L, 20L, "eb-1", "Venue", "Addr", 100, SeatingMode.RESERVED);
+    when(venueCatalogClient.getVenue(request.venueId())).thenReturn(venue);
 
-        assertThatThrownBy(() -> showSlotService.createSlot(1L, request))
-            .isInstanceOf(ValidationException.class);
-    }
+    assertThatThrownBy(() -> showSlotService.createSlot(1L, request))
+        .isInstanceOf(ValidationException.class);
+  }
 
-    @Test
-    void should_transition_to_PENDING_SYNC_and_call_createDraft_when_slot_is_DRAFT() {
-        ShowSlot slot = baseSlot();
-        slot.addPricingTier(new ShowSlotPricingTier("General", new Money(BigDecimal.ZERO, "INR"), 10, TierType.FREE));
-        when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
-        when(venueCatalogClient.getVenue(slot.getVenueId()))
-            .thenReturn(new CatalogVenueResponse(10L, 20L, "eb-1", "Venue", "Addr", 100, SeatingMode.GA));
-        when(ebEventSyncService.createDraft(eq(1L), any())).thenReturn(new EbEventDto("eb-1", null, null, null, null, null, null, null, null, null));
+  @Test
+  void should_transition_to_PENDING_SYNC_and_call_createDraft_when_slot_is_DRAFT() {
+    ShowSlot slot = baseSlot();
+    slot.addPricingTier(
+        new ShowSlotPricingTier("General", new Money(BigDecimal.ZERO, "INR"), 10, TierType.FREE));
+    when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
+    when(venueCatalogClient.getVenue(slot.getVenueId()))
+        .thenReturn(
+            new CatalogVenueResponse(10L, 20L, "eb-1", "Venue", "Addr", 100, SeatingMode.GA));
+    when(ebEventSyncService.createDraft(eq(1L), any()))
+        .thenReturn(new EbEventDto("eb-1", null, null, null, null, null, null, null, null, null));
 
-        ShowSlot result = showSlotService.submitSlot(1L, 1L);
+    ShowSlot result = showSlotService.submitSlot(1L, 1L);
 
-        verify(stateMachineService).sendEvent(slot, ShowSlotEvent.SUBMIT);
-        assertThat(result.getEbEventId()).isEqualTo("eb-1");
-        ArgumentCaptor<SlotDraftCreatedEvent> captor = ArgumentCaptor.forClass(SlotDraftCreatedEvent.class);
-        verify(eventPublisher).publishEvent(captor.capture());
-        assertThat(captor.getValue().ebEventId()).isEqualTo("eb-1");
-    }
+    verify(stateMachineService).sendEvent(slot, ShowSlotEvent.SUBMIT);
+    assertThat(result.getEbEventId()).isEqualTo("eb-1");
+    ArgumentCaptor<SlotDraftCreatedEvent> captor =
+        ArgumentCaptor.forClass(SlotDraftCreatedEvent.class);
+    verify(eventPublisher).publishEvent(captor.capture());
+    assertThat(captor.getValue().ebEventId()).isEqualTo("eb-1");
+  }
 
-    @Test
-    void should_increment_syncAttemptCount_and_not_publish_success_event_when_createDraft_fails() {
-        ShowSlot slot = baseSlot();
-        slot.addPricingTier(new ShowSlotPricingTier("General", new Money(BigDecimal.ZERO, "INR"), 10, TierType.FREE));
-        when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
-        when(venueCatalogClient.getVenue(slot.getVenueId()))
-            .thenReturn(new CatalogVenueResponse(10L, 20L, "eb-1", "Venue", "Addr", 100, SeatingMode.GA));
-        when(ebEventSyncService.createDraft(eq(1L), any())).thenThrow(new EbIntegrationException("boom"));
+  @Test
+  void should_increment_syncAttemptCount_and_not_publish_success_event_when_createDraft_fails() {
+    ShowSlot slot = baseSlot();
+    slot.addPricingTier(
+        new ShowSlotPricingTier("General", new Money(BigDecimal.ZERO, "INR"), 10, TierType.FREE));
+    when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
+    when(venueCatalogClient.getVenue(slot.getVenueId()))
+        .thenReturn(
+            new CatalogVenueResponse(10L, 20L, "eb-1", "Venue", "Addr", 100, SeatingMode.GA));
+    when(ebEventSyncService.createDraft(eq(1L), any()))
+        .thenThrow(new EbIntegrationException("boom"));
 
-        assertThatThrownBy(() -> showSlotService.submitSlot(1L, 1L))
-            .isInstanceOf(EbIntegrationException.class);
+    assertThatThrownBy(() -> showSlotService.submitSlot(1L, 1L))
+        .isInstanceOf(EbIntegrationException.class);
 
-        assertThat(slot.getSyncAttemptCount()).isEqualTo(1);
-        verify(eventPublisher, never()).publishEvent(any(SlotDraftCreatedEvent.class));
-        verify(eventPublisher).publishEvent(any(SlotSyncFailedEvent.class));
-    }
+    assertThat(slot.getSyncAttemptCount()).isEqualTo(1);
+    verify(eventPublisher, never()).publishEvent(any(SlotDraftCreatedEvent.class));
+    verify(eventPublisher).publishEvent(any(SlotSyncFailedEvent.class));
+  }
 
-    @Test
-    void should_transition_to_ACTIVE_when_publishEvent_succeeds() {
-        ShowSlot slot = baseSlot();
-        slot.markPendingSync();
-        slot.setEbEventId("eb-1");
-        when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
-        doAnswer(invocation -> {
-            slot.markActive();
-            return null;
-        }).when(stateMachineService).sendEvent(slot, ShowSlotEvent.EB_PUBLISHED);
+  @Test
+  void should_transition_to_ACTIVE_when_publishEvent_succeeds() {
+    ShowSlot slot = baseSlot();
+    slot.markPendingSync();
+    slot.setEbEventId("eb-1");
+    when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
+    doAnswer(
+            invocation -> {
+              slot.markActive();
+              return null;
+            })
+        .when(stateMachineService)
+        .sendEvent(slot, ShowSlotEvent.EB_PUBLISHED);
 
-        showSlotService.onTicketSyncComplete(new com.eventplatform.shared.common.event.published.TicketSyncCompletedEvent(1L, "eb-1"));
+    showSlotService.onTicketSyncComplete(
+        new com.eventplatform.shared.common.event.published.TicketSyncCompletedEvent(1L, "eb-1"));
 
-        assertThat(slot.getStatus()).isEqualTo(ShowSlotStatus.ACTIVE);
-        verify(eventPublisher).publishEvent(any(ShowSlotActivatedEvent.class));
-    }
+    assertThat(slot.getStatus()).isEqualTo(ShowSlotStatus.ACTIVE);
+    verify(eventPublisher).publishEvent(any(ShowSlotActivatedEvent.class));
+  }
 
-    @Test
-    void should_increment_syncAttemptCount_and_stay_PENDING_SYNC_when_publishEvent_fails() {
-        ShowSlot slot = baseSlot();
-        slot.markPendingSync();
-        slot.setEbEventId("eb-1");
-        when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
-        doAnswer(invocation -> { throw new EbIntegrationException("boom"); })
-            .when(ebEventSyncService).publishEvent(eq(1L), eq("eb-1"));
+  @Test
+  void should_increment_syncAttemptCount_and_stay_PENDING_SYNC_when_publishEvent_fails() {
+    ShowSlot slot = baseSlot();
+    slot.markPendingSync();
+    slot.setEbEventId("eb-1");
+    when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
+    doAnswer(
+            invocation -> {
+              throw new EbIntegrationException("boom");
+            })
+        .when(ebEventSyncService)
+        .publishEvent(eq(1L), eq("eb-1"));
 
-        assertThatThrownBy(() -> showSlotService.onTicketSyncComplete(
-            new com.eventplatform.shared.common.event.published.TicketSyncCompletedEvent(1L, "eb-1")))
-            .isInstanceOf(EbIntegrationException.class);
+    assertThatThrownBy(
+            () ->
+                showSlotService.onTicketSyncComplete(
+                    new com.eventplatform.shared.common.event.published.TicketSyncCompletedEvent(
+                        1L, "eb-1")))
+        .isInstanceOf(EbIntegrationException.class);
 
-        assertThat(slot.getSyncAttemptCount()).isEqualTo(1);
-        verify(eventPublisher).publishEvent(any(SlotSyncFailedEvent.class));
-    }
+    assertThat(slot.getSyncAttemptCount()).isEqualTo(1);
+    verify(eventPublisher).publishEvent(any(SlotSyncFailedEvent.class));
+  }
 
-    @Test
-    void should_persist_update_and_call_updateEvent_when_slot_is_ACTIVE() {
-        ShowSlot slot = baseSlot();
-        slot.markActive();
-        slot.setEbEventId("eb-1");
-        when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
-        when(showSlotRepository.save(slot)).thenReturn(slot);
+  @Test
+  void should_persist_update_and_call_updateEvent_when_slot_is_ACTIVE() {
+    ShowSlot slot = baseSlot();
+    slot.markActive();
+    slot.setEbEventId("eb-1");
+    when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
+    when(showSlotRepository.save(slot)).thenReturn(slot);
 
-        ShowSlotUpdateResult result = showSlotService.updateSlot(1L, 1L, new UpdateShowSlotRequest("New", null, null, null, null, null));
+    ShowSlotUpdateResult result =
+        showSlotService.updateSlot(
+            1L, 1L, new UpdateShowSlotRequest("New", null, null, null, null, null));
 
-        assertThat(result.ebSyncFailed()).isFalse();
-        verify(ebEventSyncService).updateEvent(eq(1L), eq("eb-1"), any());
-    }
+    assertThat(result.ebSyncFailed()).isFalse();
+    verify(ebEventSyncService).updateEvent(eq(1L), eq("eb-1"), any());
+  }
 
-    @Test
-    void should_persist_internal_update_and_return_207_when_EB_update_fails() {
-        ShowSlot slot = baseSlot();
-        slot.markActive();
-        slot.setEbEventId("eb-1");
-        when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
-        when(showSlotRepository.save(slot)).thenReturn(slot);
-        when(ebEventSyncService.updateEvent(eq(1L), eq("eb-1"), any()))
-            .thenThrow(new EbIntegrationException("boom"));
+  @Test
+  void should_persist_internal_update_and_return_207_when_EB_update_fails() {
+    ShowSlot slot = baseSlot();
+    slot.markActive();
+    slot.setEbEventId("eb-1");
+    when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
+    when(showSlotRepository.save(slot)).thenReturn(slot);
+    when(ebEventSyncService.updateEvent(eq(1L), eq("eb-1"), any()))
+        .thenThrow(new EbIntegrationException("boom"));
 
-        ShowSlotUpdateResult result = showSlotService.updateSlot(1L, 1L, new UpdateShowSlotRequest("New", null, null, null, null, null));
+    ShowSlotUpdateResult result =
+        showSlotService.updateSlot(
+            1L, 1L, new UpdateShowSlotRequest("New", null, null, null, null, null));
 
-        assertThat(result.ebSyncFailed()).isTrue();
-        assertThat(result.slot().getLastSyncError()).isNotNull();
-    }
+    assertThat(result.ebSyncFailed()).isTrue();
+    assertThat(result.slot().getLastSyncError()).isNotNull();
+  }
 
-    @Test
-    void should_throw_BusinessRuleException_when_updating_PENDING_SYNC_slot() {
-        ShowSlot slot = baseSlot();
-        slot.markPendingSync();
-        when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
+  @Test
+  void should_throw_BusinessRuleException_when_updating_PENDING_SYNC_slot() {
+    ShowSlot slot = baseSlot();
+    slot.markPendingSync();
+    when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
 
-        assertThatThrownBy(() -> showSlotService.updateSlot(1L, 1L, new UpdateShowSlotRequest("New", null, null, null, null, null)))
-            .isInstanceOf(BusinessRuleException.class);
-    }
+    assertThatThrownBy(
+            () ->
+                showSlotService.updateSlot(
+                    1L, 1L, new UpdateShowSlotRequest("New", null, null, null, null, null)))
+        .isInstanceOf(BusinessRuleException.class);
+  }
 
-    @Test
-    void should_transition_to_CANCELLED_and_call_cancelEvent_when_slot_is_ACTIVE() {
-        ShowSlot slot = baseSlot();
-        slot.markActive();
-        slot.setEbEventId("eb-1");
-        when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
-        doAnswer(invocation -> {
-            slot.markCancelled();
-            return null;
-        }).when(stateMachineService).sendEvent(slot, ShowSlotEvent.CANCEL);
+  @Test
+  void should_transition_to_CANCELLED_and_call_cancelEvent_when_slot_is_ACTIVE() {
+    ShowSlot slot = baseSlot();
+    slot.markActive();
+    slot.setEbEventId("eb-1");
+    when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
+    doAnswer(
+            invocation -> {
+              slot.markCancelled();
+              return null;
+            })
+        .when(stateMachineService)
+        .sendEvent(slot, ShowSlotEvent.CANCEL);
 
-        boolean result = showSlotService.cancelSlot(1L, 1L);
+    boolean result = showSlotService.cancelSlot(1L, 1L);
 
-        assertThat(result).isTrue();
-        assertThat(slot.getStatus()).isEqualTo(ShowSlotStatus.CANCELLED);
-        verify(ebEventSyncService).cancelEvent(1L, "eb-1");
-    }
+    assertThat(result).isTrue();
+    assertThat(slot.getStatus()).isEqualTo(ShowSlotStatus.CANCELLED);
+    verify(ebEventSyncService).cancelEvent(1L, "eb-1");
+  }
 
-    @Test
-    void should_transition_to_CANCELLED_even_when_cancelEvent_fails() {
-        ShowSlot slot = baseSlot();
-        slot.markActive();
-        slot.setEbEventId("eb-1");
-        when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
-        doAnswer(invocation -> {
-            slot.markCancelled();
-            return null;
-        }).when(stateMachineService).sendEvent(slot, ShowSlotEvent.CANCEL);
-        doAnswer(invocation -> { throw new EbIntegrationException("boom"); })
-            .when(ebEventSyncService).cancelEvent(1L, "eb-1");
+  @Test
+  void should_transition_to_CANCELLED_even_when_cancelEvent_fails() {
+    ShowSlot slot = baseSlot();
+    slot.markActive();
+    slot.setEbEventId("eb-1");
+    when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
+    doAnswer(
+            invocation -> {
+              slot.markCancelled();
+              return null;
+            })
+        .when(stateMachineService)
+        .sendEvent(slot, ShowSlotEvent.CANCEL);
+    doAnswer(
+            invocation -> {
+              throw new EbIntegrationException("boom");
+            })
+        .when(ebEventSyncService)
+        .cancelEvent(1L, "eb-1");
 
-        boolean result = showSlotService.cancelSlot(1L, 1L);
+    boolean result = showSlotService.cancelSlot(1L, 1L);
 
-        assertThat(result).isFalse();
-        assertThat(slot.getStatus()).isEqualTo(ShowSlotStatus.CANCELLED);
-    }
+    assertThat(result).isFalse();
+    assertThat(slot.getStatus()).isEqualTo(ShowSlotStatus.CANCELLED);
+  }
 
-    // --- getPricingTiers ---
+  // --- getPricingTiers ---
 
-    @Test
-    void should_return_pricing_tiers_for_existing_slot() {
-        ShowSlot slot = baseSlot();
-        ShowSlotPricingTier tier = new ShowSlotPricingTier("General", new Money(BigDecimal.ZERO, "INR"), 50, TierType.FREE);
-        when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
-        when(pricingTierRepository.findBySlotId(1L)).thenReturn(List.of(tier));
+  @Test
+  void should_return_pricing_tiers_for_existing_slot() {
+    ShowSlot slot = baseSlot();
+    ShowSlotPricingTier tier =
+        new ShowSlotPricingTier("General", new Money(BigDecimal.ZERO, "INR"), 50, TierType.FREE);
+    when(showSlotRepository.findById(1L)).thenReturn(Optional.of(slot));
+    when(pricingTierRepository.findBySlotId(1L)).thenReturn(List.of(tier));
 
-        List<ShowSlotPricingTier> result = showSlotService.getPricingTiers(1L);
+    List<ShowSlotPricingTier> result = showSlotService.getPricingTiers(1L);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getName()).isEqualTo("General");
-        verify(pricingTierRepository).findBySlotId(1L);
-    }
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).getName()).isEqualTo("General");
+    verify(pricingTierRepository).findBySlotId(1L);
+  }
 
-    @Test
-    void should_throw_SchedulingNotFoundException_when_slot_not_found_for_getPricingTiers() {
-        when(showSlotRepository.findById(99L)).thenReturn(Optional.empty());
+  @Test
+  void should_throw_SchedulingNotFoundException_when_slot_not_found_for_getPricingTiers() {
+    when(showSlotRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> showSlotService.getPricingTiers(99L))
-            .isInstanceOf(SchedulingNotFoundException.class);
-    }
+    assertThatThrownBy(() -> showSlotService.getPricingTiers(99L))
+        .isInstanceOf(SchedulingNotFoundException.class);
+  }
 
-    private CreateShowSlotRequest baseCreateRequest(SeatingMode seatingMode, String seatMapId) {
-        return new CreateShowSlotRequest(
-            10L,
-            "Show",
-            "Desc",
-            ZonedDateTime.now().plusDays(1),
-            ZonedDateTime.now().plusDays(1).plusHours(2),
-            seatingMode,
-            100,
-            List.of(new PricingTierRequest("Free", BigDecimal.ZERO, "INR", 10, TierType.FREE)),
-            false,
-            null,
-            seatMapId
-        );
-    }
+  private CreateShowSlotRequest baseCreateRequest(SeatingMode seatingMode, String seatMapId) {
+    return new CreateShowSlotRequest(
+        10L,
+        "Show",
+        "Desc",
+        ZonedDateTime.now().plusDays(1),
+        ZonedDateTime.now().plusDays(1).plusHours(2),
+        seatingMode,
+        100,
+        List.of(new PricingTierRequest("Free", BigDecimal.ZERO, "INR", 10, TierType.FREE)),
+        false,
+        null,
+        seatMapId);
+  }
 
-    private ShowSlot baseSlot() {
-        return new ShowSlot(
-            1L,
-            10L,
-            20L,
-            "Show",
-            "Desc",
-            ZonedDateTime.now().plusDays(1),
-            ZonedDateTime.now().plusDays(1).plusHours(2),
-            SeatingMode.GA,
-            100,
-            false,
-            null,
-            null
-        );
-    }
+  private ShowSlot baseSlot() {
+    return new ShowSlot(
+        1L,
+        10L,
+        20L,
+        "Show",
+        "Desc",
+        ZonedDateTime.now().plusDays(1),
+        ZonedDateTime.now().plusDays(1).plusHours(2),
+        SeatingMode.GA,
+        100,
+        false,
+        null,
+        null);
+  }
 }

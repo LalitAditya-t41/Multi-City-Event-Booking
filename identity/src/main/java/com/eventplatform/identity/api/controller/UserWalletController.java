@@ -14,15 +14,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/users/me/wallet")
 public class UserWalletController {
 
-    private final UserWalletService userWalletService;
+  private final UserWalletService userWalletService;
 
-    public UserWalletController(UserWalletService userWalletService) {
-        this.userWalletService = userWalletService;
-    }
+  public UserWalletController(UserWalletService userWalletService) {
+    this.userWalletService = userWalletService;
+  }
 
-    @GetMapping
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public UserWalletResponse getMyWallet(Authentication authentication) {
-        return userWalletService.getWallet(((AuthenticatedUser) authentication.getPrincipal()).userId());
-    }
+  @GetMapping
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public UserWalletResponse getMyWallet(Authentication authentication) {
+    return userWalletService.getWallet(
+        ((AuthenticatedUser) authentication.getPrincipal()).userId());
+  }
 }

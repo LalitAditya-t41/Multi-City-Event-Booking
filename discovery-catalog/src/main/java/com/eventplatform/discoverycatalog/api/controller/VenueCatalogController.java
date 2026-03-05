@@ -15,32 +15,32 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/catalog")
 public class VenueCatalogController {
 
-    private final VenueCatalogService venueCatalogService;
-    private final Long defaultOrgId;
+  private final VenueCatalogService venueCatalogService;
+  private final Long defaultOrgId;
 
-    public VenueCatalogController(VenueCatalogService venueCatalogService, @Value("${app.default-org-id}") Long defaultOrgId) {
-        this.venueCatalogService = venueCatalogService;
-        this.defaultOrgId = defaultOrgId;
-    }
+  public VenueCatalogController(
+      VenueCatalogService venueCatalogService, @Value("${app.default-org-id}") Long defaultOrgId) {
+    this.venueCatalogService = venueCatalogService;
+    this.defaultOrgId = defaultOrgId;
+  }
 
-    @GetMapping("/venues")
-    public VenueListResponse listVenues(
-        @RequestParam(name = "cityId") Long cityId,
-        @RequestParam(name = "orgId", required = false) Long organizationId,
-        @RequestParam(name = "page", defaultValue = "0") int page,
-        @RequestParam(name = "size", defaultValue = "20") int size
-    ) {
-        Long resolvedOrgId = organizationId != null ? organizationId : defaultOrgId;
-        return venueCatalogService.listVenues(resolvedOrgId, cityId, page, size);
-    }
+  @GetMapping("/venues")
+  public VenueListResponse listVenues(
+      @RequestParam(name = "cityId") Long cityId,
+      @RequestParam(name = "orgId", required = false) Long organizationId,
+      @RequestParam(name = "page", defaultValue = "0") int page,
+      @RequestParam(name = "size", defaultValue = "20") int size) {
+    Long resolvedOrgId = organizationId != null ? organizationId : defaultOrgId;
+    return venueCatalogService.listVenues(resolvedOrgId, cityId, page, size);
+  }
 
-    @GetMapping("/venues/{id}")
-    public VenueResponse getVenue(@PathVariable("id") Long venueId) {
-        return venueCatalogService.getVenue(venueId);
-    }
+  @GetMapping("/venues/{id}")
+  public VenueResponse getVenue(@PathVariable("id") Long venueId) {
+    return venueCatalogService.getVenue(venueId);
+  }
 
-    @GetMapping("/venues/{venueId}/seat-layout")
-    public VenueSeatLayoutResponse getSeatLayout(@PathVariable Long venueId) {
-        return venueCatalogService.getVenueSeatLayout(venueId);
-    }
+  @GetMapping("/venues/{venueId}/seat-layout")
+  public VenueSeatLayoutResponse getSeatLayout(@PathVariable Long venueId) {
+    return venueCatalogService.getVenueSeatLayout(venueId);
+  }
 }

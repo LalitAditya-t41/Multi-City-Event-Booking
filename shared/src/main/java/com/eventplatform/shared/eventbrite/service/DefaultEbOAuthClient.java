@@ -9,17 +9,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class DefaultEbOAuthClient implements EbOAuthClient {
 
-    private static final Logger log = LoggerFactory.getLogger(DefaultEbOAuthClient.class);
+  private static final Logger log = LoggerFactory.getLogger(DefaultEbOAuthClient.class);
 
-    @Override
-    public EbOAuthTokenResponse exchangeCodeForToken(String code, String redirectUri) {
-        log.warn("EbOAuthClient not configured. code={} redirectUri={}", code, redirectUri);
-        throw new EbIntegrationException("Eventbrite OAuth client not configured");
-    }
+  @Override
+  public EbOAuthTokenResponse exchangeCodeForToken(String code, String redirectUri) {
+    log.warn("EbOAuthClient not configured. code={} redirectUri={}", code, redirectUri);
+    throw new EbIntegrationException("Eventbrite OAuth client not configured");
+  }
 
-    @Override
-    public EbOAuthTokenResponse refreshToken(String refreshToken) {
-        log.warn("EbOAuthClient not configured. refreshToken provided");
-        throw new EbIntegrationException("Eventbrite OAuth client not configured");
-    }
+  @Override
+  public EbOAuthTokenResponse refreshToken(String refreshToken) {
+    log.warn("EbOAuthClient not configured. refreshToken provided");
+    throw new EbIntegrationException("Eventbrite OAuth client not configured");
+  }
 }

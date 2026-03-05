@@ -12,27 +12,34 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class CouponAppliedListener {
 
-    private static final Logger log = LoggerFactory.getLogger(CouponAppliedListener.class);
+  private static final Logger log = LoggerFactory.getLogger(CouponAppliedListener.class);
 
-    private final CartRepository cartRepository;
+  private final CartRepository cartRepository;
 
-    public CouponAppliedListener(CartRepository cartRepository) {
-        this.cartRepository = cartRepository;
-    }
+  public CouponAppliedListener(CartRepository cartRepository) {
+    this.cartRepository = cartRepository;
+  }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onCouponApplied(CouponAppliedEvent event) {
-        cartRepository.findById(event.cartId()).ifPresent(cart -> {
-            if (!cart.getUserId().equals(event.userId())) {
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onCouponApplied(CouponAppliedEvent event) {
+    cartRepository
+        .findById(event.cartId())
+        .ifPresent(
+            cart -> {
+              if (!cart.getUserId().equals(event.userId())) {
                 return;
-            }
-            BigDecimal amount = BigDecimal.valueOf(event.discountAmountInSmallestUnit())
-                .divide(BigDecimal.valueOf(100));
-            cart.setCouponCode(event.couponCode());
-            cart.setCouponDiscountAmount(amount);
-            cartRepository.save(cart);
-            log.debug("Applied coupon discount to cart. cartId={} couponCode={} amount={}",
-                event.cartId(), event.couponCode(), amount);
-        });
-    }
+              }
+              BigDecimal amount =
+                  BigDecimal.valueOf(event.discountAmountInSmallestUnit())
+                      .divide(BigDecimal.valueOf(100));
+              cart.setCouponCode(event.couponCode());
+              cart.setCouponDiscountAmount(amount);
+              cartRepository.save(cart);
+              log.debug(
+                  "Applied coupon discount to cart. cartId={} couponCode={} amount={}",
+                  event.cartId(),
+                  event.couponCode(),
+                  amount);
+            });
+  }
 }

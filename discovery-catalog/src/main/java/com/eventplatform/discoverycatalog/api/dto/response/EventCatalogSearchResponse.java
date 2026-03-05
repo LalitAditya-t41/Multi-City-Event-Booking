@@ -9,6 +9,4 @@ public record EventCatalogSearchResponse(
     boolean stale,
     Instant snapshotTimestamp,
     CatalogSource source,
-    PaginationInfo pagination
-) {
-}
+    PaginationInfo pagination) {}

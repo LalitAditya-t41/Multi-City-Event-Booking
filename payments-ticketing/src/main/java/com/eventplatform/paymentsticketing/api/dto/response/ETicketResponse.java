@@ -7,6 +7,4 @@ public record ETicketResponse(
     Long bookingItemId,
     String qrCodeData,
     String pdfUrl,
-    ETicketStatus status
-) {
-}
+    ETicketStatus status) {}

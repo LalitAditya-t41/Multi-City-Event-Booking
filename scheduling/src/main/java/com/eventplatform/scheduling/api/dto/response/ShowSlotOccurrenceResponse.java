@@ -10,6 +10,4 @@ public record ShowSlotOccurrenceResponse(
     ZonedDateTime endTime,
     ShowSlotStatus status,
     String ebEventId,
-    int syncAttemptCount
-) {
-}
+    int syncAttemptCount) {}

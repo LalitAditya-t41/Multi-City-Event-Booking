@@ -17,30 +17,31 @@ import java.math.BigDecimal;
 @Table(name = "user_wallets")
 public class UserWallet extends BaseEntity {
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+  @OneToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
-    @Embedded
-    @AttributeOverrides({
-        @AttributeOverride(name = "amount", column = @Column(name = "balance_amount", nullable = false)),
-        @AttributeOverride(name = "currency", column = @Column(name = "currency", nullable = false))
-    })
-    private Money balance;
+  @Embedded
+  @AttributeOverrides({
+    @AttributeOverride(
+        name = "amount",
+        column = @Column(name = "balance_amount", nullable = false)),
+    @AttributeOverride(name = "currency", column = @Column(name = "currency", nullable = false))
+  })
+  private Money balance;
 
-    protected UserWallet() {
-    }
+  protected UserWallet() {}
 
-    public UserWallet(User user) {
-        this.user = user;
-        this.balance = new Money(BigDecimal.ZERO, "INR");
-    }
+  public UserWallet(User user) {
+    this.user = user;
+    this.balance = new Money(BigDecimal.ZERO, "INR");
+  }
 
-    public User getUser() {
-        return user;
-    }
+  public User getUser() {
+    return user;
+  }
 
-    public Money getBalance() {
-        return balance;
-    }
+  public Money getBalance() {
+    return balance;
+  }
 }

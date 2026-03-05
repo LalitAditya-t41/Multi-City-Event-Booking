@@ -8,6 +8,5 @@ public record ShowSlotActivatedEvent(
     Long orgId,
     Long venueId,
     Long cityId,
-    SeatingMode seatingMode   // determines RESERVED vs GA seat provisioning
-) {
-}
+    SeatingMode seatingMode // determines RESERVED vs GA seat provisioning
+    ) {}

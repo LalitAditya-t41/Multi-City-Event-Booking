@@ -6,5 +6,5 @@ import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface CityMapper {
-    CityResponse toResponse(City city);
+  CityResponse toResponse(City city);
 }

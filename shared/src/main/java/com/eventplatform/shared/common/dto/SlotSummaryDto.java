@@ -10,6 +10,4 @@ public record SlotSummaryDto(
     Long orgId,
     Long venueId,
     Long cityId,
-    String sourceSeatMapId
-) {
-}
+    String sourceSeatMapId) {}

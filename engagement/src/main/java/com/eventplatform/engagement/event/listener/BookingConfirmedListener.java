@@ -6,17 +6,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-@Component
+@Component("engagementBookingConfirmedListener")
 public class BookingConfirmedListener {
 
-    private final ReviewEligibilityService reviewEligibilityService;
+  private final ReviewEligibilityService reviewEligibilityService;
 
-    public BookingConfirmedListener(ReviewEligibilityService reviewEligibilityService) {
-        this.reviewEligibilityService = reviewEligibilityService;
-    }
+  public BookingConfirmedListener(ReviewEligibilityService reviewEligibilityService) {
+    this.reviewEligibilityService = reviewEligibilityService;
+  }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onBookingConfirmed(BookingConfirmedEvent event) {
-        reviewEligibilityService.unlockForBooking(event.bookingId(), event.userId());
-    }
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onBookingConfirmed(BookingConfirmedEvent event) {
+    reviewEligibilityService.unlockForBooking(event.bookingId(), event.userId());
+  }
 }

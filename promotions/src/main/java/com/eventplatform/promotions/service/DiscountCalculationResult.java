@@ -7,6 +7,4 @@ public record DiscountCalculationResult(
     DiscountType discountType,
     long discountAmountInSmallestUnit,
     long adjustedTotalInSmallestUnit,
-    String currency
-) {
-}
+    String currency) {}

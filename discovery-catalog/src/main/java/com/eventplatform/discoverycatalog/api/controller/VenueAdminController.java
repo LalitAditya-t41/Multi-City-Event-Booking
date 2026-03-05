@@ -27,51 +27,54 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/catalog")
 public class VenueAdminController {
 
-    private final VenueServiceI venueService;
-    private final VenueMapper venueMapper;
+  private final VenueServiceI venueService;
+  private final VenueMapper venueMapper;
 
-    public VenueAdminController(VenueServiceI venueService, VenueMapper venueMapper) {
-        this.venueService = venueService;
-        this.venueMapper = venueMapper;
-    }
+  public VenueAdminController(VenueServiceI venueService, VenueMapper venueMapper) {
+    this.venueService = venueService;
+    this.venueMapper = venueMapper;
+  }
 
-    @PostMapping("/venues")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public ResponseEntity<VenueResponse> createVenue(@RequestParam("orgId") Long organizationId, @Valid @RequestBody CreateVenueRequest request) {
-        Venue venue = venueService.createVenue(organizationId, request);
-        VenueResponse response = venueMapper.toResponse(venue);
-        HttpStatus status = venue.getSyncStatus() == com.eventplatform.discoverycatalog.domain.enums.VenueSyncStatus.PENDING_SYNC
+  @PostMapping("/venues")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public ResponseEntity<VenueResponse> createVenue(
+      @RequestParam("orgId") Long organizationId, @Valid @RequestBody CreateVenueRequest request) {
+    Venue venue = venueService.createVenue(organizationId, request);
+    VenueResponse response = venueMapper.toResponse(venue);
+    HttpStatus status =
+        venue.getSyncStatus()
+                == com.eventplatform.discoverycatalog.domain.enums.VenueSyncStatus.PENDING_SYNC
             ? HttpStatus.ACCEPTED
             : HttpStatus.CREATED;
-        return ResponseEntity.status(status).body(response);
-    }
+    return ResponseEntity.status(status).body(response);
+  }
 
-    @PutMapping("/venues/{id}")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public VenueResponse updateVenue(
-        @RequestParam("orgId") Long organizationId,
-        @PathVariable("id") Long venueId,
-        @Valid @RequestBody UpdateVenueRequest request
-    ) {
-        Venue venue = venueService.updateVenue(organizationId, venueId, request);
-        return venueMapper.toResponse(venue);
-    }
+  @PutMapping("/venues/{id}")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public VenueResponse updateVenue(
+      @RequestParam("orgId") Long organizationId,
+      @PathVariable("id") Long venueId,
+      @Valid @RequestBody UpdateVenueRequest request) {
+    Venue venue = venueService.updateVenue(organizationId, venueId, request);
+    return venueMapper.toResponse(venue);
+  }
 
-    @PostMapping("/venues/{id}/sync")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public VenueResponse syncVenue(@RequestParam("orgId") Long organizationId, @PathVariable("id") Long venueId) {
-        Venue venue = venueService.syncVenue(organizationId, venueId);
-        return venueMapper.toResponse(venue);
-    }
+  @PostMapping("/venues/{id}/sync")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public VenueResponse syncVenue(
+      @RequestParam("orgId") Long organizationId, @PathVariable("id") Long venueId) {
+    Venue venue = venueService.syncVenue(organizationId, venueId);
+    return venueMapper.toResponse(venue);
+  }
 
-    @GetMapping("/venues/flagged")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public VenueListResponse listFlaggedVenues(
-        @RequestParam(name = "page", defaultValue = "0") int page,
-        @RequestParam(name = "size", defaultValue = "20") int size
-    ) {
-        Page<Venue> venues = venueService.listFlaggedVenues(page, size);
-        PaginationInfo pagination = new PaginationInfo(page, size, venues.getTotalElements(), venues.getTotalPages());
-        return new VenueListResponse(venues.map(venueMapper::toResponse).getContent(), pagination);
-    }
+  @GetMapping("/venues/flagged")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public VenueListResponse listFlaggedVenues(
+      @RequestParam(name = "page", defaultValue = "0") int page,
+      @RequestParam(name = "size", defaultValue = "20") int size) {
+    Page<Venue> venues = venueService.listFlaggedVenues(page, size);
+    PaginationInfo pagination =
+        new PaginationInfo(page, size, venues.getTotalElements(), venues.getTotalPages());
+    return new VenueListResponse(venues.map(venueMapper::toResponse).getContent(), pagination);
+  }
 }

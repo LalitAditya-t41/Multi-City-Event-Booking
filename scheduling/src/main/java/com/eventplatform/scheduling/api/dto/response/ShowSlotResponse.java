@@ -25,6 +25,4 @@ public record ShowSlotResponse(
     Instant lastAttemptedAt,
     List<ShowSlotPricingTierResponse> pricingTiers,
     Instant createdAt,
-    Instant updatedAt
-) {
-}
+    Instant updatedAt) {}

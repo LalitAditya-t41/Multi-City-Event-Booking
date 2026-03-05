@@ -7,7 +7,4 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Serializes to: {@code {"utc": "2025-06-01T18:00:00Z", "timezone": "Asia/Kolkata"}}
  */
 public record EbTimeDto(
-    @JsonProperty("utc")      String utc,
-    @JsonProperty("timezone") String timezone
-) {
-}
+    @JsonProperty("utc") String utc, @JsonProperty("timezone") String timezone) {}

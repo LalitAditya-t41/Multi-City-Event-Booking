@@ -12,6 +12,4 @@ public record CouponUsageStatsResponse(
     long voidedRedemptions,
     EbSyncStatus ebSyncStatus,
     Instant lastEbSyncAt,
-    Integer ebQuantitySoldAtLastSync
-) {
-}
+    Integer ebQuantitySoldAtLastSync) {}

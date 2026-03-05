@@ -8,6 +8,4 @@ public record AdminVenueResponse(
     Long cityId,
     String syncStatus,
     String lastSyncError,
-    Instant lastAttemptedAt
-) {
-}
+    Instant lastAttemptedAt) {}

@@ -8,44 +8,52 @@ import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "group_discount_rules", uniqueConstraints = @UniqueConstraint(name = "uq_discount_rule_tier", columnNames = {"show_slot_id", "pricing_tier_id"}))
+@Table(
+    name = "group_discount_rules",
+    uniqueConstraints =
+        @UniqueConstraint(
+            name = "uq_discount_rule_tier",
+            columnNames = {"show_slot_id", "pricing_tier_id"}))
 public class GroupDiscountRule extends BaseEntity {
 
-    @Column(name = "show_slot_id", nullable = false)
-    private Long showSlotId;
+  @Column(name = "show_slot_id", nullable = false)
+  private Long showSlotId;
 
-    @Column(name = "pricing_tier_id", nullable = false)
-    private Long pricingTierId;
+  @Column(name = "pricing_tier_id", nullable = false)
+  private Long pricingTierId;
 
-    @Column(name = "group_discount_threshold", nullable = false)
-    private Integer groupDiscountThreshold;
+  @Column(name = "group_discount_threshold", nullable = false)
+  private Integer groupDiscountThreshold;
 
-    @Column(name = "group_discount_percent", nullable = false)
-    private BigDecimal groupDiscountPercent;
+  @Column(name = "group_discount_percent", nullable = false)
+  private BigDecimal groupDiscountPercent;
 
-    protected GroupDiscountRule() {
-    }
+  protected GroupDiscountRule() {}
 
-    public GroupDiscountRule(Long showSlotId, Long pricingTierId, Integer groupDiscountThreshold, BigDecimal groupDiscountPercent) {
-        this.showSlotId = showSlotId;
-        this.pricingTierId = pricingTierId;
-        this.groupDiscountThreshold = groupDiscountThreshold;
-        this.groupDiscountPercent = groupDiscountPercent;
-    }
+  public GroupDiscountRule(
+      Long showSlotId,
+      Long pricingTierId,
+      Integer groupDiscountThreshold,
+      BigDecimal groupDiscountPercent) {
+    this.showSlotId = showSlotId;
+    this.pricingTierId = pricingTierId;
+    this.groupDiscountThreshold = groupDiscountThreshold;
+    this.groupDiscountPercent = groupDiscountPercent;
+  }
 
-    public Long getShowSlotId() {
-        return showSlotId;
-    }
+  public Long getShowSlotId() {
+    return showSlotId;
+  }
 
-    public Long getPricingTierId() {
-        return pricingTierId;
-    }
+  public Long getPricingTierId() {
+    return pricingTierId;
+  }
 
-    public Integer getGroupDiscountThreshold() {
-        return groupDiscountThreshold;
-    }
+  public Integer getGroupDiscountThreshold() {
+    return groupDiscountThreshold;
+  }
 
-    public BigDecimal getGroupDiscountPercent() {
-        return groupDiscountPercent;
-    }
+  public BigDecimal getGroupDiscountPercent() {
+    return groupDiscountPercent;
+  }
 }

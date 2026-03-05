@@ -18,24 +18,24 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/users/me/settings")
 public class UserSettingsController {
 
-    private final UserSettingsService userSettingsService;
+  private final UserSettingsService userSettingsService;
 
-    public UserSettingsController(UserSettingsService userSettingsService) {
-        this.userSettingsService = userSettingsService;
-    }
+  public UserSettingsController(UserSettingsService userSettingsService) {
+    this.userSettingsService = userSettingsService;
+  }
 
-    @GetMapping
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public UserSettingsResponse getMySettings(Authentication authentication) {
-        return userSettingsService.getMySettings(((AuthenticatedUser) authentication.getPrincipal()).userId());
-    }
+  @GetMapping
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public UserSettingsResponse getMySettings(Authentication authentication) {
+    return userSettingsService.getMySettings(
+        ((AuthenticatedUser) authentication.getPrincipal()).userId());
+  }
 
-    @PutMapping
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public UserSettingsResponse upsertMySettings(
-        Authentication authentication,
-        @Valid @RequestBody UserSettingsUpsertRequest request
-    ) {
-        return userSettingsService.upsertMySettings(((AuthenticatedUser) authentication.getPrincipal()).userId(), request);
-    }
+  @PutMapping
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public UserSettingsResponse upsertMySettings(
+      Authentication authentication, @Valid @RequestBody UserSettingsUpsertRequest request) {
+    return userSettingsService.upsertMySettings(
+        ((AuthenticatedUser) authentication.getPrincipal()).userId(), request);
+  }
 }

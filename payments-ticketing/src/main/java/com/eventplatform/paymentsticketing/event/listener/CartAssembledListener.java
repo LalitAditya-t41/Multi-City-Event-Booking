@@ -5,17 +5,17 @@ import com.eventplatform.shared.common.event.published.CartAssembledEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("paymentsTicketingCartAssembledListener")
 public class CartAssembledListener {
 
-    private final PaymentService paymentService;
+  private final PaymentService paymentService;
 
-    public CartAssembledListener(PaymentService paymentService) {
-        this.paymentService = paymentService;
-    }
+  public CartAssembledListener(PaymentService paymentService) {
+    this.paymentService = paymentService;
+  }
 
-    @EventListener
-    public void onCartAssembled(CartAssembledEvent event) {
-        paymentService.createCheckout(event);
-    }
+  @EventListener
+  public void onCartAssembled(CartAssembledEvent event) {
+    paymentService.createCheckout(event);
+  }
 }

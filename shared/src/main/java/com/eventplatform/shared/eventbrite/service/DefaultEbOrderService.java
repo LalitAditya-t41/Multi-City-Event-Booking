@@ -10,26 +10,29 @@ import org.springframework.web.client.RestClient;
 @Service
 public class DefaultEbOrderService implements EbOrderService {
 
-    private final RestClient client;
+  private final RestClient client;
 
-    public DefaultEbOrderService(@Qualifier("ebRestClient") RestClient client) {
-        this.client = client;
-    }
+  public DefaultEbOrderService(@Qualifier("ebRestClient") RestClient client) {
+    this.client = client;
+  }
 
-    @Override
-    public EbOrderResponse getOrder(String orderId) {
-        try {
-            return client.get()
-                .uri("/v3/orders/{orderId}/", orderId)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, (req, resp2) -> {
-                    throw new EbIntegrationException("EB getOrder failed: " + resp2.getStatusCode());
-                })
-                .body(EbOrderResponse.class);
-        } catch (EbIntegrationException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new EbIntegrationException("EB getOrder error: " + ex.getMessage(), ex);
-        }
+  @Override
+  public EbOrderResponse getOrder(String orderId) {
+    try {
+      return client
+          .get()
+          .uri("/v3/orders/{orderId}/", orderId)
+          .retrieve()
+          .onStatus(
+              HttpStatusCode::isError,
+              (req, resp2) -> {
+                throw new EbIntegrationException("EB getOrder failed: " + resp2.getStatusCode());
+              })
+          .body(EbOrderResponse.class);
+    } catch (EbIntegrationException ex) {
+      throw ex;
+    } catch (Exception ex) {
+      throw new EbIntegrationException("EB getOrder error: " + ex.getMessage(), ex);
     }
+  }
 }

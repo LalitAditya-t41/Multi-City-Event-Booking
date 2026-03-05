@@ -11,13 +11,12 @@ public record UpdateShowSlotRequest(
     ZonedDateTime startTime,
     ZonedDateTime endTime,
     Integer capacity,
-    List<@Valid PricingTierRequest> pricingTiers
-) {
-    @AssertTrue(message = "endTime must be after startTime")
-    public boolean isValidTimeRange() {
-        if (startTime == null || endTime == null) {
-            return true;
-        }
-        return endTime.isAfter(startTime);
+    List<@Valid PricingTierRequest> pricingTiers) {
+  @AssertTrue(message = "endTime must be after startTime")
+  public boolean isValidTimeRange() {
+    if (startTime == null || endTime == null) {
+      return true;
     }
+    return endTime.isAfter(startTime);
+  }
 }

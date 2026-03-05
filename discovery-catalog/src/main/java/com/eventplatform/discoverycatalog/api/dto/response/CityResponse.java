@@ -7,6 +7,4 @@ public record CityResponse(
     String state,
     String countryCode,
     String latitude,
-    String longitude
-) {
-}
+    String longitude) {}

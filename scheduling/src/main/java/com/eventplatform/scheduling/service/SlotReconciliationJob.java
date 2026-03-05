@@ -16,38 +16,48 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class SlotReconciliationJob {
 
-    private static final Logger log = LoggerFactory.getLogger(SlotReconciliationJob.class);
+  private static final Logger log = LoggerFactory.getLogger(SlotReconciliationJob.class);
 
-    private final ShowSlotRepository showSlotRepository;
-    private final EbEventSyncService ebEventSyncService;
+  private final ShowSlotRepository showSlotRepository;
+  private final EbEventSyncService ebEventSyncService;
 
-    public SlotReconciliationJob(
-        ShowSlotRepository showSlotRepository,
-        EbEventSyncService ebEventSyncService
-    ) {
-        this.showSlotRepository = showSlotRepository;
-        this.ebEventSyncService = ebEventSyncService;
-    }
+  public SlotReconciliationJob(
+      ShowSlotRepository showSlotRepository, EbEventSyncService ebEventSyncService) {
+    this.showSlotRepository = showSlotRepository;
+    this.ebEventSyncService = ebEventSyncService;
+  }
 
-    @Scheduled(fixedDelayString = "${eventbrite.slot.reconcile.delay-ms:3600000}")
-    @Transactional
-    public void reconcile() {
-        List<ShowSlot> activeSlots = showSlotRepository.findAll().stream()
-            .filter(slot -> slot.getStatus() == ShowSlotStatus.ACTIVE && slot.getEbEventId() != null)
+  @Scheduled(fixedDelayString = "${eventbrite.slot.reconcile.delay-ms:3600000}")
+  @Transactional
+  public void reconcile() {
+    List<ShowSlot> activeSlots =
+        showSlotRepository.findAll().stream()
+            .filter(
+                slot -> slot.getStatus() == ShowSlotStatus.ACTIVE && slot.getEbEventId() != null)
             .toList();
 
-        for (ShowSlot slot : activeSlots) {
-            try {
-                EbEventDto ebEvent = ebEventSyncService.getEventById(slot.getEbEventId());
-                if (ebEvent == null || ebEvent.state() == null || !"LIVE".equalsIgnoreCase(ebEvent.state())) {
-                    slot.recordSyncFailure("EB event not live or missing on reconciliation");
-                    showSlotRepository.save(slot);
-                }
-            } catch (EbIntegrationException ex) {
-                log.warn("Slot reconciliation failed. slotId={} ebEventId={}", slot.getId(), slot.getEbEventId(), ex);
-            } catch (Exception ex) {
-                log.warn("Unexpected slot reconciliation error. slotId={} ebEventId={}", slot.getId(), slot.getEbEventId(), ex);
-            }
+    for (ShowSlot slot : activeSlots) {
+      try {
+        EbEventDto ebEvent = ebEventSyncService.getEventById(slot.getEbEventId());
+        if (ebEvent == null
+            || ebEvent.state() == null
+            || !"LIVE".equalsIgnoreCase(ebEvent.state())) {
+          slot.recordSyncFailure("EB event not live or missing on reconciliation");
+          showSlotRepository.save(slot);
         }
+      } catch (EbIntegrationException ex) {
+        log.warn(
+            "Slot reconciliation failed. slotId={} ebEventId={}",
+            slot.getId(),
+            slot.getEbEventId(),
+            ex);
+      } catch (Exception ex) {
+        log.warn(
+            "Unexpected slot reconciliation error. slotId={} ebEventId={}",
+            slot.getId(),
+            slot.getEbEventId(),
+            ex);
+      }
     }
+  }
 }

@@ -15,16 +15,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/tickets")
 public class ETicketController {
 
-    private final ETicketService eTicketService;
+  private final ETicketService eTicketService;
 
-    public ETicketController(ETicketService eTicketService) {
-        this.eTicketService = eTicketService;
-    }
+  public ETicketController(ETicketService eTicketService) {
+    this.eTicketService = eTicketService;
+  }
 
-    @GetMapping("/{bookingRef}")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public TicketsByBookingResponse getTickets(Authentication authentication, @PathVariable String bookingRef) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return eTicketService.getTickets(user.userId(), bookingRef);
-    }
+  @GetMapping("/{bookingRef}")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public TicketsByBookingResponse getTickets(
+      Authentication authentication, @PathVariable String bookingRef) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return eTicketService.getTickets(user.userId(), bookingRef);
+  }
 }

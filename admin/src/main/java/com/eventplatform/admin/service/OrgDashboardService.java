@@ -10,32 +10,29 @@ import org.springframework.stereotype.Service;
 @Service
 public class OrgDashboardService {
 
-    private final SchedulingAdminClient schedulingAdminClient;
-    private final CatalogAdminClient catalogAdminClient;
+  private final SchedulingAdminClient schedulingAdminClient;
+  private final CatalogAdminClient catalogAdminClient;
 
-    public OrgDashboardService(
-        SchedulingAdminClient schedulingAdminClient,
-        CatalogAdminClient catalogAdminClient
-    ) {
-        this.schedulingAdminClient = schedulingAdminClient;
-        this.catalogAdminClient = catalogAdminClient;
-    }
+  public OrgDashboardService(
+      SchedulingAdminClient schedulingAdminClient, CatalogAdminClient catalogAdminClient) {
+    this.schedulingAdminClient = schedulingAdminClient;
+    this.catalogAdminClient = catalogAdminClient;
+  }
 
-    public SlotFlaggedResponse getFlaggedSlots(Long orgId) {
-        List<SchedulingSlotResponse> pending = schedulingAdminClient.getPendingSyncSlots(orgId).stream()
+  public SlotFlaggedResponse getFlaggedSlots(Long orgId) {
+    List<SchedulingSlotResponse> pending =
+        schedulingAdminClient.getPendingSyncSlots(orgId).stream()
             .filter(slot -> slot.syncAttemptCount() > 0)
             .toList();
-        List<SchedulingSlotResponse> mismatches = schedulingAdminClient.getMismatchSlots(orgId);
-        return new SlotFlaggedResponse(pending, mismatches);
-    }
+    List<SchedulingSlotResponse> mismatches = schedulingAdminClient.getMismatchSlots(orgId);
+    return new SlotFlaggedResponse(pending, mismatches);
+  }
 
-    public List<AdminVenueResponse> getFlaggedVenues(Long orgId) {
-        return catalogAdminClient.getFlaggedVenues(orgId);
-    }
+  public List<AdminVenueResponse> getFlaggedVenues(Long orgId) {
+    return catalogAdminClient.getFlaggedVenues(orgId);
+  }
 
-    public record SlotFlaggedResponse(
-        List<SchedulingSlotResponse> pendingSyncFailed,
-        List<SchedulingSlotResponse> activeWithEbMismatch
-    ) {
-    }
+  public record SlotFlaggedResponse(
+      List<SchedulingSlotResponse> pendingSyncFailed,
+      List<SchedulingSlotResponse> activeWithEbMismatch) {}
 }

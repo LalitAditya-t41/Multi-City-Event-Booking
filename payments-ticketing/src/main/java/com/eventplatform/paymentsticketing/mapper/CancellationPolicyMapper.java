@@ -8,7 +8,7 @@ import org.mapstruct.Mapper;
 @Mapper(componentModel = "spring")
 public interface CancellationPolicyMapper {
 
-    CancellationPolicyResponse toResponse(CancellationPolicy policy);
+  CancellationPolicyResponse toResponse(CancellationPolicy policy);
 
-    CancellationPolicyResponse.TierResponse toTierResponse(CancellationPolicyTier tier);
+  CancellationPolicyResponse.TierResponse toTierResponse(CancellationPolicyTier tier);
 }

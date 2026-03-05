@@ -6,11 +6,11 @@ import java.util.List;
 
 public interface EbDiscountSyncService {
 
-    EbDiscountResponse createDiscount(String orgId, EbDiscountCreateRequest request);
+  EbDiscountResponse createDiscount(String orgId, EbDiscountCreateRequest request);
 
-    List<EbDiscountResponse> listDiscounts(String orgId);
+  List<EbDiscountResponse> listDiscounts(String orgId);
 
-    EbDiscountResponse getDiscount(String discountId);
+  EbDiscountResponse getDiscount(String discountId);
 
-    void deleteDiscount(String discountId);
+  void deleteDiscount(String discountId);
 }

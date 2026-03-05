@@ -34,61 +34,74 @@ import com.eventplatform.shared.security.SecurityConfig;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(controllers = {
-    PromotionAdminController.class,
-    CouponAdminController.class,
-    CouponUserController.class
-})
+@WebMvcTest(
+    controllers = {
+      PromotionAdminController.class,
+      CouponAdminController.class,
+      CouponUserController.class
+    })
 @ContextConfiguration(classes = com.eventplatform.promotions.PromotionsTestApplication.class)
 @Import({SecurityConfig.class, GlobalExceptionHandler.class})
 class PromotionsControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+  @Autowired private MockMvc mockMvc;
 
-    @MockBean
-    private PromotionService promotionService;
-    @MockBean
-    private CouponAdminService couponAdminService;
-    @MockBean
-    private CouponEligibilityService couponEligibilityService;
-    @MockBean
-    private DiscountReconciliationService reconciliationService;
-    @MockBean
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+  @MockitoBean private PromotionService promotionService;
+  @MockitoBean private CouponAdminService couponAdminService;
+  @MockitoBean private CouponEligibilityService couponEligibilityService;
+  @MockitoBean private DiscountReconciliationService reconciliationService;
+  @MockitoBean private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @BeforeEach
-    void setUpFilterPassThrough() throws Exception {
-        doAnswer(invocation -> {
-            jakarta.servlet.FilterChain chain = invocation.getArgument(2);
-            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
-            return null;
-        }).when(jwtAuthenticationFilter).doFilter(any(), any(), any());
-    }
+  @BeforeEach
+  void setUpFilterPassThrough() throws Exception {
+    doAnswer(
+            invocation -> {
+              jakarta.servlet.FilterChain chain = invocation.getArgument(2);
+              chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
+              return null;
+            })
+        .when(jwtAuthenticationFilter)
+        .doFilter(any(), any(), any());
+  }
 
-    @Test
-    void POST_promotions_should_return_201_with_promotion_id_for_ROLE_ADMIN() throws Exception {
-        when(promotionService.create(any(), any())).thenReturn(new PromotionResponse(
-            101L, 1L, "Promo", DiscountType.PERCENT_OFF, new BigDecimal("10"), PromotionScope.ORG_WIDE,
-            null, 10, 2, Instant.now(), Instant.now().plusSeconds(3600), PromotionStatus.ACTIVE, Instant.now(), Instant.now()
-        ));
+  @Test
+  void POST_promotions_should_return_201_with_promotion_id_for_ROLE_ADMIN() throws Exception {
+    when(promotionService.create(any(), any()))
+        .thenReturn(
+            new PromotionResponse(
+                101L,
+                1L,
+                "Promo",
+                DiscountType.PERCENT_OFF,
+                new BigDecimal("10"),
+                PromotionScope.ORG_WIDE,
+                null,
+                10,
+                2,
+                Instant.now(),
+                Instant.now().plusSeconds(3600),
+                PromotionStatus.ACTIVE,
+                Instant.now(),
+                Instant.now()));
 
-        mockMvc.perform(post("/api/v1/promotions")
+    mockMvc
+        .perform(
+            post("/api/v1/promotions")
                 .with(authentication(adminAuth()))
                 .contentType("application/json")
-                .content("""
+                .content(
+                    """
                     {
                       "name":"Promo",
                       "discountType":"PERCENT_OFF",
@@ -100,17 +113,20 @@ class PromotionsControllerTest {
                       "perUserCap":2
                     }
                     """))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.id").value(101))
-            .andExpect(jsonPath("$.status").value("ACTIVE"));
-    }
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.id").value(101))
+        .andExpect(jsonPath("$.status").value("ACTIVE"));
+  }
 
-    @Test
-    void POST_promotions_should_return_403_when_called_by_ROLE_USER() throws Exception {
-        mockMvc.perform(post("/api/v1/promotions")
+  @Test
+  void POST_promotions_should_return_403_when_called_by_ROLE_USER() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/promotions")
                 .with(authentication(userAuth()))
                 .contentType("application/json")
-                .content("""
+                .content(
+                    """
                     {
                       "name":"Promo",
                       "discountType":"PERCENT_OFF",
@@ -120,114 +136,149 @@ class PromotionsControllerTest {
                       "validUntil":"2026-03-06T00:00:00Z"
                     }
                     """))
-            .andExpect(status().isForbidden());
-    }
+        .andExpect(status().isForbidden());
+  }
 
-    @Test
-    void POST_coupons_should_return_201_and_show_SYNC_PENDING_eb_sync_status() throws Exception {
-        when(couponAdminService.createCoupon(any(), any(), any())).thenReturn(new CouponResponse(
-            1L, 101L, 1L, "SAVE10", CouponStatus.ACTIVE, 0, EbSyncStatus.SYNC_PENDING, null, null, Instant.now(), Instant.now()
-        ));
+  @Test
+  void POST_coupons_should_return_201_and_show_SYNC_PENDING_eb_sync_status() throws Exception {
+    when(couponAdminService.createCoupon(any(), any(), any()))
+        .thenReturn(
+            new CouponResponse(
+                1L,
+                101L,
+                1L,
+                "SAVE10",
+                CouponStatus.ACTIVE,
+                0,
+                EbSyncStatus.SYNC_PENDING,
+                null,
+                null,
+                Instant.now(),
+                Instant.now()));
 
-        mockMvc.perform(post("/api/v1/promotions/101/coupons")
+    mockMvc
+        .perform(
+            post("/api/v1/promotions/101/coupons")
                 .with(authentication(adminAuth()))
                 .contentType("application/json")
                 .content("{" + "\"code\":\"SAVE10\"" + "}"))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.ebSyncStatus").value("SYNC_PENDING"));
-    }
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.ebSyncStatus").value("SYNC_PENDING"));
+  }
 
-    @Test
-    void POST_coupons_should_return_409_on_duplicate_code_within_org() throws Exception {
-        when(couponAdminService.createCoupon(any(), any(), any())).thenThrow(new CouponCodeConflictException("SAVE10"));
+  @Test
+  void POST_coupons_should_return_409_on_duplicate_code_within_org() throws Exception {
+    when(couponAdminService.createCoupon(any(), any(), any()))
+        .thenThrow(new CouponCodeConflictException("SAVE10"));
 
-        mockMvc.perform(post("/api/v1/promotions/101/coupons")
+    mockMvc
+        .perform(
+            post("/api/v1/promotions/101/coupons")
                 .with(authentication(adminAuth()))
                 .contentType("application/json")
                 .content("{" + "\"code\":\"SAVE10\"" + "}"))
-            .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.errorCode").value("COUPON_CODE_CONFLICT"));
-    }
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.errorCode").value("COUPON_CODE_CONFLICT"));
+  }
 
-    @Test
-    void POST_promotions_validate_should_return_200_with_discount_breakdown_for_valid_coupon() throws Exception {
-        when(couponEligibilityService.validateAndApply(any(), any())).thenReturn(
-            new DiscountBreakdownResponse("SAVE10", DiscountType.PERCENT_OFF, 1000L, 9000L, "inr")
-        );
+  @Test
+  void POST_promotions_validate_should_return_200_with_discount_breakdown_for_valid_coupon()
+      throws Exception {
+    when(couponEligibilityService.validateAndApply(any(), any()))
+        .thenReturn(
+            new DiscountBreakdownResponse("SAVE10", DiscountType.PERCENT_OFF, 1000L, 9000L, "inr"));
 
-        mockMvc.perform(post("/api/v1/promotions/validate")
+    mockMvc
+        .perform(
+            post("/api/v1/promotions/validate")
                 .with(authentication(userAuth()))
                 .contentType("application/json")
                 .content("{" + "\"couponCode\":\"SAVE10\",\"cartId\":100" + "}"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.discountAmountInSmallestUnit").value(1000))
-            .andExpect(jsonPath("$.adjustedCartTotalInSmallestUnit").value(9000));
-    }
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.discountAmountInSmallestUnit").value(1000))
+        .andExpect(jsonPath("$.adjustedCartTotalInSmallestUnit").value(9000));
+  }
 
-    @Test
-    void POST_promotions_validate_should_return_410_when_coupon_is_INACTIVE() throws Exception {
-        when(couponEligibilityService.validateAndApply(any(), any())).thenThrow(new CouponInactiveException("SAVE10"));
+  @Test
+  void POST_promotions_validate_should_return_410_when_coupon_is_INACTIVE() throws Exception {
+    when(couponEligibilityService.validateAndApply(any(), any()))
+        .thenThrow(new CouponInactiveException("SAVE10"));
 
-        mockMvc.perform(post("/api/v1/promotions/validate")
+    mockMvc
+        .perform(
+            post("/api/v1/promotions/validate")
                 .with(authentication(userAuth()))
                 .contentType("application/json")
                 .content("{" + "\"couponCode\":\"SAVE10\",\"cartId\":100" + "}"))
-            .andExpect(status().isGone())
-            .andExpect(jsonPath("$.errorCode").value("COUPON_INACTIVE"));
-    }
+        .andExpect(status().isGone())
+        .andExpect(jsonPath("$.errorCode").value("COUPON_INACTIVE"));
+  }
 
-    @Test
-    void POST_promotions_validate_should_return_409_when_usage_limit_reached() throws Exception {
-        when(couponEligibilityService.validateAndApply(any(), any())).thenThrow(new CouponUsageLimitReachedException());
+  @Test
+  void POST_promotions_validate_should_return_409_when_usage_limit_reached() throws Exception {
+    when(couponEligibilityService.validateAndApply(any(), any()))
+        .thenThrow(new CouponUsageLimitReachedException());
 
-        mockMvc.perform(post("/api/v1/promotions/validate")
+    mockMvc
+        .perform(
+            post("/api/v1/promotions/validate")
                 .with(authentication(userAuth()))
                 .contentType("application/json")
                 .content("{" + "\"couponCode\":\"SAVE10\",\"cartId\":100" + "}"))
-            .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.errorCode").value("COUPON_USAGE_LIMIT_REACHED"));
-    }
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.errorCode").value("COUPON_USAGE_LIMIT_REACHED"));
+  }
 
-    @Test
-    void DELETE_promotions_cart_coupon_should_return_204_and_release_reservation() throws Exception {
-        mockMvc.perform(delete("/api/v1/promotions/cart/100/coupon")
-                .with(authentication(userAuth())))
-            .andExpect(status().isNoContent());
-    }
+  @Test
+  void DELETE_promotions_cart_coupon_should_return_204_and_release_reservation() throws Exception {
+    mockMvc
+        .perform(delete("/api/v1/promotions/cart/100/coupon").with(authentication(userAuth())))
+        .andExpect(status().isNoContent());
+  }
 
-    @Test
-    void POST_coupons_sync_should_return_200_with_updated_ebSyncStatus() throws Exception {
-        when(couponAdminService.manualSync(any(), any())).thenReturn(new CouponResponse(
-            1L, 101L, 1L, "SAVE10", CouponStatus.ACTIVE, 1, EbSyncStatus.SYNCED, "eb_1", 1, Instant.now(), Instant.now()
-        ));
+  @Test
+  void POST_coupons_sync_should_return_200_with_updated_ebSyncStatus() throws Exception {
+    when(couponAdminService.manualSync(any(), any()))
+        .thenReturn(
+            new CouponResponse(
+                1L,
+                101L,
+                1L,
+                "SAVE10",
+                CouponStatus.ACTIVE,
+                1,
+                EbSyncStatus.SYNCED,
+                "eb_1",
+                1,
+                Instant.now(),
+                Instant.now()));
 
-        mockMvc.perform(post("/api/v1/promotions/coupons/SAVE10/sync")
-                .with(authentication(adminAuth())))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.ebSyncStatus").value("SYNCED"));
-    }
+    mockMvc
+        .perform(post("/api/v1/promotions/coupons/SAVE10/sync").with(authentication(adminAuth())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.ebSyncStatus").value("SYNCED"));
+  }
 
-    @Test
-    void POST_reconciliation_trigger_should_return_202_accepted() throws Exception {
-        mockMvc.perform(post("/api/v1/promotions/reconciliation/trigger")
-                .with(authentication(adminAuth())))
-            .andExpect(status().isAccepted())
-            .andExpect(jsonPath("$.message").value("Reconciliation triggered"));
-    }
+  @Test
+  void POST_reconciliation_trigger_should_return_202_accepted() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/promotions/reconciliation/trigger").with(authentication(adminAuth())))
+        .andExpect(status().isAccepted())
+        .andExpect(jsonPath("$.message").value("Reconciliation triggered"));
+  }
 
-    private UsernamePasswordAuthenticationToken adminAuth() {
-        return new UsernamePasswordAuthenticationToken(
-            new AuthenticatedUser(1L, "ADMIN", 1L, "admin@test.com"),
-            null,
-            List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-        );
-    }
+  private UsernamePasswordAuthenticationToken adminAuth() {
+    return new UsernamePasswordAuthenticationToken(
+        new AuthenticatedUser(1L, "ADMIN", 1L, "admin@test.com"),
+        null,
+        List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+  }
 
-    private UsernamePasswordAuthenticationToken userAuth() {
-        return new UsernamePasswordAuthenticationToken(
-            new AuthenticatedUser(99L, "USER", 1L, "user@test.com"),
-            null,
-            List.of(new SimpleGrantedAuthority("ROLE_USER"))
-        );
-    }
+  private UsernamePasswordAuthenticationToken userAuth() {
+    return new UsernamePasswordAuthenticationToken(
+        new AuthenticatedUser(99L, "USER", 1L, "user@test.com"),
+        null,
+        List.of(new SimpleGrantedAuthority("ROLE_USER")));
+  }
 }

@@ -6,7 +6,4 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public record CancelItemsRequest(
-    @NotEmpty List<Long> bookingItemIds,
-    @NotNull RefundReason reason
-) {
-}
+    @NotEmpty List<Long> bookingItemIds, @NotNull RefundReason reason) {}

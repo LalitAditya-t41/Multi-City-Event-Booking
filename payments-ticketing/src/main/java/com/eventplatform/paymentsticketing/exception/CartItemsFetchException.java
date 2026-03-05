@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 
 public class CartItemsFetchException extends BaseException {
 
-    public CartItemsFetchException(String message) {
-        super(message, "CART_ITEMS_UNAVAILABLE", HttpStatus.SERVICE_UNAVAILABLE);
-    }
+  public CartItemsFetchException(String message) {
+    super(message, "CART_ITEMS_UNAVAILABLE", HttpStatus.SERVICE_UNAVAILABLE);
+  }
 }

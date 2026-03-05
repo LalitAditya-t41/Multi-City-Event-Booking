@@ -9,6 +9,4 @@ public record CatalogVenueResponse(
     String name,
     String address,
     Integer capacity,
-    SeatingMode seatingMode
-) {
-}
+    SeatingMode seatingMode) {}

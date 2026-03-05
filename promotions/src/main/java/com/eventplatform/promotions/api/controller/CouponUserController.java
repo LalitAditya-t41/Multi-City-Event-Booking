@@ -21,24 +21,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/promotions")
 public class CouponUserController {
 
-    private final CouponEligibilityService couponEligibilityService;
+  private final CouponEligibilityService couponEligibilityService;
 
-    public CouponUserController(CouponEligibilityService couponEligibilityService) {
-        this.couponEligibilityService = couponEligibilityService;
-    }
+  public CouponUserController(CouponEligibilityService couponEligibilityService) {
+    this.couponEligibilityService = couponEligibilityService;
+  }
 
-    @PostMapping("/validate")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public DiscountBreakdownResponse validate(Authentication authentication, @Valid @RequestBody CouponValidateRequest request) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return couponEligibilityService.validateAndApply(user.userId(), request);
-    }
+  @PostMapping("/validate")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public DiscountBreakdownResponse validate(
+      Authentication authentication, @Valid @RequestBody CouponValidateRequest request) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return couponEligibilityService.validateAndApply(user.userId(), request);
+  }
 
-    @DeleteMapping("/cart/{cartId}/coupon")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public void remove(Authentication authentication, @PathVariable Long cartId) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        couponEligibilityService.removeCouponFromCart(user.userId(), cartId);
-    }
+  @DeleteMapping("/cart/{cartId}/coupon")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public void remove(Authentication authentication, @PathVariable Long cartId) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    couponEligibilityService.removeCouponFromCart(user.userId(), cartId);
+  }
 }

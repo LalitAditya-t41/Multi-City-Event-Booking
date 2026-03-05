@@ -16,88 +16,87 @@ import java.time.Instant;
 @Table(name = "cancellation_requests")
 public class CancellationRequest {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(name = "booking_id", nullable = false)
-    private Long bookingId;
+  @Column(name = "booking_id", nullable = false)
+  private Long bookingId;
 
-    @Column(name = "booking_item_id")
-    private Long bookingItemId;
+  @Column(name = "booking_item_id")
+  private Long bookingItemId;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+  @Column(name = "user_id", nullable = false)
+  private Long userId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "reason")
-    private RefundReason reason;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "reason")
+  private RefundReason reason;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private CancellationRequestStatus status;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "status", nullable = false)
+  private CancellationRequestStatus status;
 
-    @Column(name = "requested_at", nullable = false)
-    private Instant requestedAt;
+  @Column(name = "requested_at", nullable = false)
+  private Instant requestedAt;
 
-    @Column(name = "resolved_at")
-    private Instant resolvedAt;
+  @Column(name = "resolved_at")
+  private Instant resolvedAt;
 
-    protected CancellationRequest() {
-    }
+  protected CancellationRequest() {}
 
-    public CancellationRequest(Long bookingId, Long bookingItemId, Long userId, RefundReason reason) {
-        this.bookingId = bookingId;
-        this.bookingItemId = bookingItemId;
-        this.userId = userId;
-        this.reason = reason;
-        this.status = CancellationRequestStatus.PENDING;
-        this.requestedAt = Instant.now();
-    }
+  public CancellationRequest(Long bookingId, Long bookingItemId, Long userId, RefundReason reason) {
+    this.bookingId = bookingId;
+    this.bookingItemId = bookingItemId;
+    this.userId = userId;
+    this.reason = reason;
+    this.status = CancellationRequestStatus.PENDING;
+    this.requestedAt = Instant.now();
+  }
 
-    public CancellationRequest(Long bookingId, Long userId, RefundReason reason) {
-        this(bookingId, null, userId, reason);
-    }
+  public CancellationRequest(Long bookingId, Long userId, RefundReason reason) {
+    this(bookingId, null, userId, reason);
+  }
 
-    public void approve() {
-        this.status = CancellationRequestStatus.APPROVED;
-        this.resolvedAt = Instant.now();
-    }
+  public void approve() {
+    this.status = CancellationRequestStatus.APPROVED;
+    this.resolvedAt = Instant.now();
+  }
 
-    public void reject() {
-        this.status = CancellationRequestStatus.REJECTED;
-        this.resolvedAt = Instant.now();
-    }
+  public void reject() {
+    this.status = CancellationRequestStatus.REJECTED;
+    this.resolvedAt = Instant.now();
+  }
 
-    public Long getId() {
-        return id;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public Long getBookingId() {
-        return bookingId;
-    }
+  public Long getBookingId() {
+    return bookingId;
+  }
 
-    public Long getBookingItemId() {
-        return bookingItemId;
-    }
+  public Long getBookingItemId() {
+    return bookingItemId;
+  }
 
-    public Long getUserId() {
-        return userId;
-    }
+  public Long getUserId() {
+    return userId;
+  }
 
-    public RefundReason getReason() {
-        return reason;
-    }
+  public RefundReason getReason() {
+    return reason;
+  }
 
-    public CancellationRequestStatus getStatus() {
-        return status;
-    }
+  public CancellationRequestStatus getStatus() {
+    return status;
+  }
 
-    public Instant getRequestedAt() {
-        return requestedAt;
-    }
+  public Instant getRequestedAt() {
+    return requestedAt;
+  }
 
-    public Instant getResolvedAt() {
-        return resolvedAt;
-    }
+  public Instant getResolvedAt() {
+    return resolvedAt;
+  }
 }

@@ -9,5 +9,4 @@ import org.springframework.context.annotation.ComponentScan;
 @SpringBootConfiguration
 @EnableAutoConfiguration
 @ComponentScan(basePackageClasses = {OrgEventbriteController.class, GlobalExceptionHandler.class})
-public class AdminTestApplication {
-}
+public class AdminTestApplication {}

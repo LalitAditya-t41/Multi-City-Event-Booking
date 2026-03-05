@@ -10,6 +10,4 @@ public record BookingItemResponse(
     Long unitPrice,
     String currency,
     BookingItemStatus status,
-    ETicketResponse eTicket
-) {
-}
+    ETicketResponse eTicket) {}

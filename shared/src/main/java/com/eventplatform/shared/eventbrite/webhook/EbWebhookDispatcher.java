@@ -11,33 +11,33 @@ import org.springframework.stereotype.Component;
 @Component
 public class EbWebhookDispatcher {
 
-    private static final Logger log = LoggerFactory.getLogger(EbWebhookDispatcher.class);
+  private static final Logger log = LoggerFactory.getLogger(EbWebhookDispatcher.class);
 
-    private final EventbriteWebhookSignatureValidator signatureValidator;
-    private final ApplicationEventPublisher eventPublisher;
-    private final ObjectMapper objectMapper;
-    private final Long defaultOrgId;
+  private final EventbriteWebhookSignatureValidator signatureValidator;
+  private final ApplicationEventPublisher eventPublisher;
+  private final ObjectMapper objectMapper;
+  private final Long defaultOrgId;
 
-    public EbWebhookDispatcher(
-        EventbriteWebhookSignatureValidator signatureValidator,
-        ApplicationEventPublisher eventPublisher,
-        ObjectMapper objectMapper,
-        @Value("${app.default-org-id}") Long defaultOrgId
-    ) {
-        this.signatureValidator = signatureValidator;
-        this.eventPublisher = eventPublisher;
-        this.objectMapper = objectMapper;
-        this.defaultOrgId = defaultOrgId;
+  public EbWebhookDispatcher(
+      EventbriteWebhookSignatureValidator signatureValidator,
+      ApplicationEventPublisher eventPublisher,
+      ObjectMapper objectMapper,
+      @Value("${app.default-org-id}") Long defaultOrgId) {
+    this.signatureValidator = signatureValidator;
+    this.eventPublisher = eventPublisher;
+    this.objectMapper = objectMapper;
+    this.defaultOrgId = defaultOrgId;
+  }
+
+  public void dispatch(String payload, String signatureHeader) {
+    signatureValidator.validate(payload, signatureHeader);
+    try {
+      JsonNode jsonNode = objectMapper.readTree(payload);
+      eventPublisher.publishEvent(new EbWebhookReceivedEvent(defaultOrgId, jsonNode));
+    } catch (Exception ex) {
+      log.warn("Failed to parse webhook payload. payload={}", payload, ex);
+      eventPublisher.publishEvent(
+          new EbWebhookReceivedEvent(defaultOrgId, objectMapper.createObjectNode()));
     }
-
-    public void dispatch(String payload, String signatureHeader) {
-        signatureValidator.validate(payload, signatureHeader);
-        try {
-            JsonNode jsonNode = objectMapper.readTree(payload);
-            eventPublisher.publishEvent(new EbWebhookReceivedEvent(defaultOrgId, jsonNode));
-        } catch (Exception ex) {
-            log.warn("Failed to parse webhook payload. payload={}", payload, ex);
-            eventPublisher.publishEvent(new EbWebhookReceivedEvent(defaultOrgId, objectMapper.createObjectNode()));
-        }
-    }
+  }
 }

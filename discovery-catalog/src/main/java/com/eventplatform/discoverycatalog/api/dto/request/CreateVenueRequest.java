@@ -15,6 +15,4 @@ public record CreateVenueRequest(
     String latitude,
     String longitude,
     @NotNull @Positive Integer capacity,
-    @NotNull SeatingMode seatingMode
-) {
-}
+    @NotNull SeatingMode seatingMode) {}

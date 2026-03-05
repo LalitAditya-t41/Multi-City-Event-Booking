@@ -23,60 +23,69 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = ETicketController.class)
 @Import({SecurityConfig.class, GlobalExceptionHandler.class})
 class ETicketControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+  @Autowired private MockMvc mockMvc;
 
-    @MockBean
-    private ETicketService eTicketService;
+  @MockitoBean private ETicketService eTicketService;
 
-    @MockBean
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+  @MockitoBean private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @BeforeEach
-    void setUpFilterPassThrough() throws Exception {
-        doAnswer(invocation -> {
-            jakarta.servlet.FilterChain chain = invocation.getArgument(2);
-            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
-            return null;
-        }).when(jwtAuthenticationFilter).doFilter(any(), any(), any());
-    }
+  @BeforeEach
+  void setUpFilterPassThrough() throws Exception {
+    doAnswer(
+            invocation -> {
+              jakarta.servlet.FilterChain chain = invocation.getArgument(2);
+              chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
+              return null;
+            })
+        .when(jwtAuthenticationFilter)
+        .doFilter(any(), any(), any());
+  }
 
-    @Test
-    void should_return_200_with_ticket_list_for_owner() throws Exception {
-        when(eTicketService.getTickets(1L, "BK-20260304-001")).thenReturn(new TicketsByBookingResponse(
-            "BK-20260304-001",
-            List.of(new ETicketResponse("BK-20260304-001:1", 1L, "qr", "/tickets/BK-20260304-001/1.pdf", ETicketStatus.ACTIVE))
-        ));
+  @Test
+  void should_return_200_with_ticket_list_for_owner() throws Exception {
+    when(eTicketService.getTickets(1L, "BK-20260304-001"))
+        .thenReturn(
+            new TicketsByBookingResponse(
+                "BK-20260304-001",
+                List.of(
+                    new ETicketResponse(
+                        "BK-20260304-001:1",
+                        1L,
+                        "qr",
+                        "/tickets/BK-20260304-001/1.pdf",
+                        ETicketStatus.ACTIVE))));
 
-        mockMvc.perform(get("/api/v1/tickets/BK-20260304-001").with(authentication(userAuthentication())))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.tickets[0].ticketCode").value("BK-20260304-001:1"));
-    }
+    mockMvc
+        .perform(get("/api/v1/tickets/BK-20260304-001").with(authentication(userAuthentication())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.tickets[0].ticketCode").value("BK-20260304-001:1"));
+  }
 
-    @Test
-    void should_return_404_for_non_owner_ticket_lookup() throws Exception {
-        when(eTicketService.getTickets(1L, "BK-UNKNOWN")).thenThrow(new BookingNotFoundException("BK-UNKNOWN"));
+  @Test
+  void should_return_404_for_non_owner_ticket_lookup() throws Exception {
+    when(eTicketService.getTickets(1L, "BK-UNKNOWN"))
+        .thenThrow(new BookingNotFoundException("BK-UNKNOWN"));
 
-        mockMvc.perform(get("/api/v1/tickets/BK-UNKNOWN").with(authentication(userAuthentication())))
-            .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.errorCode").value("BOOKING_NOT_FOUND"));
-    }
+    mockMvc
+        .perform(get("/api/v1/tickets/BK-UNKNOWN").with(authentication(userAuthentication())))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.errorCode").value("BOOKING_NOT_FOUND"));
+  }
 
-    private UsernamePasswordAuthenticationToken userAuthentication() {
-        return new UsernamePasswordAuthenticationToken(
-            new AuthenticatedUser(1L, "USER", null, null),
-            null,
-            List.of(new SimpleGrantedAuthority("ROLE_USER"))
-        );
-    }
+  private UsernamePasswordAuthenticationToken userAuthentication() {
+    return new UsernamePasswordAuthenticationToken(
+        new AuthenticatedUser(1L, "USER", null, null),
+        null,
+        List.of(new SimpleGrantedAuthority("ROLE_USER")));
+  }
 }

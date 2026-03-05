@@ -9,5 +9,4 @@ import org.springframework.context.annotation.ComponentScan;
 @SpringBootConfiguration
 @EnableAutoConfiguration
 @ComponentScan(basePackageClasses = {CityCatalogController.class, GlobalExceptionHandler.class})
-public class DiscoveryCatalogTestApplication {
-}
+public class DiscoveryCatalogTestApplication {}

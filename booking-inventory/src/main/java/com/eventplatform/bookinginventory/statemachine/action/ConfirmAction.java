@@ -8,14 +8,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class ConfirmAction {
 
-    private final SeatLockRedisService seatLockRedisService;
+  private final SeatLockRedisService seatLockRedisService;
 
-    public ConfirmAction(SeatLockRedisService seatLockRedisService) {
-        this.seatLockRedisService = seatLockRedisService;
-    }
+  public ConfirmAction(SeatLockRedisService seatLockRedisService) {
+    this.seatLockRedisService = seatLockRedisService;
+  }
 
-    public void apply(Seat seat, SeatActionContext context) {
-        seat.confirm(context.bookingRef());
-        seatLockRedisService.release(seat.getId(), context.userId());
-    }
+  public void apply(Seat seat, SeatActionContext context) {
+    seat.confirm(context.bookingRef());
+    seatLockRedisService.release(seat.getId(), context.userId());
+  }
 }

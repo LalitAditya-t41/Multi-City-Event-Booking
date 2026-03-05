@@ -13,6 +13,4 @@ public record UpdateVenueRequest(
     String latitude,
     String longitude,
     @Positive Integer capacity,
-    SeatingMode seatingMode
-) {
-}
+    SeatingMode seatingMode) {}

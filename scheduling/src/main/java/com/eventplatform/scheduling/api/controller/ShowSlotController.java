@@ -39,121 +39,118 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/scheduling/slots")
 public class ShowSlotController {
 
-    private final ShowSlotService showSlotService;
-    private final ShowSlotMapper showSlotMapper;
+  private final ShowSlotService showSlotService;
+  private final ShowSlotMapper showSlotMapper;
 
-    public ShowSlotController(ShowSlotService showSlotService, ShowSlotMapper showSlotMapper) {
-        this.showSlotService = showSlotService;
-        this.showSlotMapper = showSlotMapper;
-    }
+  public ShowSlotController(ShowSlotService showSlotService, ShowSlotMapper showSlotMapper) {
+    this.showSlotService = showSlotService;
+    this.showSlotMapper = showSlotMapper;
+  }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public ShowSlotResponse createSlot(
-        @RequestParam("orgId") Long organizationId,
-        @Valid @RequestBody CreateShowSlotRequest request
-    ) {
-        ShowSlot slot = showSlotService.createSlot(organizationId, request);
-        return showSlotMapper.toResponse(slot);
-    }
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public ShowSlotResponse createSlot(
+      @RequestParam("orgId") Long organizationId,
+      @Valid @RequestBody CreateShowSlotRequest request) {
+    ShowSlot slot = showSlotService.createSlot(organizationId, request);
+    return showSlotMapper.toResponse(slot);
+  }
 
-    @PostMapping("/{id}/submit")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public ShowSlotSubmitResponse submitSlot(
-        @RequestParam("orgId") Long organizationId,
-        @PathVariable("id") Long slotId
-    ) {
-        ShowSlot slot = showSlotService.submitSlot(organizationId, slotId);
-        return new ShowSlotSubmitResponse(slot.getId(), slot.getStatus(), slot.getEbEventId(), slot.getSyncAttemptCount(), "EB sync initiated");
-    }
+  @PostMapping("/{id}/submit")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public ShowSlotSubmitResponse submitSlot(
+      @RequestParam("orgId") Long organizationId, @PathVariable("id") Long slotId) {
+    ShowSlot slot = showSlotService.submitSlot(organizationId, slotId);
+    return new ShowSlotSubmitResponse(
+        slot.getId(),
+        slot.getStatus(),
+        slot.getEbEventId(),
+        slot.getSyncAttemptCount(),
+        "EB sync initiated");
+  }
 
-    @GetMapping("/{id}")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public ShowSlotResponse getSlot(@PathVariable("id") Long slotId) {
-        return showSlotMapper.toResponse(showSlotService.getSlot(slotId));
-    }
+  @GetMapping("/{id}")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public ShowSlotResponse getSlot(@PathVariable("id") Long slotId) {
+    return showSlotMapper.toResponse(showSlotService.getSlot(slotId));
+  }
 
-    @GetMapping
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public PageResponse<ShowSlotResponse> listSlots(
-        @RequestParam("orgId") Long organizationId,
-        @RequestParam(name = "status", required = false) ShowSlotStatus status,
-        @RequestParam(name = "venueId", required = false) Long venueId,
-        @RequestParam(name = "cityId", required = false) Long cityId,
-        @RequestParam(name = "startAfter", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime startAfter,
-        @RequestParam(name = "page", defaultValue = "0") int page,
-        @RequestParam(name = "size", defaultValue = "20") int size
-    ) {
-        Page<ShowSlot> slots = showSlotService.listSlots(organizationId, status, venueId, cityId, startAfter, page, size);
-        List<ShowSlotResponse> responses = slots.map(showSlotMapper::toResponse).getContent();
-        return new PageResponse<>(responses, slots.getTotalElements(), page, size);
-    }
+  @GetMapping
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public PageResponse<ShowSlotResponse> listSlots(
+      @RequestParam("orgId") Long organizationId,
+      @RequestParam(name = "status", required = false) ShowSlotStatus status,
+      @RequestParam(name = "venueId", required = false) Long venueId,
+      @RequestParam(name = "cityId", required = false) Long cityId,
+      @RequestParam(name = "startAfter", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          ZonedDateTime startAfter,
+      @RequestParam(name = "page", defaultValue = "0") int page,
+      @RequestParam(name = "size", defaultValue = "20") int size) {
+    Page<ShowSlot> slots =
+        showSlotService.listSlots(organizationId, status, venueId, cityId, startAfter, page, size);
+    List<ShowSlotResponse> responses = slots.map(showSlotMapper::toResponse).getContent();
+    return new PageResponse<>(responses, slots.getTotalElements(), page, size);
+  }
 
-    @PutMapping("/{id}")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public ResponseEntity<ShowSlotResponse> updateSlot(
-        @RequestParam("orgId") Long organizationId,
-        @PathVariable("id") Long slotId,
-        @Valid @RequestBody UpdateShowSlotRequest request
-    ) {
-        ShowSlotUpdateResult result = showSlotService.updateSlot(organizationId, slotId, request);
-        ShowSlotResponse response = showSlotMapper.toResponse(result.slot());
-        if (result.ebSyncFailed()) {
-            return ResponseEntity.status(207).body(response);
-        }
-        return ResponseEntity.ok(response);
+  @PutMapping("/{id}")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public ResponseEntity<ShowSlotResponse> updateSlot(
+      @RequestParam("orgId") Long organizationId,
+      @PathVariable("id") Long slotId,
+      @Valid @RequestBody UpdateShowSlotRequest request) {
+    ShowSlotUpdateResult result = showSlotService.updateSlot(organizationId, slotId, request);
+    ShowSlotResponse response = showSlotMapper.toResponse(result.slot());
+    if (result.ebSyncFailed()) {
+      return ResponseEntity.status(207).body(response);
     }
+    return ResponseEntity.ok(response);
+  }
 
-    @PostMapping("/{id}/cancel")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public ShowSlotCancelResponse cancelSlot(
-        @RequestParam("orgId") Long organizationId,
-        @PathVariable("id") Long slotId
-    ) {
-        boolean ebCancelled = showSlotService.cancelSlot(organizationId, slotId);
-        ShowSlot slot = showSlotService.getSlot(slotId);
-        return new ShowSlotCancelResponse(slot.getId(), slot.getStatus(), ebCancelled, "Slot cancelled");
-    }
+  @PostMapping("/{id}/cancel")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public ShowSlotCancelResponse cancelSlot(
+      @RequestParam("orgId") Long organizationId, @PathVariable("id") Long slotId) {
+    boolean ebCancelled = showSlotService.cancelSlot(organizationId, slotId);
+    ShowSlot slot = showSlotService.getSlot(slotId);
+    return new ShowSlotCancelResponse(
+        slot.getId(), slot.getStatus(), ebCancelled, "Slot cancelled");
+  }
 
-    @PostMapping("/{id}/retry-sync")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public ShowSlotRetryResponse retrySync(
-        @RequestParam("orgId") Long organizationId,
-        @PathVariable("id") Long slotId
-    ) {
-        showSlotService.retrySync(organizationId, slotId);
-        return new ShowSlotRetryResponse(ShowSlotStatus.PENDING_SYNC, "Retry initiated");
-    }
+  @PostMapping("/{id}/retry-sync")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public ShowSlotRetryResponse retrySync(
+      @RequestParam("orgId") Long organizationId, @PathVariable("id") Long slotId) {
+    showSlotService.retrySync(organizationId, slotId);
+    return new ShowSlotRetryResponse(ShowSlotStatus.PENDING_SYNC, "Retry initiated");
+  }
 
-    @GetMapping("/{id}/pricing-tiers")
-    @PreAuthorize("isAuthenticated()")
-    public List<ShowSlotPricingTierResponse> getPricingTiers(@PathVariable("id") Long slotId) {
-        return showSlotService.getPricingTiers(slotId)
-            .stream()
-            .map(showSlotMapper::toPricingTierResponse)
-            .toList();
-    }
+  @GetMapping("/{id}/pricing-tiers")
+  @PreAuthorize("isAuthenticated()")
+  public List<ShowSlotPricingTierResponse> getPricingTiers(@PathVariable("id") Long slotId) {
+    return showSlotService.getPricingTiers(slotId).stream()
+        .map(showSlotMapper::toPricingTierResponse)
+        .toList();
+  }
 
-    @GetMapping("/{id}/occurrences")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public ShowSlotOccurrenceListResponse listOccurrences(@PathVariable("id") Long slotId) {
-        List<ShowSlotOccurrence> occurrences = showSlotService.listOccurrences(slotId);
-        List<ShowSlotOccurrenceResponse> responseList = occurrences.stream()
-            .map(showSlotMapper::toOccurrenceResponse)
-            .toList();
-        return new ShowSlotOccurrenceListResponse(slotId, responseList);
-    }
+  @GetMapping("/{id}/occurrences")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public ShowSlotOccurrenceListResponse listOccurrences(@PathVariable("id") Long slotId) {
+    List<ShowSlotOccurrence> occurrences = showSlotService.listOccurrences(slotId);
+    List<ShowSlotOccurrenceResponse> responseList =
+        occurrences.stream().map(showSlotMapper::toOccurrenceResponse).toList();
+    return new ShowSlotOccurrenceListResponse(slotId, responseList);
+  }
 
-    @GetMapping("/mismatches")
-    @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
-    public PageResponse<ShowSlotResponse> listMismatches(
-        @RequestParam("orgId") Long organizationId,
-        @RequestParam(name = "page", defaultValue = "0") int page,
-        @RequestParam(name = "size", defaultValue = "20") int size
-    ) {
-        Page<ShowSlot> slots = showSlotService.listMismatches(organizationId, page, size);
-        List<ShowSlotResponse> responses = slots.map(showSlotMapper::toResponse).getContent();
-        return new PageResponse<>(responses, slots.getTotalElements(), page, size);
-    }
+  @GetMapping("/mismatches")
+  @PreAuthorize("hasRole('" + Roles.ADMIN + "')")
+  public PageResponse<ShowSlotResponse> listMismatches(
+      @RequestParam("orgId") Long organizationId,
+      @RequestParam(name = "page", defaultValue = "0") int page,
+      @RequestParam(name = "size", defaultValue = "20") int size) {
+    Page<ShowSlot> slots = showSlotService.listMismatches(organizationId, page, size);
+    List<ShowSlotResponse> responses = slots.map(showSlotMapper::toResponse).getContent();
+    return new PageResponse<>(responses, slots.getTotalElements(), page, size);
+  }
 }

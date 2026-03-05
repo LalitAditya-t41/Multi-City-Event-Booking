@@ -7,9 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RefundRepository extends JpaRepository<Refund, Long> {
 
-    Optional<Refund> findTopByBookingIdOrderByCreatedAtDesc(Long bookingId);
+  Optional<Refund> findTopByBookingIdOrderByCreatedAtDesc(Long bookingId);
 
-    List<Refund> findByBookingId(Long bookingId);
+  List<Refund> findByBookingId(Long bookingId);
 
-    Optional<Refund> findByStripeRefundId(String stripeRefundId);
+  Optional<Refund> findByStripeRefundId(String stripeRefundId);
 }

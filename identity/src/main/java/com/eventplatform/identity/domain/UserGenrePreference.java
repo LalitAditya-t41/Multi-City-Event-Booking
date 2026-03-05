@@ -11,27 +11,26 @@ import jakarta.persistence.Table;
 @Table(name = "user_genre_preferences")
 public class UserGenrePreference extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_settings_id", nullable = false)
-    private UserSettings userSettings;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "user_settings_id", nullable = false)
+  private UserSettings userSettings;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "preference_option_id", nullable = false)
-    private PreferenceOption preferenceOption;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "preference_option_id", nullable = false)
+  private PreferenceOption preferenceOption;
 
-    protected UserGenrePreference() {
-    }
+  protected UserGenrePreference() {}
 
-    public UserGenrePreference(UserSettings userSettings, PreferenceOption preferenceOption) {
-        this.userSettings = userSettings;
-        this.preferenceOption = preferenceOption;
-    }
+  public UserGenrePreference(UserSettings userSettings, PreferenceOption preferenceOption) {
+    this.userSettings = userSettings;
+    this.preferenceOption = preferenceOption;
+  }
 
-    public UserSettings getUserSettings() {
-        return userSettings;
-    }
+  public UserSettings getUserSettings() {
+    return userSettings;
+  }
 
-    public PreferenceOption getPreferenceOption() {
-        return preferenceOption;
-    }
+  public PreferenceOption getPreferenceOption() {
+    return preferenceOption;
+  }
 }

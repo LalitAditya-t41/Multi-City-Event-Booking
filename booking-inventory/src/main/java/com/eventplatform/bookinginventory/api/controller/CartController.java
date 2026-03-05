@@ -23,45 +23,48 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/booking/cart")
 public class CartController {
 
-    private final CartService cartService;
+  private final CartService cartService;
 
-    public CartController(CartService cartService) {
-        this.cartService = cartService;
-    }
+  public CartController(CartService cartService) {
+    this.cartService = cartService;
+  }
 
-    @PostMapping("/add-seat")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public CartResponse addSeat(Authentication authentication, @Valid @RequestBody AddSeatRequest request) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return cartService.addSeat(user.userId(), user.orgId(), user.role(), request);
-    }
+  @PostMapping("/add-seat")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public CartResponse addSeat(
+      Authentication authentication, @Valid @RequestBody AddSeatRequest request) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return cartService.addSeat(user.userId(), user.orgId(), user.role(), request);
+  }
 
-    @DeleteMapping("/items/{itemId}")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public CartResponse removeItem(Authentication authentication, @PathVariable Long itemId) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return cartService.removeItem(user.userId(), itemId);
-    }
+  @DeleteMapping("/items/{itemId}")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public CartResponse removeItem(Authentication authentication, @PathVariable Long itemId) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return cartService.removeItem(user.userId(), itemId);
+  }
 
-    @GetMapping("/{cartId}")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public CartResponse getCart(Authentication authentication, @PathVariable Long cartId) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return cartService.getCart(user.userId(), cartId);
-    }
+  @GetMapping("/{cartId}")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public CartResponse getCart(Authentication authentication, @PathVariable Long cartId) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return cartService.getCart(user.userId(), cartId);
+  }
 
-    @PostMapping("/confirm")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public CartResponse confirm(Authentication authentication, @Valid @RequestBody ConfirmCartRequest request) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return cartService.confirm(user.userId(), user.orgId(), user.email(), request);
-    }
+  @PostMapping("/confirm")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public CartResponse confirm(
+      Authentication authentication, @Valid @RequestBody ConfirmCartRequest request) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    return cartService.confirm(user.userId(), user.orgId(), user.email(), request);
+  }
 
-    @PostMapping("/abandon")
-    @PreAuthorize("hasRole('" + Roles.USER + "')")
-    public Map<String, String> abandon(Authentication authentication, @Valid @RequestBody AbandonCartRequest request) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        cartService.abandon(user.userId(), request);
-        return Map.of("message", "Cart abandoned. All seat locks released.");
-    }
+  @PostMapping("/abandon")
+  @PreAuthorize("hasRole('" + Roles.USER + "')")
+  public Map<String, String> abandon(
+      Authentication authentication, @Valid @RequestBody AbandonCartRequest request) {
+    AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+    cartService.abandon(user.userId(), request);
+    return Map.of("message", "Cart abandoned. All seat locks released.");
+  }
 }

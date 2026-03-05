@@ -20,6 +20,4 @@ public record PromotionResponse(
     Instant validUntil,
     PromotionStatus status,
     Instant createdAt,
-    Instant updatedAt
-) {
-}
+    Instant updatedAt) {}

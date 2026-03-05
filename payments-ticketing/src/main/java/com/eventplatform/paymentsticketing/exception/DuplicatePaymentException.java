@@ -6,12 +6,11 @@ import org.springframework.http.HttpStatus;
 
 public class DuplicatePaymentException extends BaseException {
 
-    public DuplicatePaymentException(String bookingRef) {
-        super(
-            "Payment already exists for this cart",
-            "PAYMENT_ALREADY_EXISTS",
-            HttpStatus.CONFLICT,
-            Map.of("bookingRef", bookingRef)
-        );
-    }
+  public DuplicatePaymentException(String bookingRef) {
+    super(
+        "Payment already exists for this cart",
+        "PAYMENT_ALREADY_EXISTS",
+        HttpStatus.CONFLICT,
+        Map.of("bookingRef", bookingRef));
+  }
 }

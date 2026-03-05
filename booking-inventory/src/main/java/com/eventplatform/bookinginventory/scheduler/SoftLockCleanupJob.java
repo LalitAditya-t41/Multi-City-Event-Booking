@@ -18,42 +18,43 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class SoftLockCleanupJob {
 
-    private final SeatRepository seatRepository;
-    private final SeatLockAuditLogRepository auditRepository;
-    private final SeatLockRedisService seatLockRedisService;
+  private final SeatRepository seatRepository;
+  private final SeatLockAuditLogRepository auditRepository;
+  private final SeatLockRedisService seatLockRedisService;
 
-    public SoftLockCleanupJob(
-        SeatRepository seatRepository,
-        SeatLockAuditLogRepository auditRepository,
-        SeatLockRedisService seatLockRedisService
-    ) {
-        this.seatRepository = seatRepository;
-        this.auditRepository = auditRepository;
-        this.seatLockRedisService = seatLockRedisService;
-    }
+  public SoftLockCleanupJob(
+      SeatRepository seatRepository,
+      SeatLockAuditLogRepository auditRepository,
+      SeatLockRedisService seatLockRedisService) {
+    this.seatRepository = seatRepository;
+    this.auditRepository = auditRepository;
+    this.seatLockRedisService = seatLockRedisService;
+  }
 
-    @Scheduled(fixedDelay = 60000)
-    @Transactional
-    public void cleanupExpiredSoftLocks() {
-        for (Seat seat : seatRepository.findByLockStateAndLockedUntilBefore(SeatLockState.SOFT_LOCKED, Instant.now())) {
-            Long lockedUser = seat.getLockedByUserId();
-            SeatLockState from = seat.getLockState();
-            seat.release(LockReleaseReason.TTL_EXPIRED);
-            seatRepository.save(seat);
-            if (lockedUser != null) {
-                seatLockRedisService.release(seat.getId(), lockedUser);
-            }
-            auditRepository.save(new SeatLockAuditLog(
-                seat.getId(),
-                null,
-                seat.getShowSlotId(),
-                lockedUser,
-                from,
-                SeatLockState.AVAILABLE,
-                SeatLockEvent.RELEASE,
-                LockReleaseReason.TTL_EXPIRED.name(),
-                null
-            ));
-        }
+  @Scheduled(fixedDelay = 60000)
+  @Transactional
+  public void cleanupExpiredSoftLocks() {
+    for (Seat seat :
+        seatRepository.findByLockStateAndLockedUntilBefore(
+            SeatLockState.SOFT_LOCKED, Instant.now())) {
+      Long lockedUser = seat.getLockedByUserId();
+      SeatLockState from = seat.getLockState();
+      seat.release(LockReleaseReason.TTL_EXPIRED);
+      seatRepository.save(seat);
+      if (lockedUser != null) {
+        seatLockRedisService.release(seat.getId(), lockedUser);
+      }
+      auditRepository.save(
+          new SeatLockAuditLog(
+              seat.getId(),
+              null,
+              seat.getShowSlotId(),
+              lockedUser,
+              from,
+              SeatLockState.AVAILABLE,
+              SeatLockEvent.RELEASE,
+              LockReleaseReason.TTL_EXPIRED.name(),
+              null));
     }
+  }
 }

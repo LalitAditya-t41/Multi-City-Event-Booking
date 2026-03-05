@@ -12,19 +12,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/internal/identity/users")
 public class InternalIdentityController {
 
-    private final InternalIdentityQueryService internalIdentityQueryService;
+  private final InternalIdentityQueryService internalIdentityQueryService;
 
-    public InternalIdentityController(InternalIdentityQueryService internalIdentityQueryService) {
-        this.internalIdentityQueryService = internalIdentityQueryService;
-    }
+  public InternalIdentityController(InternalIdentityQueryService internalIdentityQueryService) {
+    this.internalIdentityQueryService = internalIdentityQueryService;
+  }
 
-    @GetMapping("/{userId}/display-name")
-    public DisplayNameResponse displayName(@PathVariable Long userId) {
-        return internalIdentityQueryService.getDisplayName(userId);
-    }
+  @GetMapping("/{userId}/display-name")
+  public DisplayNameResponse displayName(@PathVariable Long userId) {
+    return internalIdentityQueryService.getDisplayName(userId);
+  }
 
-    @GetMapping("/{userId}/email")
-    public EmailResponse email(@PathVariable Long userId) {
-        return internalIdentityQueryService.getEmail(userId);
-    }
+  @GetMapping("/{userId}/email")
+  public EmailResponse email(@PathVariable Long userId) {
+    return internalIdentityQueryService.getEmail(userId);
+  }
 }

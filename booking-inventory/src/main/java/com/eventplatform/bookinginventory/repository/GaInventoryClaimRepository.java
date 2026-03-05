@@ -9,9 +9,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GaInventoryClaimRepository extends JpaRepository<GaInventoryClaim, Long> {
 
-    Optional<GaInventoryClaim> findByShowSlotIdAndPricingTierIdAndUserIdAndCartId(Long showSlotId, Long pricingTierId, Long userId, Long cartId);
+  Optional<GaInventoryClaim> findByShowSlotIdAndPricingTierIdAndUserIdAndCartId(
+      Long showSlotId, Long pricingTierId, Long userId, Long cartId);
 
-    List<GaInventoryClaim> findByLockStateAndLockedUntilBefore(SeatLockState lockState, Instant now);
+  List<GaInventoryClaim> findByLockStateAndLockedUntilBefore(SeatLockState lockState, Instant now);
 
-    long countByShowSlotIdAndPricingTierIdAndLockState(Long showSlotId, Long pricingTierId, SeatLockState lockState);
+  long countByShowSlotIdAndPricingTierIdAndLockState(
+      Long showSlotId, Long pricingTierId, SeatLockState lockState);
 }

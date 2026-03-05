@@ -20,54 +20,52 @@ import org.springframework.stereotype.Service;
 @Service
 public class VenueCatalogService {
 
-    private final VenueRepository venueRepository;
-    private final CityRepository cityRepository;
-    private final VenueMapper venueMapper;
-    private final VenueSeatRepository venueSeatRepository;
+  private final VenueRepository venueRepository;
+  private final CityRepository cityRepository;
+  private final VenueMapper venueMapper;
+  private final VenueSeatRepository venueSeatRepository;
 
-    public VenueCatalogService(
-        VenueRepository venueRepository,
-        CityRepository cityRepository,
-        VenueMapper venueMapper,
-        VenueSeatRepository venueSeatRepository
-    ) {
-        this.venueRepository = venueRepository;
-        this.cityRepository = cityRepository;
-        this.venueMapper = venueMapper;
-        this.venueSeatRepository = venueSeatRepository;
-    }
+  public VenueCatalogService(
+      VenueRepository venueRepository,
+      CityRepository cityRepository,
+      VenueMapper venueMapper,
+      VenueSeatRepository venueSeatRepository) {
+    this.venueRepository = venueRepository;
+    this.cityRepository = cityRepository;
+    this.venueMapper = venueMapper;
+    this.venueSeatRepository = venueSeatRepository;
+  }
 
-    public VenueListResponse listVenues(Long organizationId, Long cityId, int page, int size) {
-        if (cityId == null) {
-            throw new InvalidCatalogSearchException("cityId is required");
-        }
-        boolean cityExists = cityRepository.existsById(cityId);
-        if (!cityExists) {
-            throw new CatalogNotFoundException("City not found: " + cityId);
-        }
-        Page<VenueResponse> venues = venueRepository.findByOrganizationIdAndCityId(
-            organizationId,
-            cityId,
-            PageRequest.of(page, size)
-        ).map(venueMapper::toResponse);
-        PaginationInfo pagination = new PaginationInfo(page, size, venues.getTotalElements(), venues.getTotalPages());
-        return new VenueListResponse(venues.getContent(), pagination);
+  public VenueListResponse listVenues(Long organizationId, Long cityId, int page, int size) {
+    if (cityId == null) {
+      throw new InvalidCatalogSearchException("cityId is required");
     }
+    boolean cityExists = cityRepository.existsById(cityId);
+    if (!cityExists) {
+      throw new CatalogNotFoundException("City not found: " + cityId);
+    }
+    Page<VenueResponse> venues =
+        venueRepository
+            .findByOrganizationIdAndCityId(organizationId, cityId, PageRequest.of(page, size))
+            .map(venueMapper::toResponse);
+    PaginationInfo pagination =
+        new PaginationInfo(page, size, venues.getTotalElements(), venues.getTotalPages());
+    return new VenueListResponse(venues.getContent(), pagination);
+  }
 
-    public VenueResponse getVenue(Long venueId) {
-        return venueRepository.findById(venueId)
-            .map(venueMapper::toResponse)
-            .orElseThrow(() -> new CatalogNotFoundException("Venue not found: " + venueId));
-    }
+  public VenueResponse getVenue(Long venueId) {
+    return venueRepository
+        .findById(venueId)
+        .map(venueMapper::toResponse)
+        .orElseThrow(() -> new CatalogNotFoundException("Venue not found: " + venueId));
+  }
 
-    public VenueSeatLayoutResponse getVenueSeatLayout(Long venueId) {
-        if (!venueRepository.existsById(venueId)) {
-            throw new CatalogNotFoundException("Venue not found: " + venueId);
-        }
-        List<VenueSeat> seats = venueSeatRepository.findByVenueId(venueId);
-        List<VenueSeatResponse> responses = seats.stream()
-            .map(venueMapper::toSeatResponse)
-            .toList();
-        return new VenueSeatLayoutResponse(venueId, responses.size(), responses);
+  public VenueSeatLayoutResponse getVenueSeatLayout(Long venueId) {
+    if (!venueRepository.existsById(venueId)) {
+      throw new CatalogNotFoundException("Venue not found: " + venueId);
     }
+    List<VenueSeat> seats = venueSeatRepository.findByVenueId(venueId);
+    List<VenueSeatResponse> responses = seats.stream().map(venueMapper::toSeatResponse).toList();
+    return new VenueSeatLayoutResponse(venueId, responses.size(), responses);
+  }
 }

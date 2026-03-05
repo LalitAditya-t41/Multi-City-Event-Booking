@@ -14,46 +14,43 @@ import org.springframework.stereotype.Service;
 @Service
 public class SeatLockStateMachineService {
 
-    private final SeatLockStateMachineConfig config;
-    private final SoftLockAction softLockAction;
-    private final HardLockAction hardLockAction;
-    private final PaymentPendingAction paymentPendingAction;
-    private final ConfirmAction confirmAction;
-    private final ReleaseAction releaseAction;
+  private final SeatLockStateMachineConfig config;
+  private final SoftLockAction softLockAction;
+  private final HardLockAction hardLockAction;
+  private final PaymentPendingAction paymentPendingAction;
+  private final ConfirmAction confirmAction;
+  private final ReleaseAction releaseAction;
 
-    public SeatLockStateMachineService(
-        SeatLockStateMachineConfig config,
-        SoftLockAction softLockAction,
-        HardLockAction hardLockAction,
-        PaymentPendingAction paymentPendingAction,
-        ConfirmAction confirmAction,
-        ReleaseAction releaseAction
-    ) {
-        this.config = config;
-        this.softLockAction = softLockAction;
-        this.hardLockAction = hardLockAction;
-        this.paymentPendingAction = paymentPendingAction;
-        this.confirmAction = confirmAction;
-        this.releaseAction = releaseAction;
-    }
+  public SeatLockStateMachineService(
+      SeatLockStateMachineConfig config,
+      SoftLockAction softLockAction,
+      HardLockAction hardLockAction,
+      PaymentPendingAction paymentPendingAction,
+      ConfirmAction confirmAction,
+      ReleaseAction releaseAction) {
+    this.config = config;
+    this.softLockAction = softLockAction;
+    this.hardLockAction = hardLockAction;
+    this.paymentPendingAction = paymentPendingAction;
+    this.confirmAction = confirmAction;
+    this.releaseAction = releaseAction;
+  }
 
-    public void sendEvent(Seat seat, SeatLockEvent event, SeatActionContext context) {
-        SeatLockState next = config.nextState(seat.getLockState(), event);
-        if (next == null) {
-            throw new BusinessRuleException(
-                "Invalid seat transition: " + seat.getLockState() + " -> " + event,
-                "INVALID_SEAT_TRANSITION"
-            );
-        }
-        switch (event) {
-            case SELECT -> softLockAction.apply(seat, context);
-            case CONFIRM -> hardLockAction.apply(seat, context);
-            case PAYMENT_INITIATE -> paymentPendingAction.apply(seat, context);
-            case CONFIRM_PAYMENT -> confirmAction.apply(seat, context);
-            case RELEASE -> releaseAction.apply(seat, context);
-        }
+  public void sendEvent(Seat seat, SeatLockEvent event, SeatActionContext context) {
+    SeatLockState next = config.nextState(seat.getLockState(), event);
+    if (next == null) {
+      throw new BusinessRuleException(
+          "Invalid seat transition: " + seat.getLockState() + " -> " + event,
+          "INVALID_SEAT_TRANSITION");
     }
+    switch (event) {
+      case SELECT -> softLockAction.apply(seat, context);
+      case CONFIRM -> hardLockAction.apply(seat, context);
+      case PAYMENT_INITIATE -> paymentPendingAction.apply(seat, context);
+      case CONFIRM_PAYMENT -> confirmAction.apply(seat, context);
+      case RELEASE -> releaseAction.apply(seat, context);
+    }
+  }
 
-    public record SeatActionContext(Long userId, String bookingRef, String reason) {
-    }
+  public record SeatActionContext(Long userId, String bookingRef, String reason) {}
 }

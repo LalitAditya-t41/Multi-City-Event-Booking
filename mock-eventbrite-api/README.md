@@ -26,7 +26,7 @@ Provide either:
 Missing/empty token returns APIB error envelope.
 
 ## Seeded IDs
-These are stable and re-seeded on startup and `/mock/reset`:
+Baseline IDs are stable and re-seeded on startup and `/mock/reset`:
 - Organization: `org_1`
 - Venue: `venue_1`
 - Events: `event_1`, `series_1` (series parent), `event_2` (series child)
@@ -37,10 +37,26 @@ These are stable and re-seeded on startup and `/mock/reset`:
 - Order: `order_1`
 - Attendee: `attendee_1`
 
+Heavy profile adds additional demo data:
+- Venues: `venue_2` to `venue_6`
+- Events: `event_3` to `event_14`
+- Ticket Classes: `ticket_3+`
+- Discounts: `discount_2+`
+- Orders/Attendees: `order_2+`, `attendee_2+`
+
 ## Mock Admin
 - `POST /mock/config` — update runtime config
 - `POST /mock/reset` — wipe + re-seed
+- `POST /mock/seed` — profile seeding with `append` or `reset` mode
 - `GET /mock/dashboard` — state snapshot
+
+Example seed request:
+```json
+{
+  "profile": "heavy",
+  "mode": "append"
+}
+```
 
 Example config:
 ```json

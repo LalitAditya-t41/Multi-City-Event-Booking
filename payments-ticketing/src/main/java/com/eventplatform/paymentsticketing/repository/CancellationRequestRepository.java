@@ -8,9 +8,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CancellationRequestRepository extends JpaRepository<CancellationRequest, Long> {
 
-    Optional<CancellationRequest> findTopByBookingIdOrderByRequestedAtDesc(Long bookingId);
+  Optional<CancellationRequest> findTopByBookingIdOrderByRequestedAtDesc(Long bookingId);
 
-    boolean existsByBookingItemIdAndStatus(Long bookingItemId, CancellationRequestStatus status);
+  boolean existsByBookingItemIdAndStatus(Long bookingItemId, CancellationRequestStatus status);
 
-    List<CancellationRequest> findByBookingIdAndStatus(Long bookingId, CancellationRequestStatus status);
+  List<CancellationRequest> findByBookingIdAndStatus(
+      Long bookingId, CancellationRequestStatus status);
 }

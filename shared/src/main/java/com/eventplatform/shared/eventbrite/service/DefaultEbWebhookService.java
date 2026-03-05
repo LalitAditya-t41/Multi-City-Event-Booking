@@ -11,16 +11,18 @@ import org.springframework.stereotype.Service;
 @Service
 public class DefaultEbWebhookService implements EbWebhookService {
 
-    private static final Logger log = LoggerFactory.getLogger(DefaultEbWebhookService.class);
+  private static final Logger log = LoggerFactory.getLogger(DefaultEbWebhookService.class);
 
-    @Override
-    public EbWebhookRegistrationResult registerWebhook(
-        String organizationId,
-        String endpointUrl,
-        List<String> actions,
-        String eventId
-    ) {
-        log.info("Mock webhook registration. orgId={} endpointUrl={} actions={} eventId={}", organizationId, endpointUrl, actions, eventId);
-        return new EbWebhookRegistrationResult("wh_" + UUID.randomUUID(), endpointUrl, actions, Instant.now());
-    }
+  @Override
+  public EbWebhookRegistrationResult registerWebhook(
+      String organizationId, String endpointUrl, List<String> actions, String eventId) {
+    log.info(
+        "Mock webhook registration. orgId={} endpointUrl={} actions={} eventId={}",
+        organizationId,
+        endpointUrl,
+        actions,
+        eventId);
+    return new EbWebhookRegistrationResult(
+        "wh_" + UUID.randomUUID(), endpointUrl, actions, Instant.now());
+  }
 }

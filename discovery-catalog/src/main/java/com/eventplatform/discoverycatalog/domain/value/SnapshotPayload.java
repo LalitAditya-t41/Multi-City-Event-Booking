@@ -4,5 +4,4 @@ import com.eventplatform.discoverycatalog.api.dto.response.EventCatalogItemRespo
 import java.time.Instant;
 import java.util.List;
 
-public record SnapshotPayload(List<EventCatalogItemResponse> events, Instant snapshotTimestamp) {
-}
+public record SnapshotPayload(List<EventCatalogItemResponse> events, Instant snapshotTimestamp) {}

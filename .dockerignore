@@ -1,0 +1,47 @@
+# =============================================================================
+# .dockerignore — what NOT to copy into the Docker build context
+#
+# Excluding these means: smaller build context sent to the Docker daemon,
+# faster builds, smaller final images, and no accidental credential leaks.
+# =============================================================================
+
+# Maven build output — never needed in the build context; the builder
+# stage runs mvn clean package which regenerates these
+**/target/
+
+# IDE and local config files
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Git history — not needed inside the image
+.git/
+.gitignore
+
+# Docs and planning — not part of the runnable application
+docs/
+POQ/
+agents/
+AGENTS.md
+PRODUCT.md
+*.md
+
+# Local test results
+test_result_folder/
+
+# Python virtual environments from the mock service repo
+mock-eventbrite-api/.venv/
+mock-eventbrite-api/__pycache__/
+mock-eventbrite-api/**/__pycache__/
+mock-eventbrite-api/**/*.pyc
+
+# Environment files that may contain secrets
+.env
+.env.local
+*.env
+
+# macOS metadata
+.DS_Store

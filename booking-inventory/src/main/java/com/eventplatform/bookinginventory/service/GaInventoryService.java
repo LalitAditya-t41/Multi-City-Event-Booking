@@ -8,13 +8,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class GaInventoryService {
 
-    private final GaInventoryRedisService gaInventoryRedisService;
+  private final GaInventoryRedisService gaInventoryRedisService;
 
-    public GaInventoryService(GaInventoryRedisService gaInventoryRedisService) {
-        this.gaInventoryRedisService = gaInventoryRedisService;
-    }
+  public GaInventoryService(GaInventoryRedisService gaInventoryRedisService) {
+    this.gaInventoryRedisService = gaInventoryRedisService;
+  }
 
-    public void initCounters(Long slotId, List<PricingTierDto> tiers) {
-        tiers.forEach(tier -> gaInventoryRedisService.init(slotId, tier.tierId(), tier.quota()));
-    }
+  public void initCounters(Long slotId, List<PricingTierDto> tiers) {
+    tiers.forEach(tier -> gaInventoryRedisService.init(slotId, tier.tierId(), tier.quota()));
+  }
 }

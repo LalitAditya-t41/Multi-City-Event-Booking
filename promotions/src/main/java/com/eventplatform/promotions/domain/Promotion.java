@@ -20,96 +20,137 @@ import java.util.List;
 @Table(name = "promotions")
 public class Promotion extends BaseEntity {
 
-    @Column(name = "org_id", nullable = false)
-    private Long orgId;
+  @Column(name = "org_id", nullable = false)
+  private Long orgId;
 
-    @Column(name = "name", nullable = false)
-    private String name;
+  @Column(name = "name", nullable = false)
+  private String name;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "discount_type", nullable = false)
-    private DiscountType discountType;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "discount_type", nullable = false)
+  private DiscountType discountType;
 
-    @Column(name = "discount_value", nullable = false)
-    private BigDecimal discountValue;
+  @Column(name = "discount_value", nullable = false)
+  private BigDecimal discountValue;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "scope", nullable = false)
-    private PromotionScope scope;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "scope", nullable = false)
+  private PromotionScope scope;
 
-    @Column(name = "eb_event_id")
-    private String ebEventId;
+  @Column(name = "eb_event_id")
+  private String ebEventId;
 
-    @Column(name = "max_usage_limit")
-    private Integer maxUsageLimit;
+  @Column(name = "max_usage_limit")
+  private Integer maxUsageLimit;
 
-    @Column(name = "per_user_cap")
-    private Integer perUserCap;
+  @Column(name = "per_user_cap")
+  private Integer perUserCap;
 
-    @Column(name = "valid_from", nullable = false)
-    private Instant validFrom;
+  @Column(name = "valid_from", nullable = false)
+  private Instant validFrom;
 
-    @Column(name = "valid_until", nullable = false)
-    private Instant validUntil;
+  @Column(name = "valid_until", nullable = false)
+  private Instant validUntil;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private PromotionStatus status;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "status", nullable = false)
+  private PromotionStatus status;
 
-    @OneToMany(mappedBy = "promotion", cascade = CascadeType.ALL)
-    private List<Coupon> coupons = new ArrayList<>();
+  @OneToMany(mappedBy = "promotion", cascade = CascadeType.ALL)
+  private List<Coupon> coupons = new ArrayList<>();
 
-    protected Promotion() {
-    }
+  protected Promotion() {}
 
-    public Promotion(Long orgId, String name, DiscountType discountType, BigDecimal discountValue, PromotionScope scope,
-                     String ebEventId, Integer maxUsageLimit, Integer perUserCap, Instant validFrom, Instant validUntil) {
-        this.orgId = orgId;
-        this.name = name;
-        this.discountType = discountType;
-        this.discountValue = discountValue;
-        this.scope = scope;
-        this.ebEventId = ebEventId;
-        this.maxUsageLimit = maxUsageLimit;
-        this.perUserCap = perUserCap;
-        this.validFrom = validFrom;
-        this.validUntil = validUntil;
-        this.status = PromotionStatus.ACTIVE;
-    }
+  public Promotion(
+      Long orgId,
+      String name,
+      DiscountType discountType,
+      BigDecimal discountValue,
+      PromotionScope scope,
+      String ebEventId,
+      Integer maxUsageLimit,
+      Integer perUserCap,
+      Instant validFrom,
+      Instant validUntil) {
+    this.orgId = orgId;
+    this.name = name;
+    this.discountType = discountType;
+    this.discountValue = discountValue;
+    this.scope = scope;
+    this.ebEventId = ebEventId;
+    this.maxUsageLimit = maxUsageLimit;
+    this.perUserCap = perUserCap;
+    this.validFrom = validFrom;
+    this.validUntil = validUntil;
+    this.status = PromotionStatus.ACTIVE;
+  }
 
-    public void deactivate() {
-        this.status = PromotionStatus.INACTIVE;
-        this.coupons.forEach(Coupon::deactivate);
-    }
+  public void deactivate() {
+    this.status = PromotionStatus.INACTIVE;
+    this.coupons.forEach(Coupon::deactivate);
+  }
 
-    public boolean isActiveAt(Instant now) {
-        return status == PromotionStatus.ACTIVE && !now.isBefore(validFrom) && !now.isAfter(validUntil);
-    }
+  public boolean isActiveAt(Instant now) {
+    return status == PromotionStatus.ACTIVE && !now.isBefore(validFrom) && !now.isAfter(validUntil);
+  }
 
-    public boolean isValid(Instant now) {
-        return isActiveAt(now);
-    }
+  public boolean isValid(Instant now) {
+    return isActiveAt(now);
+  }
 
-    public void addCoupon(Coupon coupon) {
-        this.coupons.add(coupon);
-    }
+  public void addCoupon(Coupon coupon) {
+    this.coupons.add(coupon);
+  }
 
-    public Long getOrgId() { return orgId; }
-    public String getName() { return name; }
-    public DiscountType getDiscountType() { return discountType; }
-    public BigDecimal getDiscountValue() { return discountValue; }
-    public PromotionScope getScope() { return scope; }
-    public String getEbEventId() { return ebEventId; }
-    public Integer getMaxUsageLimit() { return maxUsageLimit; }
-    public Integer getPerUserCap() { return perUserCap; }
-    public Instant getValidFrom() { return validFrom; }
-    public Instant getValidUntil() { return validUntil; }
-    public PromotionStatus getStatus() { return status; }
+  public Long getOrgId() {
+    return orgId;
+  }
 
-    public void updateWindowAndCaps(Instant validFrom, Instant validUntil, Integer maxUsageLimit, Integer perUserCap) {
-        if (validFrom != null) this.validFrom = validFrom;
-        if (validUntil != null) this.validUntil = validUntil;
-        if (maxUsageLimit != null) this.maxUsageLimit = maxUsageLimit;
-        if (perUserCap != null) this.perUserCap = perUserCap;
-    }
+  public String getName() {
+    return name;
+  }
+
+  public DiscountType getDiscountType() {
+    return discountType;
+  }
+
+  public BigDecimal getDiscountValue() {
+    return discountValue;
+  }
+
+  public PromotionScope getScope() {
+    return scope;
+  }
+
+  public String getEbEventId() {
+    return ebEventId;
+  }
+
+  public Integer getMaxUsageLimit() {
+    return maxUsageLimit;
+  }
+
+  public Integer getPerUserCap() {
+    return perUserCap;
+  }
+
+  public Instant getValidFrom() {
+    return validFrom;
+  }
+
+  public Instant getValidUntil() {
+    return validUntil;
+  }
+
+  public PromotionStatus getStatus() {
+    return status;
+  }
+
+  public void updateWindowAndCaps(
+      Instant validFrom, Instant validUntil, Integer maxUsageLimit, Integer perUserCap) {
+    if (validFrom != null) this.validFrom = validFrom;
+    if (validUntil != null) this.validUntil = validUntil;
+    if (maxUsageLimit != null) this.maxUsageLimit = maxUsageLimit;
+    if (perUserCap != null) this.perUserCap = perUserCap;
+  }
 }

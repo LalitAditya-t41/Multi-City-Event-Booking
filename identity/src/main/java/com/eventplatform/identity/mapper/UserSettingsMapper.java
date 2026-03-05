@@ -12,29 +12,29 @@ import org.mapstruct.Mapper;
 @Mapper(componentModel = "spring")
 public interface UserSettingsMapper {
 
-    default UserSettingsResponse toResponse(UserSettings settings) {
-        PreferenceSelectionResponse city = toSelection(settings.getPreferredCityOption());
-        List<PreferenceSelectionResponse> genres = settings.getGenrePreferences().stream()
+  default UserSettingsResponse toResponse(UserSettings settings) {
+    PreferenceSelectionResponse city = toSelection(settings.getPreferredCityOption());
+    List<PreferenceSelectionResponse> genres =
+        settings.getGenrePreferences().stream()
             .map(UserGenrePreference::getPreferenceOption)
             .sorted(Comparator.comparingLong(PreferenceOption::getId))
             .map(this::toSelection)
             .toList();
 
-        return new UserSettingsResponse(
-            settings.getFullName(),
-            settings.getPhone(),
-            settings.getDob(),
-            settings.getAddress(),
-            city,
-            genres,
-            settings.isNotificationOptIn()
-        );
-    }
+    return new UserSettingsResponse(
+        settings.getFullName(),
+        settings.getPhone(),
+        settings.getDob(),
+        settings.getAddress(),
+        city,
+        genres,
+        settings.isNotificationOptIn());
+  }
 
-    default PreferenceSelectionResponse toSelection(PreferenceOption option) {
-        if (option == null) {
-            return null;
-        }
-        return new PreferenceSelectionResponse(option.getId(), option.getValue());
+  default PreferenceSelectionResponse toSelection(PreferenceOption option) {
+    if (option == null) {
+      return null;
     }
+    return new PreferenceSelectionResponse(option.getId(), option.getValue());
+  }
 }

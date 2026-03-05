@@ -21,10 +21,9 @@ public record CreateShowSlotRequest(
     @NotEmpty List<@Valid PricingTierRequest> pricingTiers,
     @NotNull Boolean isRecurring,
     String recurrenceRule,
-    String sourceSeatMapId
-) {
-    @AssertTrue(message = "endTime must be after startTime")
-    public boolean isValidTimeRange() {
-        return startTime == null || endTime == null || endTime.isAfter(startTime);
-    }
+    String sourceSeatMapId) {
+  @AssertTrue(message = "endTime must be after startTime")
+  public boolean isValidTimeRange() {
+    return startTime == null || endTime == null || endTime.isAfter(startTime);
+  }
 }

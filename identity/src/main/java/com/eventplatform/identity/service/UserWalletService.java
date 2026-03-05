@@ -10,18 +10,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class UserWalletService {
 
-    private final UserWalletRepository userWalletRepository;
-    private final UserWalletMapper userWalletMapper;
+  private final UserWalletRepository userWalletRepository;
+  private final UserWalletMapper userWalletMapper;
 
-    public UserWalletService(UserWalletRepository userWalletRepository, UserWalletMapper userWalletMapper) {
-        this.userWalletRepository = userWalletRepository;
-        this.userWalletMapper = userWalletMapper;
-    }
+  public UserWalletService(
+      UserWalletRepository userWalletRepository, UserWalletMapper userWalletMapper) {
+    this.userWalletRepository = userWalletRepository;
+    this.userWalletMapper = userWalletMapper;
+  }
 
-    @Transactional(readOnly = true)
-    public UserWalletResponse getWallet(Long userId) {
-        return userWalletRepository.findByUserId(userId)
-            .map(userWalletMapper::toResponse)
-            .orElseThrow(() -> new ResourceNotFoundException("Wallet not found", "WALLET_NOT_FOUND"));
-    }
+  @Transactional(readOnly = true)
+  public UserWalletResponse getWallet(Long userId) {
+    return userWalletRepository
+        .findByUserId(userId)
+        .map(userWalletMapper::toResponse)
+        .orElseThrow(() -> new ResourceNotFoundException("Wallet not found", "WALLET_NOT_FOUND"));
+  }
 }

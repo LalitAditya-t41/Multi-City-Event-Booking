@@ -1,0 +1,54 @@
+# =============================================================================
+# application-docker.yaml — Spring Profile: docker
+#
+# This file is loaded ADDITIONALLY to application.yaml when
+# SPRING_PROFILES_ACTIVE=docker.
+# It only overrides values that change between local bare-metal and Docker.
+#
+# Key difference: all "localhost" references become Docker service names.
+# Docker Compose defines the network "event-network" and all services
+# resolve each other by their service-name DNS entries:
+#   postgres        → event-postgres container
+#   redis           → event-redis container
+#   mock-eventbrite → event-mock-eventbrite container
+# =============================================================================
+
+spring:
+  datasource:
+    # "localhost" → "postgres" (the Docker Compose service name)
+    url: jdbc:postgresql://postgres:5432/eventplatform
+    username: eventplatform
+    password: eventplatform
+
+  data:
+    redis:
+      # "localhost" → "redis" (the Docker Compose service name)
+      host: redis
+      port: 6379
+
+# ── Application internal base URL ──────────────────────────────────────────────
+# When the app calls itself (e.g. internal REST reads in admin/), use the
+# container's own address. "app" is the service name in docker-compose.yml.
+app:
+  internal-base-url: http://app:8080
+
+# ── Mock Eventbrite base URL ───────────────────────────────────────────────────
+# "localhost:8888" → "mock-eventbrite:8888" (Docker service name)
+eventbrite:
+  base-url: http://mock-eventbrite:8888
+  webhook:
+    # Eventbrite mock will POST webhooks to THIS URL (the app inside Docker)
+    endpoint-url: http://app:8080/api/v1/webhooks/eventbrite
+
+# ── Stripe webhook ─────────────────────────────────────────────────────────────
+# Stripe CLI runs on the HOST machine and forwards to localhost:8080
+# (which is port-mapped from the container). No URL change needed here —
+# Stripe CLI points to http://localhost:8080/api/v1/webhooks/stripe on host,
+# and Docker maps host:8080 → container:8080 automatically.
+
+# ── Logging (more verbose in Docker for troubleshooting) ──────────────────────
+logging:
+  level:
+    com.eventplatform: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
