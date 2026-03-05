@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-@Component
+@Component("engagementBookingCancelledListener")
 public class BookingCancelledListener {
 
   private final ReviewEligibilityService reviewEligibilityService;

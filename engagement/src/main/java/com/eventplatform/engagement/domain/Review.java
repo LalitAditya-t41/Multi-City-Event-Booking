@@ -22,7 +22,7 @@ public class Review extends BaseEntity {
   private Long eventId;
 
   @Column(name = "rating", nullable = false)
-  private int rating;
+  private short rating;
 
   @Column(name = "title", nullable = false, length = 100)
   private String title;
@@ -61,7 +61,7 @@ public class Review extends BaseEntity {
     }
     this.userId = userId;
     this.eventId = eventId;
-    this.rating = rating;
+    this.rating = (short) rating;
     this.title = title;
     this.body = body;
     this.attendanceVerificationStatus = attendanceVerificationStatus;

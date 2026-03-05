@@ -5,7 +5,7 @@ import com.eventplatform.shared.common.event.published.CartAssembledEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("paymentsTicketingCartAssembledListener")
 public class CartAssembledListener {
 
   private final PaymentService paymentService;

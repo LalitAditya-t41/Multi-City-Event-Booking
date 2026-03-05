@@ -39,6 +39,9 @@ public class SecurityConfig {
         .authorizeHttpRequests(
             auth ->
                 auth.requestMatchers(
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
                         "/api/v1/catalog/**",
                         "/api/v1/engagement/reviews/events/**",
                         "/api/v1/booking/slots/*/seats", // public seat map view (no auth needed)
