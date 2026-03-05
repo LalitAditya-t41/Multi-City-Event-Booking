@@ -1,0 +1,161 @@
+# =============================================================================
+# docker-compose.yml — Full Local Stack
+#
+# Services:
+#   postgres          — PostgreSQL 15 (DB)
+#   redis             — Redis 7 (seat locks + spring cache)
+#   mock-eventbrite   — Python FastAPI mock of Eventbrite API v3
+#   app               — Spring Boot 3.5.11 application (all 7 modules + admin)
+#
+# Usage:
+#   # First time (build + start all):
+#   docker compose up --build
+#
+#   # Start with existing images (after first build):
+#   docker compose up
+#
+#   # Start in background:
+#   docker compose up -d
+#
+#   # Stop all containers + remove them (keeps volumes):
+#   docker compose down
+#
+#   # Destroy everything including volumes (fresh start):
+#   docker compose down -v
+#
+#   # Rebuild only the app image (after code changes):
+#   docker compose build app && docker compose up app
+#
+#   # Tail logs for one service:
+#   docker compose logs -f app
+# =============================================================================
+
+services:
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: event-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: eventplatform
+      POSTGRES_USER: eventplatform
+      POSTGRES_PASSWORD: eventplatform
+      # Tune for development containers (not production values)
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    ports:
+      # Map to 5433 on host to avoid clashing with any local PostgreSQL on 5432
+      - "5433:5432"
+    volumes:
+      # Named volume: data survives `docker compose down` but not `down -v`
+      - postgres-data:/var/lib/postgresql/data
+      # Init SQL: seeds org, city, venue, admin user.
+      # Runs ONLY on first container startup (when data volume is empty).
+      # Flyway (in the Spring Boot app) creates the schema BEFORE this runs,
+      # so tables are guaranteed to exist when init.sql executes.
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventplatform -d eventplatform"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - event-network
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: event-redis
+    restart: unless-stopped
+    # Disable persistence entirely for local dev (faster, no disk I/O)
+    command: redis-server --save "" --appendonly no
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - event-network
+
+  # ── Mock Eventbrite API ────────────────────────────────────────────────────
+  mock-eventbrite:
+    build:
+      context: ./mock-eventbrite-api
+      dockerfile: Dockerfile
+    container_name: event-mock-eventbrite
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      # No real config needed — all in-memory with seeded data
+      PYTHONUNBUFFERED: "1"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8888/mock/dashboard')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    networks:
+      - event-network
+
+  # ── Spring Boot Application ────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: event-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring profile — activates application-docker.yaml overrides
+      SPRING_PROFILES_ACTIVE: docker
+
+      # ── External API Secrets (PROVIDE THESE AT RUNTIME) ─────────────────
+      # Option A: pass via environment (shown below with placeholders)
+      # Option B: use a .env file in the project root (see .env.example)
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-pk_test_placeholder}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      EVENTBRITE_API_KEY: mock-token
+
+      # ── JVM / Spring tuning ──────────────────────────────────────────────
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+UseContainerSupport
+        -XX:MaxRAMPercentage=75.0
+        -XX:+ExitOnOutOfMemoryError
+        -Djava.security.egd=file:/dev/./urandom
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-eventbrite:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 60s
+    networks:
+      - event-network
+
+# ── Named Volumes ─────────────────────────────────────────────────────────────
+volumes:
+  postgres-data:
+    # Default local driver — data stored at Docker's data root
+    driver: local
+
+# ── Network ───────────────────────────────────────────────────────────────────
+# All containers share this bridge network.
+# They communicate by service name (e.g. "postgres", "redis", "mock-eventbrite")
+# which Docker DNS resolves automatically.
+networks:
+  event-network:
+    driver: bridge
