@@ -15,7 +15,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     Optional<Review> findByUserIdAndEventId(Long userId, Long eventId);
 
-    Page<Review> findByEventIdAndStatusOrderBySubmittedAtDesc(Long eventId, ReviewStatus status, Pageable pageable);
+    Page<Review> findByEventIdAndStatusOrderByPublishedAtDesc(Long eventId, ReviewStatus status, Pageable pageable);
 
     Page<Review> findByUserIdOrderBySubmittedAtDesc(Long userId, Pageable pageable);
 

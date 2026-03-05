@@ -78,7 +78,7 @@ public class ReviewService {
     @Transactional(readOnly = true)
     public Page<ReviewResponse> listPublishedReviews(Long eventId, Pageable pageable) {
         eventMetadataLookupService.getRequiredEventMetadata(eventId);
-        Page<Review> page = reviewRepository.findByEventIdAndStatusOrderBySubmittedAtDesc(eventId, ReviewStatus.PUBLISHED, pageable);
+        Page<Review> page = reviewRepository.findByEventIdAndStatusOrderByPublishedAtDesc(eventId, ReviewStatus.PUBLISHED, pageable);
         return page.map(review -> reviewMapper.toReviewResponse(review, identityLookupService.getDisplayName(review.getUserId())));
     }
 

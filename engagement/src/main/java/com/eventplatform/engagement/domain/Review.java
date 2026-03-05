@@ -51,6 +51,9 @@ public class Review extends BaseEntity {
     }
 
     public Review(Long userId, Long eventId, int rating, String title, String body, AttendanceVerificationStatus attendanceVerificationStatus) {
+        if (rating < 1 || rating > 5) {
+            throw new IllegalArgumentException("rating must be between 1 and 5");
+        }
         this.userId = userId;
         this.eventId = eventId;
         this.rating = rating;

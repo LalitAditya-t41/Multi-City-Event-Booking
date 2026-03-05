@@ -45,6 +45,9 @@ public class ReviewEligibility extends BaseEntity {
     }
 
     public void unlock(Long slotId, Long bookingId, Instant eligibleUntil) {
+        if (this.status == ReviewEligibilityStatus.REVOKED) {
+            return;
+        }
         this.slotId = slotId;
         this.bookingId = bookingId;
         this.eligibleUntil = eligibleUntil;
@@ -60,6 +63,13 @@ public class ReviewEligibility extends BaseEntity {
 
     public void markExpired() {
         this.status = ReviewEligibilityStatus.EXPIRED;
+    }
+
+    public boolean isEligible(Instant now) {
+        if (status != ReviewEligibilityStatus.UNLOCKED) {
+            return false;
+        }
+        return eligibleUntil == null || !eligibleUntil.isBefore(now);
     }
 
     public Long getUserId() {

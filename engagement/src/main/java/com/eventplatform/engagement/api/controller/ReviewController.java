@@ -47,7 +47,7 @@ public class ReviewController {
     @GetMapping("/events/{eventId}")
     public Page<ReviewResponse> listPublished(
         @PathVariable Long eventId,
-        @PageableDefault(size = 20, sort = "submittedAt", direction = Sort.Direction.DESC) Pageable pageable
+        @PageableDefault(size = 20, sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return reviewService.listPublishedReviews(eventId, pageable);
     }
