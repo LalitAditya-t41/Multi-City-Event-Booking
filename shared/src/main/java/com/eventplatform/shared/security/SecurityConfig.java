@@ -37,6 +37,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/v1/catalog/**",
+                    "/api/v1/engagement/reviews/events/**",
                     "/api/v1/booking/slots/*/seats",          // public seat map view (no auth needed)
                     "/api/v1/booking/slots/*/availability",   // public GA availability check
                     "/api/v1/admin/orgs/*/eventbrite/callback",

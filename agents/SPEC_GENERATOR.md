@@ -46,15 +46,15 @@ Before speccing any feature, understand the module structure and dependency orde
 
 ### The 7 Modules (Quick Reference)
 
-| Module | Owns | Eventbrite Facades |
+| Module | Owns | External Facades |
 |---|---|---|
 | discovery-catalog | Events, Venues, Cities, catalog sync | EbEventSyncService, EbTicketService |
 | scheduling | Show slots, conflict validation | EbEventSyncService |
-| identity | Users, JWT, profiles, preferences | EbAttendeeService |
-| booking-inventory | Seats, SeatMap, Cart, Seat Lock State Machine | EbTicketService |
-| payments-ticketing | Bookings, Payments, E-Tickets, Cancellations, Refunds | EbOrderService, EbAttendeeService, EbRefundService |
-| promotions | Coupons, Promotions, Eligibility rules | EbDiscountSyncService |
-| engagement | Reviews, Moderation, AI Chatbot, RAG pipeline | EbEventSyncService |
+| identity | Users, JWT auth, profiles, preferences, wallet | (none) |
+| booking-inventory | Seats, SeatMap, Cart, Seat Lock State Machine; `groupDiscountAmount` + `couponDiscountAmount` on Cart | EbTicketService |
+| payments-ticketing | Bookings, Payments (Stripe), E-Tickets, Cancellations, Refunds (Stripe) | **StripePaymentService, StripeRefundService, StripeWebhookHandler** (all in `shared/stripe/service/`); `EbOrderService` for admin reporting ONLY |
+| promotions | Coupons, Promotions, Eligibility rules, CouponRedemption | EbDiscountSyncService |
+| engagement | Reviews, Moderation, AI Chatbot, RAG pipeline | EbEventSyncService, EbAttendeeService (FR8 attendance verification only) |
 
 ### Module Dependency Direction (Strictly Downward)
 
@@ -68,17 +68,17 @@ A module NEVER imports from a module at its level or below. If Module B needs da
 
 ## Eventbrite Integration Constraints (Critical for Feature Specs)
 
-When speccing a feature touching Eventbrite, these unsupported operations are non-negotiable:
+When speccing a feature touching Eventbrite, these constraints are non-negotiable:
 
 - **No user creation API** — Users 100% internal; link to Eventbrite post-purchase
-- **No order creation API** — JS SDK checkout widget only; backend reads after onOrderComplete callback
-- **No single-order cancel API** — Uncheck bulk event cancel only; per-order requires workaround
-- **No seat lock API** — Entire state machine (AVAILABLE → SOFT_LOCKED → HARD_LOCKED → CONFIRMED) is internal Redis
-- **No refund submission API** — Refund status read-only; submission requires org-token workaround
+- **No order creation API** — Orders created internally in `bookings` table on Stripe payment confirmation. **EB Checkout Widget is removed** — do not spec or reference it.
+- **No single-order cancel API on EB** — Buyer cancellations use `StripeRefundService.createRefund()` programmatically. No EB call needed for per-booking refunds.
+- **No seat lock API** — Entire state machine (AVAILABLE → SOFT_LOCKED → HARD_LOCKED → CONFIRMED) is internal Redis + Spring State Machine
+- **Refund submission via Stripe** — All refunds use `StripeRefundService` (`POST /v1/refunds`). `EbRefundService` is inactive. No org-token workaround needed.
 - **No conflict validation API** — Turnaround gaps enforced entirely in internal DB
-- **No reviews API** — Reviews 100% internal; Eventbrite attendance verification only
+- **No reviews API** — Reviews 100% internal; Eventbrite attendance verification only (EbAttendeeService, engagement module, FR8 only)
 
-**See docs/EVENTBRITE_INTEGRATION.md for full constraints and workarounds.**
+**See docs/EVENTBRITE_INTEGRATION.md for full constraints and current implementation status.**
 
 If your feature hits one of these, document it in Open Questions.
 

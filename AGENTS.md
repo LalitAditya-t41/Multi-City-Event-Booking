@@ -10,7 +10,7 @@
 | File | Governs |
 |---|---|
 | `PRODUCT.md` | The 7 modules, what each one owns, dependency order, inter-module event map, Eventbrite ACL facade names, hard architectural rules, and where new code goes. Read this before touching any module. |
-| `docs/EVENTBRITE_INTEGRATION.md` | Eventbrite integration architecture: ACL facades, all FR flows (planned vs. implemented), critical constraints (no user/order creation, no single-order cancel, no seat locking), workarounds. Read before designing any Eventbrite feature. |
+| `docs/EVENTBRITE_INTEGRATION.md` | Eventbrite integration architecture: ACL facades, all FR flows (FR1–FR7 implemented), critical constraints (no user creation, no seat locking; single-order cancel/refunds are handled via `StripeRefundService`). Read before designing any Eventbrite-touching feature. |
 | `docs/MODULE_STRUCTURE_TEMPLATE.md` | Canonical folder and package layout for every module. The exact location of every layer: `api/controller/`, `api/dto/`, `domain/`, `service/`, `repository/`, `mapper/`, `event/published/`, `event/listener/`, `statemachine/`, `exception/`. Anti-patterns list. Read this before writing any class. |
 | `agents/SPEC_GENERATOR.md` | How to produce a `SPEC.md` for any feature. Eight confirmation-gated stages with module context and Eventbrite constraints built-in. Requirements → Domain Model → Architecture & File Structure → DB Schema → API → Business Logic → Error Handling → Tests. Read this before speccing any feature. |
 | `agents/CODING_AGENT.md` | Spring Boot 3.5.11 / Java 21 coding standards. Domain behaviour, service orchestration, mapper rules, controller rules, event rules, 10 Eventbrite ACL facades, inter-module communication (REST + Spring Events), admin/ special rules, state machine, Spring AI. Read this before writing any production code. |
@@ -66,7 +66,7 @@ All 10 facades are in `shared/eventbrite/service/`. These are the ONLY things mo
 3. **EbScheduleService** — Create recurring event schedules and occurrences
 4. **EbTicketService** — Create/update ticket classes; manage inventory; check availability
 5. **EbCapacityService** — Retrieve and update event capacity tiers
-6. **EbOrderService** — Read orders post-checkout (admin/ reporting only — NOT used in FR5/FR6 payment flows; JS SDK widget only creates orders)
+6. **EbOrderService** — Read orders post-checkout (admin/ reporting only — NOT used in FR5/FR6 payment flows; orders are created internally in `bookings` table when Stripe payment is confirmed)
 7. **EbAttendeeService** — List attendees; verify attendance for reviews (engagement only — FR8 attendance verification)
 8. **EbDiscountSyncService** — Create, update, delete discount codes
 9. **EbRefundService** — INACTIVE for payments — all refunds go through `StripeRefundService`; original EB refund read-only API has no submission endpoint

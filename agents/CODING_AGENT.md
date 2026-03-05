@@ -163,7 +163,15 @@ public enum BookingStatus { PENDING, CONFIRMED, CANCELLED, REFUNDED }
 ```java
 // In shared/common/service/ — interface only, no implementation
 public interface CartSnapshotReader {
-    List<CartItemSnapshotDto> getCartItems(Long cartId);
+    List<CartItemSnapshotDto> getCartItems(Long cartId);  // per-line-item data
+
+    /**
+     * Returns cart-level header metadata.
+     * Used by promotions.CouponEligibilityService to validate coupon eligibility
+     * (orgId, slotId, couponCode, expiresAt, currency).
+     * Throws ResourceNotFoundException if cart does not exist.
+     */
+    CartSummaryDto getCartSummary(Long cartId);
 }
 
 // In booking-inventory/service/ — owns the data, implements the contract
@@ -188,7 +196,7 @@ public class PaymentService {
 Current shared reader interfaces:
 - `SlotSummaryReader` → implemented in `scheduling`, consumed by `booking-inventory`
 - `SlotPricingReader` → implemented in `scheduling`, consumed by `booking-inventory`
-- `CartSnapshotReader` → implemented in `booking-inventory`, consumed by `payments-ticketing` (payment confirmation hot path)
+- `CartSnapshotReader` → implemented in `booking-inventory`, consumed by `payments-ticketing` (payment confirmation hot path) and `promotions` (coupon eligibility via `getCartSummary()`)
 - `PaymentConfirmationReader` → implemented in `payments-ticketing`, consumed by `booking-inventory` `PaymentTimeoutWatchdog`
 
 ---
@@ -430,45 +438,68 @@ and calls ACL facades for external systems. It owns no business logic itself —
 - **CRITICAL: All external system calls go ONLY through ACL facade services from `shared/`. Never call Eventbrite or OpenAI HTTP directly. See "Eventbrite ACL Facades" section above in "Coding Standards".**
 
 ```java
-// ✅ Correct service
+// ✅ Correct service — FR5: Stripe-based payment initiation (payments-ticketing module)
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class BookingService {
+public class PaymentService {
 
     private final BookingRepository bookingRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final EbOrderService ebOrderService; // ACL facade from shared/eventbrite/service/
+    private final StripePaymentService stripePaymentService; // ACL facade from shared/stripe/service/
+    private final CartSnapshotReader cartSnapshotReader;     // shared interface, impl in booking-inventory
 
     @Transactional
-    public Booking confirmBooking(UUID bookingId) {
-        // 1. Load the entity — throw if not found
-        Booking booking = bookingRepository.findById(bookingId)
-            .orElseThrow(() -> new BookingNotFoundException(bookingId));
+    public CheckoutInitResponse createCheckoutIntent(Long cartId, String userEmail) {
+        // 1. Read cart snapshot via shared interface (no cross-module @Repository import)
+        CartSummaryDto cart = cartSnapshotReader.getCartSummary(cartId);
+        List<CartItemSnapshotDto> items = cartSnapshotReader.getCartItems(cartId);
 
-        // 2. Delegate to domain — domain enforces the rule
-        booking.confirm();
+        // 2. Compute total (group discount + coupon discount already written to cart by this point)
+        long amountInPaise = computeNetTotal(items, cart); // subtract couponDiscountAmount
 
-        // 3. Persist
-        bookingRepository.save(booking);
+        // 3. Call Stripe via facade only — never call Stripe SDK directly
+        String idempotencyKey = "checkout-" + cartId;
+        StripePaymentIntentResponse resp = stripePaymentService.createPaymentIntent(
+            new StripePaymentIntentRequest(
+                amountInPaise, cart.currency(), userEmail,
+                "Booking " + cartId, idempotencyKey, Map.of("cart_id", cartId.toString())
+            )
+        );
 
-        // 4. Publish event — other modules react asynchronously
-        eventPublisher.publishEvent(new BookingConfirmedEvent(
-            booking.getId(), booking.getUserId(), booking.getShowSlotId()));
+        // 4. Persist payment record with PENDING status
+        Payment payment = new Payment(cartId, resp.paymentIntentId(), amountInPaise, cart.currency());
+        paymentRepository.save(payment);
 
-        log.info("Booking confirmed. bookingId={} userId={}", bookingId, booking.getUserId());
-        return booking;
+        // client_secret goes to frontend ONLY — never store or log it
+        log.info("Stripe PaymentIntent created. cartId={} paymentIntentId={}", cartId, resp.paymentIntentId());
+        return new CheckoutInitResponse(cartId, resp.paymentIntentId(), resp.clientSecret());
     }
 
     @Transactional
-    public Booking initiateBooking(CreateBookingCommand command) {
-        // 5. Checkout happens via Eventbrite JS widget; backend only reads order after callback
-        EbOrder order = ebOrderService.getOrderById(command.eventbriteOrderId());
+    public Booking confirmPayment(String paymentIntentId) {
+        // 5. Verify Stripe status before creating booking
+        StripePaymentIntentResponse pi = stripePaymentService.retrievePaymentIntent(paymentIntentId);
+        if (!"succeeded".equals(pi.status()) || pi.amountReceived() != pi.amount()) {
+            throw new BusinessRuleException("Payment not succeeded: " + pi.status());
+        }
 
-        Booking booking = new Booking(command.userId(), command.cartId(), order.id());
+        // 6. Idempotency: skip if already confirmed
+        if (bookingRepository.existsByStripePaymentIntentId(paymentIntentId)) {
+            return bookingRepository.findByStripePaymentIntentId(paymentIntentId).orElseThrow();
+        }
+
+        // 7. Create internal booking
+        Booking booking = new Booking(pi.cartId(), paymentIntentId, pi.chargeId());
+        booking.confirm();
         bookingRepository.save(booking);
 
-        eventPublisher.publishEvent(new BookingInitiatedEvent(booking.getId(), booking.getUserId()));
+        // 8. Publish — bookingId is included so promotions can record CouponRedemption
+        eventPublisher.publishEvent(new BookingConfirmedEvent(
+            booking.getId(), booking.getCartId(), booking.getSeatIds(),
+            paymentIntentId, booking.getUserId()));
+
+        log.info("Booking confirmed. bookingId={} paymentIntentId={}", booking.getId(), paymentIntentId);
         return booking;
     }
 }
@@ -658,11 +689,13 @@ public record CreateBookingRequest(
 
 ```java
 // ✅ Correct published event — record, primitives/IDs only
+// BookingConfirmedEvent — published by payments-ticketing after Stripe payment_intent.succeeded
 public record BookingConfirmedEvent(
-    UUID bookingId,
-    UUID userId,
-    UUID showSlotId,
-    Money totalAmount   // value object is allowed
+    Long bookingId,             // ← REQUIRED: promotions uses this for CouponRedemption FK
+    Long cartId,
+    List<Long> seatIds,
+    String stripePaymentIntentId,
+    Long userId
     // ❌ Never: Booking booking — no @Entity in events
 ) {}
 ```
@@ -883,7 +916,8 @@ Every external system integration follows this structure. Never deviate.
 
 ```java
 // shared/eventbrite/service/EbOrderService.java
-// ✅ Correct ACL facade — modules read order data from Eventbrite post-checkout
+// ✅ ADMIN/REPORTING ONLY — NOT used in FR5/FR6 payment or refund flows
+// Stripe owns all payments; this facade reads historic EB orders for admin dashboards only.
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -1086,9 +1120,10 @@ String url = "https://api.eventbrite.com/v3/orders"; // wrong
 - [ ] No `@Service`, `@Component`, or `@Autowired` in `domain/` classes
 - [ ] No field mapping in services or controllers — all in `mapper/`
 - [ ] **Mapper ownership: services use mapper for request DTO → domain; controllers use mapper for domain → response DTO. Neither maps manually.**
-- [ ] **No external API calls inside module code — ALL through `shared/` ACL facades (Eventbrite, OpenAI)**
-- [ ] **Eventbrite: No module calls Eventbrite HTTP directly. All calls via EbEventSyncService, EbVenueService, EbTicketService, EbOrderService, EbAttendeeService, etc.**
-- [ ] **Eventbrite: Never attempt order creation, user creation, single-order cancel, seat locking, or cart persistence (not supported)**
+- [ ] **Stripe / Payments: All payments via `StripePaymentService` only. All refunds via `StripeRefundService` only. Never call Stripe SDK classes directly from a module. Never use EB Checkout Widget or EB order/refund flows.**
+- [ ] **Stripe: `client_secret` must be returned to frontend only — never log, store, or pass it beyond the response DTO.**
+- [ ] **Eventbrite: No module calls Eventbrite HTTP directly. All calls via EbEventSyncService, EbVenueService, EbTicketService, EbOrderService (admin reporting only), EbAttendeeService, etc.**
+- [ ] **Eventbrite: Never attempt order creation, user creation, single-order cancel (use Stripe refund), seat locking (use Redis SM), or cart persistence (not supported)**
 - [ ] No cross-module `@Service` or `@Repository` imports
 - [ ] `@Transactional` applied to all multi-step service methods
 - [ ] `@Transactional(readOnly = true)` applied to all read-only service methods
