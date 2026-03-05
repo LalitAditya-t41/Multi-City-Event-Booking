@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.db import get_db
@@ -17,7 +17,7 @@ from app.models.attendee import Attendee
 from app.models.capacity_tier import CapacityTier
 from app.models.seatmap import SeatMap
 from app.models.webhook_log import WebhookLog
-from app.services.seed import seed_data
+from app.services.seed import APPEND_MODE, BASELINE_PROFILE, HEAVY_PROFILE, seed_data
 from app.services.rate_limiter import rate_limiter
 
 router = APIRouter(tags=["mock-admin"])
@@ -65,7 +65,7 @@ def update_config(body: dict):
 @router.post("/mock/reset")
 def reset_mock(db: Session = Depends(get_db)):
     reset_db()
-    seed_data(db)
+    seed_data(db, profile=BASELINE_PROFILE, mode=APPEND_MODE)
     return {
         "message": "Mock state cleared.",
         "defaultConfig": {
@@ -76,6 +76,27 @@ def reset_mock(db: Session = Depends(get_db)):
             "eventActionRateLimit": runtime_config.event_action_rate_limit,
             "failureRates": runtime_config.failure_rates,
         },
+    }
+
+
+@router.post("/mock/seed")
+def seed_mock(body: dict, db: Session = Depends(get_db)):
+    profile = body.get("profile", HEAVY_PROFILE)
+    mode = body.get("mode", APPEND_MODE)
+    if profile not in {BASELINE_PROFILE, HEAVY_PROFILE}:
+        raise HTTPException(status_code=400, detail="profile must be 'baseline' or 'heavy'")
+    if mode not in {APPEND_MODE, "reset"}:
+        raise HTTPException(status_code=400, detail="mode must be 'append' or 'reset'")
+
+    if mode == "reset":
+        reset_db()
+        mode = APPEND_MODE
+
+    seed_data(db, profile=profile, mode=mode)
+    return {
+        "message": "Mock seed completed.",
+        "profile": profile,
+        "mode": body.get("mode", APPEND_MODE),
     }
 
 
